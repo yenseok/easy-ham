@@ -93,16 +93,17 @@ pipeline {
                 echo '=== Pushing Images to Docker Hub ==='
                 script {
                     docker.withRegistry('https://registry.hub.docker.com', DOCKER_HUB_CREDENTIAL_ID) {
-                        docker.image("${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}").push()
-                        docker.image("${DOCKER_BACKEND_IMAGE}:latest").push()
-                        docker.image("${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}").push()
-                        docker.image("${DOCKER_FRONTEND_IMAGE}:latest").push()
+                        sh """
+                            docker push ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}
+                            docker push ${DOCKER_BACKEND_IMAGE}:latest
+                            docker push ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}
+                            docker push ${DOCKER_FRONTEND_IMAGE}:latest
+                        """
                     }
                 }
                 echo 'Docker Hub에 이미지 푸시 완료!'
             }
         }
-
         
                 stage('Deploy to Server') {
             steps {
