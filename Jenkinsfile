@@ -110,10 +110,11 @@ pipeline {
                 echo '=== Deploying on Remote Server ==='
                 sshagent(credentials: ['ec2-ssh-key']) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no ubuntu@your.ec2.ip.address << EOF
+                        ssh -o StrictHostKeyChecking=no ubuntu@3.39.246.235 << EOF
                             cd ${DEPLOY_PATH}
 
-                            echo "${IMAGE_TAG}" > .env
+                            echo "IMAGE_TAG=${IMAGE_TAG}" > .env
+
 
                             echo "Pulling latest images..."
                             docker pull ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}
