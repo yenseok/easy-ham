@@ -105,28 +105,33 @@ pipeline {
             }
         }
         
-        stage('Deploy to Server') {
+                stage('Deploy to Server') {
             steps {
-                echo '=== Deploying on Same Server ==='
-                sh """
-                    cd ${DEPLOY_PATH}
-                    
-                    echo "Pulling latest images..."
-                    docker pull ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}
-                    docker pull ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}
-                    
-                    echo "Starting services..."
-                    export TAG=${IMAGE_TAG}
-                    docker compose up -d backend frontend mysql mongodb
-                    
-                    echo "Cleaning up old images..."
-                    docker image prune -f
-                    
-                    echo "Deployment completed!"
-                    docker compose ps
-                """
+                echo '=== Deploying on Remote Server ==='
+                sshagent(credentials: ['ec2-ssh-key']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no ubuntu@your.ec2.ip.address << EOF
+                            cd ${DEPLOY_PATH}
+
+                            echo "${IMAGE_TAG}" > .env
+
+                            echo "Pulling latest images..."
+                            docker pull ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}
+                            docker pull ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}
+
+                            echo "Starting services..."
+                            docker compose --env-file .env up -d backend frontend mysql mongodb
+
+                            echo "Cleaning up old images..."
+                            docker image prune -f
+
+                            docker compose ps
+                        EOF
+                    """
+                }
             }
         }
+
     }
     
     post {
