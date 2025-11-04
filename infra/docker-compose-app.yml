@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  backend:
+    image: bonghyerin/pyeonriham-backend:${IMAGE_TAG}  # Jenkins가 푸시한 이미지
+    container_name: "pyeonriham-backend"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_PORT: 6379
+      SPRING_REDIS_PASSWORD: ${REDIS_PASSWORD}
+    depends_on:
+      - mysql
+      - redis
+    restart: always
+    networks:
+      - pyeonriham_network
+
+  frontend:
+    image: bonghyerin/pyeonriham-frontend:${IMAGE_TAG}
+    container_name: "pyeonriham-frontend"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - pyeonriham_network
+
+  fastapi:
+    image: bonghyerin/pyeonriham-ai:${IMAGE_TAG}
+    container_name: "pyeonriham-fastapi"
+    restart: always
+    networks:
+      - pyeonriham_network
+
+networks:
+  pyeonriham_network:
+    external: true
