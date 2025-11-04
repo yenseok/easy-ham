@@ -18,7 +18,8 @@ WORKDIR /usr/share/nginx/html
 RUN rm -rf ./*
 
 # 빌드된 파일 복사
-COPY --from=builder /app/dist .
+COPY --from=builder /app/build .
+
 
 # Nginx 설정 (SPA 라우팅 지원)
 COPY nginx.conf /etc/nginx/conf.d/default.conf
