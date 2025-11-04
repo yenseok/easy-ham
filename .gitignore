@@ -1,0 +1,54 @@
+# ===== Frontend =====
+# Build output
+frontend/dist/
+frontend/build/
+
+# Dependencies
+frontend/node_modules/
+
+# Environment
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+
+# IDE
+frontend/.vscode/
+frontend/.idea/
+
+# Logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# ===== Backend =====
+# Gradle
+backend/.gradle/
+backend/build/
+backend/out/
+
+# IDE
+backend/.idea/
+backend/.vscode/
+backend/*.iml
+backend/*.ipr
+backend/*.iws
+
+# Environment
+backend/.env
+backend/application-*.yml
+backend/application-*.properties
+
+# Logs
+backend/*.log
+
+# ===== Docker =====
+*.env
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== General =====
+*.log
+*.tmp
+*.temp

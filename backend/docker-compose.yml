@@ -1,15 +1,19 @@
-# Compose v2에서는 version 키 생략 권장
-
+# Compose v2: version 키 생략 권장
 services:
-  # --- Spring Boot (백엔드) ---
-  spring:
-    build: ./spring
-    container_name: prham-spring
+  # --- Backend (Spring Boot, Gradle 빌드 산출물 실행) ---
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: app-backend
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-mymm_db}?useSSL=false&serverTimezone=Asia/Seoul
       SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-prham_user}
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-prham_password}
+      TZ: Asia/Seoul
+      # 필요 시 JVM 옵션
+      # JAVA_OPTS: "-Xms256m -Xmx512m"
     expose:
       - '8080'
     depends_on:
@@ -25,28 +29,27 @@ services:
       timeout: 5s
       retries: 10
     restart: always
-    networks: [prham-network]
+    networks: [app-net]
 
-  # --- Nginx (정적 프론트 + /api 프록시) ---
-  nginx:
-    build: ./nginx
-    container_name: prham-nginx
+  # --- Frontend (Nginx로 정적 서빙 + SPA 라우팅) ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: app-frontend
     ports:
-      - '80:80' # 우선 HTTP만 오픈(SSL은 나중에 443 추가)
-      # - "443:443"  # SSL 적용할 때 열기
+      - '80:80' # 우선 HTTP만 오픈(SSL은 443 추가)
+      # - "443:443"
     depends_on:
-      spring:
+      backend:
         condition: service_healthy
     restart: always
-    networks: [prham-network]
-    # SSL 쓰면 인증서 마운트
-    # volumes:
-    #   - ./ssl:/etc/letsencrypt:ro
+    networks: [app-net]
 
   # --- MySQL ---
   mysql:
     image: mysql:${MYSQL_VERSION:-8.0}
-    container_name: prham-mysql
+    container_name: app-mysql
     command: >
       --default-authentication-plugin=mysql_native_password
       --character-set-server=utf8mb4
@@ -72,12 +75,12 @@ services:
       timeout: 5s
       retries: 10
     restart: always
-    networks: [prham-network]
+    networks: [app-net]
 
-  # --- MongoDB (필요 시) ---
+
   mongodb:
     image: mongo:${MONGO_VERSION:-7.0}
-    container_name: prham-mongodb
+    container_name: app-mongodb
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-admin_password}
@@ -88,12 +91,12 @@ services:
     ports:
       - '${MONGO_HOST_PORT:-27017}:27017'
     restart: always
-    networks: [prham-network]
+    networks: [app-net]
 
 volumes:
   mysql-data:
-  mongodb-data:
+  # mongodb-data:
 
 networks:
-  prham-network:
+  app-net:
     driver: bridge
