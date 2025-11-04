@@ -17,7 +17,7 @@ pipeline {
         // 이미지 태그
         IMAGE_TAG = "${BUILD_NUMBER}"
         
-        // 배포 경로 (같은 서버)
+        // 배포 경로
         DEPLOY_PATH = '/home/ubuntu/app'
     }
     
@@ -25,10 +25,7 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo '=== Checking out code from GitLab ==='
-                cleanWs()
-                git url: 'https://lab.ssafy.com/s13-final/S13P31A105.git', 
-                    branch: 'release', 
-                    credentialsId: 'gitlab-credentials'
+                checkout scm
             }
         }
         
@@ -73,7 +70,6 @@ pipeline {
             steps {
                 echo '=== Building Docker Images ==='
                 script {
-                    // Backend Docker Image 빌드
                     dir(BACKEND_DIR) {
                         sh """
                             docker build -t ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} .
@@ -81,7 +77,6 @@ pipeline {
                         """
                     }
                     
-                    // Frontend Docker Image 빌드
                     dir(FRONTEND_DIR) {
                         sh """
                             docker build -t ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} .
@@ -112,7 +107,7 @@ pipeline {
         
         stage('Deploy to Server') {
             steps {
-                echo '=== Deploying on Same Server (No SSH needed) ==='
+                echo '=== Deploying on Same Server ==='
                 sh """
                     cd ${DEPLOY_PATH}
                     
