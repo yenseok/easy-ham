@@ -28,7 +28,7 @@ pipeline {
                 cleanWs()
                 git url: 'https://lab.ssafy.com/s13-final/S13P31A105.git', 
                     branch: 'release', 
-                    credentialsId: 'jenkins-token'
+                    credentialsId: 'gitlab-credentials'
             }
         }
         
