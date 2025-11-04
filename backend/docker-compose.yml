@@ -2,7 +2,7 @@
 services:
   # --- Backend (Spring Boot, Gradle 빌드 산출물 실행) ---
   backend:
-    image: bonghyerin/prham-backend:${TAG:-latest}
+    image: bonghyerin/prham-backend:${IMAGE_TAG}
     container_name: app-backend
     build:
       context: ./backend
@@ -35,7 +35,7 @@ services:
 
   # --- Frontend (Nginx로 정적 서빙 + SPA 라우팅) ---
   frontend:
-    image: bonghyerin/prham-frontend:${TAG:-latest}
+    image: bonghyerin/prham-frontend:${IMAGE_TAG}
     container_name: app-frontend
     build:
       context: ./frontend
