@@ -19,9 +19,9 @@ pipeline {
 
         // EC2 배포 정보
         EC2_USER = 'ubuntu'
-        EC2_HOST = '<EC2_IP>'     // ✅ 여기에 실제 IP 입력
+        EC2_HOST = '3.39.246.235'
         EC2_PATH = '/home/ubuntu/app'
-        SSH_CREDENTIAL_ID = 'jenkins-ssh-key' // ✅ Jenkins Credentials에 등록한 SSH 키 ID
+        SSH_CREDENTIAL_ID = 'ec2-deploy-key'
     }
 
     stages {
@@ -53,6 +53,11 @@ pipeline {
         stage('Build Frontend') {
             steps {
                 echo '=== Building Frontend (npm) ==='
+                script {
+                    // ✅ NodeJS Plugin 환경 경로 추가
+                    def nodeHome = tool name: 'NodeJS-LTS', type: 'NodeJSInstallation'
+                    env.PATH = "${nodeHome}/bin:${env.PATH}"
+                }
                 dir(FRONTEND_DIR) {
                     sh 'npm install'
                     sh 'npm run build'
@@ -99,20 +104,31 @@ pipeline {
             }
         }
 
-        stage('Deploy to Server') {
+        stage('Deploy to EC2 Server') {
             steps {
-                echo '=== 🚀 Deploying on EC2 Server ==='
+                echo '=== 🚀 Deploying on EC2 Server (3.39.246.235) ==='
                 script {
                     sshagent(credentials: ["${SSH_CREDENTIAL_ID}"]) {
                         sh """
                             ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
+                                set -e
+                                echo "📂 배포 디렉토리 이동 중..."
                                 cd ${EC2_PATH} || exit 1
-                                echo "🔹 Docker Compose 업데이트 중..."
-                                docker-compose pull
-                                docker-compose down
-                                docker-compose up -d
+
+                                echo "🧹 기존 컨테이너 중지 및 정리..."
+                                docker compose down || true
+
+                                echo "🪣 최신 이미지 Pull 중..."
+                                export IMAGE_TAG=${IMAGE_TAG}
+                                docker compose pull
+
+                                echo "🚀 서비스 재시작..."
+                                docker compose up -d
+
+                                echo "🧽 불필요한 이미지 정리..."
                                 docker image prune -f
-                                echo "✅ 배포 완료!"
+
+                                echo "✅ 배포 완료! 서비스가 http://3.39.246.235:8080 에서 실행 중입니다."
                             '
                         """
                     }
@@ -123,7 +139,7 @@ pipeline {
 
     post {
         success {
-            echo '🎉 전체 파이프라인 성공!'
+            echo '🎉 전체 파이프라인 성공! 서비스 배포 완료!'
         }
         failure {
             echo '❌ Pipeline 실패! 로그를 확인하세요.'
