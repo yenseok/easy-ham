@@ -7,21 +7,25 @@ pipeline {
         BACKEND_DIR = "${PROJECT_DIR}/backend"
 
         // Docker Hub 정보
-        DOCKER_HUB_CREDENTIAL_ID = 'dockerhub-jenkins'
+        DOCKER_HUB_CREDENTIAL_ID = 'dockerhub-cred'
         DOCKER_HUB_USER = 'bonghyerin'
 
         // Docker 이미지 이름
         DOCKER_FRONTEND_IMAGE = "${DOCKER_HUB_USER}/prham-frontend"
-        DOCKER_BACKEND_IMAGE = "${DOCKER_HUB_USER}/prham-backend"
+        DOCKER_BACKEND_IMAGE  = "${DOCKER_HUB_USER}/prham-backend"
 
-        // 이미지 태그
+        // 이미지 태그 (빌드 번호)
         IMAGE_TAG = "${BUILD_NUMBER}"
 
-        // 배포 경로
-        DEPLOY_PATH = '/home/ubuntu/app'
+        // EC2 배포 정보
+        EC2_USER = 'ubuntu'
+        EC2_HOST = '<EC2_IP>'     // ✅ 여기에 실제 IP 입력
+        EC2_PATH = '/home/ubuntu/app'
+        SSH_CREDENTIAL_ID = 'jenkins-ssh-key' // ✅ Jenkins Credentials에 등록한 SSH 키 ID
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 echo '=== Checking out code from GitLab ==='
@@ -37,32 +41,23 @@ pipeline {
                         if (fileExists('./gradlew')) {
                             sh 'chmod +x ./gradlew'
                             sh './gradlew clean build -x test'
-                            echo 'Backend 빌드 완료!'
                         } else {
-                            error 'gradlew 파일이 없습니다!'
+                            error "gradlew not found!"
                         }
                     }
                 }
+                echo '✅ Backend 빌드 완료!'
             }
         }
 
         stage('Build Frontend') {
-            tools {
-                nodejs 'NodeJS-LTS'
-            }
             steps {
                 echo '=== Building Frontend (npm) ==='
                 dir(FRONTEND_DIR) {
-                    script {
-                        if (fileExists('package.json')) {
-                            sh 'npm install'
-                            sh 'npm run build'
-                            echo 'Frontend 빌드 완료!'
-                        } else {
-                            error 'package.json이 없습니다!'
-                        }
-                    }
+                    sh 'npm install'
+                    sh 'npm run build'
                 }
+                echo '✅ Frontend 빌드 완료!'
             }
         }
 
@@ -76,7 +71,6 @@ pipeline {
                             docker tag ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} ${DOCKER_BACKEND_IMAGE}:latest
                         """
                     }
-
                     dir(FRONTEND_DIR) {
                         sh """
                             docker build -t ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} .
@@ -84,50 +78,44 @@ pipeline {
                         """
                     }
                 }
-                echo 'Docker 이미지 빌드 완료!'
+                echo '✅ Docker 이미지 빌드 완료!'
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
                 echo '=== Pushing Images to Docker Hub ==='
-                script {
+                withCredentials([usernamePassword(credentialsId: "${DOCKER_HUB_CREDENTIAL_ID}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh """
-                        echo "=== Backend 이미지 푸시 중... ==="
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                         docker push ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}
                         docker push ${DOCKER_BACKEND_IMAGE}:latest
-                        
-                        echo "=== Frontend 이미지 푸시 중... ==="
                         docker push ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}
                         docker push ${DOCKER_FRONTEND_IMAGE}:latest
+                        docker logout
                     """
                 }
-                echo '✅ Docker Hub에 이미지 푸시 완료!'
+                echo '✅ Docker Hub 푸시 완료!'
             }
         }
 
         stage('Deploy to Server') {
             steps {
-                echo '=== Deploying on Local Server ==='
+                echo '=== 🚀 Deploying on EC2 Server ==='
                 script {
-                    sh """
-                        cd ${DEPLOY_PATH}
-                        
-                        echo "IMAGE_TAG=${IMAGE_TAG}" > .env
-                        
-                        echo "Pulling latest images..."
-                        docker pull ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}
-                        docker pull ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}
-                        
-                        echo "Starting services..."
-                        docker compose --env-file .env up -d backend frontend mysql mongodb
-                        
-                        echo "Cleaning up old images..."
-                        docker image prune -f
-                        
-                        echo "✅ Deployment complete!"
-                        docker compose ps
-                    """
+                    sshagent(credentials: ["${SSH_CREDENTIAL_ID}"]) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
+                                cd ${EC2_PATH} || exit 1
+                                echo "🔹 Docker Compose 업데이트 중..."
+                                docker-compose pull
+                                docker-compose down
+                                docker-compose up -d
+                                docker image prune -f
+                                echo "✅ 배포 완료!"
+                            '
+                        """
+                    }
                 }
             }
         }
@@ -135,24 +123,10 @@ pipeline {
 
     post {
         success {
-            echo '=== ✅ Pipeline 성공! ==='
-            echo "Backend: ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}"
-            echo "Frontend: ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}"
-            
-            echo '=== 🧹 Cleaning up workspace Docker images ==='
-            sh """
-                docker rmi ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} || true
-                docker rmi ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} || true
-            """
+            echo '🎉 전체 파이프라인 성공!'
         }
         failure {
-            echo '=== ❌ Pipeline 실패! ==='
-            echo '로그를 확인하세요.'
-            
-            sh """
-                docker rmi ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} || true
-                docker rmi ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} || true
-            """
+            echo '❌ Pipeline 실패! 로그를 확인하세요.'
         }
     }
 }
