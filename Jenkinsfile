@@ -1,26 +1,26 @@
 pipeline {
     agent any
-    
+
     environment {
         PROJECT_DIR = '.'
         FRONTEND_DIR = "${PROJECT_DIR}/frontend"
         BACKEND_DIR = "${PROJECT_DIR}/backend"
-        
+
         // Docker Hub 정보
-        DOCKER_HUB_CREDENTIAL_ID = 'dockerhub-cred'
-        DOCKER_HUB_USER = 'bonghyerin'
-        
+        DOCKER_HUB_CREDENTIAL_ID = 'dockerhub-jenkins'  // 수정
+        DOCKER_HUB_USER = 'bonghyerin'  // 본인 계정 확인
+
         // Docker 이미지 이름
         DOCKER_FRONTEND_IMAGE = "${DOCKER_HUB_USER}/prham-frontend"
         DOCKER_BACKEND_IMAGE = "${DOCKER_HUB_USER}/prham-backend"
-        
+
         // 이미지 태그
         IMAGE_TAG = "${BUILD_NUMBER}"
-        
+
         // 배포 경로
         DEPLOY_PATH = '/home/ubuntu/app'
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
@@ -28,7 +28,7 @@ pipeline {
                 checkout scm
             }
         }
-        
+
         stage('Build Backend') {
             steps {
                 echo '=== Building Backend (Gradle) ==='
@@ -45,10 +45,10 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Build Frontend') {
             tools {
-                nodejs 'NodeJS-LTS' 
+                nodejs 'NodeJS-LTS'  // Jenkins에 NodeJS 설치 필요
             }
             steps {
                 echo '=== Building Frontend (npm) ==='
@@ -65,7 +65,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Build Docker Images') {
             steps {
                 echo '=== Building Docker Images ==='
@@ -76,7 +76,7 @@ pipeline {
                             docker tag ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} ${DOCKER_BACKEND_IMAGE}:latest
                         """
                     }
-                    
+
                     dir(FRONTEND_DIR) {
                         sh """
                             docker build -t ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} .
@@ -87,7 +87,7 @@ pipeline {
                 echo 'Docker 이미지 빌드 완료!'
             }
         }
-        
+
         stage('Push to Docker Hub') {
             steps {
                 echo '=== Pushing Images to Docker Hub ==='
@@ -104,24 +104,23 @@ pipeline {
                 echo 'Docker Hub에 이미지 푸시 완료!'
             }
         }
-        
-                stage('Deploy to Server') {
+
+        stage('Deploy to Server') {
             steps {
                 echo '=== Deploying on Remote Server ==='
-                sshagent(credentials: ['ec2-ssh-key']) {
+                sshagent(credentials: ['ec2-deploy-key']) {  // 수정
                     sh """
                         ssh -o StrictHostKeyChecking=no ubuntu@3.39.246.235 << EOF
                             cd ${DEPLOY_PATH}
 
                             echo "IMAGE_TAG=${IMAGE_TAG}" > .env
 
-
                             echo "Pulling latest images..."
                             docker pull ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}
                             docker pull ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}
 
                             echo "Starting services..."
-                            docker compose --env-file .env up -d backend frontend mysql mongodb
+                            docker compose --env-file .env up -d backend frontend mysql redis
 
                             echo "Cleaning up old images..."
                             docker image prune -f
@@ -132,9 +131,8 @@ pipeline {
                 }
             }
         }
-
     }
-    
+
     post {
         success {
             echo '=== Pipeline 성공! ==='
