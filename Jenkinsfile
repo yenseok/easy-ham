@@ -34,37 +34,44 @@ pipeline {
             }
         }
 
-        stage('Build Backend') {
-            steps {
-                echo '=== Building Backend (Gradle) ==='
-                dir(BACKEND_DIR) {
-                    script {
-                        if (fileExists('./gradlew')) {
-                            sh 'chmod +x ./gradlew'
-                            sh './gradlew clean build -x test'
-                            echo 'Backend 빌드 완료!'
-                        } else {
-                            error 'gradlew 파일이 없습니다!'
+        // ✅ Backend & Frontend 병렬 빌드
+        stage('Build Backend & Frontend') {
+            parallel {
+                stage('Build Backend') {
+                    steps {
+                        echo '=== Building Backend (Gradle) ==='
+                        dir(BACKEND_DIR) {
+                            script {
+                                if (fileExists('./gradlew')) {
+                                    sh 'chmod +x ./gradlew'
+                                    sh './gradlew clean build -x test'
+                                    echo '✅ Backend 빌드 완료!'
+                                } else {
+                                    error '❌ gradlew 파일이 없습니다!'
+                                }
+                            }
                         }
                     }
                 }
-            }
-        }
 
-        stage('Build Frontend') {
-            tools {
-                nodejs 'NodeJS-LTS'
-            }
-            steps {
-                echo '=== Building Frontend (npm) ==='
-                dir(FRONTEND_DIR) {
-                    script {
-                        if (fileExists('package.json')) {
-                            sh 'npm install'
-                            sh 'npm run build'
-                            echo 'Frontend 빌드 완료!'
-                        } else {
-                            error 'package.json이 없습니다!'
+                stage('Build Frontend') {
+                    tools {
+                        nodejs 'NodeJS-LTS'
+                    }
+                    steps {
+                        echo '=== Building Frontend (npm) ==='
+                        dir(FRONTEND_DIR) {
+                            script {
+                                if (fileExists('package.json')) {
+                                    sh '''
+                                        npm install
+                                        npm run build
+                                    '''
+                                    echo '✅ Frontend 빌드 완료!'
+                                } else {
+                                    error '❌ package.json이 없습니다!'
+                                }
+                            }
                         }
                     }
                 }
@@ -89,7 +96,7 @@ pipeline {
                         """
                     }
                 }
-                echo 'Docker 이미지 빌드 완료!'
+                echo '✅ Docker 이미지 빌드 완료!'
             }
         }
 
@@ -106,7 +113,7 @@ pipeline {
                         """
                     }
                 }
-                echo 'Docker Hub에 이미지 푸시 완료!'
+                echo '✅ Docker Hub에 이미지 푸시 완료!'
             }
         }
 
@@ -130,7 +137,7 @@ pipeline {
                             echo "Cleaning up old images..."
                             docker image prune -f
 
-                            echo "Deployment complete!"
+                            echo "✅ Deployment complete!"
                             docker compose ps
 EOF
                     """
@@ -141,16 +148,16 @@ EOF
 
     post {
         success {
-            echo '=== Pipeline 성공! ==='
+            echo '=== ✅ Pipeline 성공! ==='
             echo "Backend: ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}"
             echo "Frontend: ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}"
         }
         failure {
-            echo '=== Pipeline 실패! ==='
+            echo '=== ❌ Pipeline 실패! ==='
             echo '로그를 확인하세요.'
         }
         always {
-            echo '=== Cleaning up workspace Docker images ==='
+            echo '=== 🧹 Cleaning up workspace Docker images ==='
             sh """
                 docker rmi ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} || true
                 docker rmi ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} || true
