@@ -137,32 +137,30 @@ pipeline {
         }
 
         stage('Deploy to Server') {
-            steps {
-                echo '=== Deploying on Remote Server ==='
-                sshagent(credentials: [DEPLOY_SERVER_CREDENTIAL_ID]) {
-                    sh """
-                        ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER_USER}@${DEPLOY_SERVER_IP} << 'EOF'
-                            cd ${DEPLOY_PATH}
-
-                            echo "IMAGE_TAG=${IMAGE_TAG}" > .env
-
-                            echo "Pulling latest images..."
-                            docker pull ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}
-                            docker pull ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}
-
-                            echo "Starting services..."
-                            docker compose --env-file .env up -d backend frontend mysql mongodb
-
-                            echo "Cleaning up old images..."
-                            docker image prune -f
-
-                            echo "Deployment complete!"
-                            docker compose ps
-EOF
-                    """
-                }
-            }
+    steps {
+        echo '=== Deploying on Local Server ==='
+        script {
+            sh """
+                cd ${DEPLOY_PATH}
+                
+                echo "IMAGE_TAG=${IMAGE_TAG}" > .env
+                
+                echo "Pulling latest images..."
+                docker pull ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}
+                docker pull ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}
+                
+                echo "Starting services..."
+                docker compose --env-file .env up -d backend frontend mysql mongodb
+                
+                echo "Cleaning up old images..."
+                docker image prune -f
+                
+                echo "✅ Deployment complete!"
+                docker compose ps
+            """
         }
+    }
+}
     }
 
     post {
