@@ -10,7 +10,8 @@ pipeline {
         FRONTEND_DIR = "${PROJECT_DIR}/frontend"
         BACKEND_DIR = "${PROJECT_DIR}/backend"
 
-        DOCKER_HUB_CREDENTIAL_ID = 'dockerhub-cred'
+        // ✅ Jenkins credential ID 수정 완료
+        DOCKER_HUB_CREDENTIAL_ID = 'dockerhub-jenkins'
         DOCKER_HUB_USER = 'bonghyerin'
 
         DOCKER_FRONTEND_IMAGE = "${DOCKER_HUB_USER}/prham-frontend"
