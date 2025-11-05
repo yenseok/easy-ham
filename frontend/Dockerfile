@@ -28,7 +28,7 @@ RUN npm run build
 FROM nginx:stable-alpine
 
 # 빌드 결과 복사
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/build /usr/share/nginx/html
 
 # 사용자 정의 Nginx 설정 덮어쓰기
 COPY nginx.conf /etc/nginx/conf.d/default.conf
