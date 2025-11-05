@@ -1,23 +1,23 @@
 pipeline {
     agent any
 
+    tools {
+        nodejs 'NodeJS-LTS'   // ✅ Declarative 방식으로 NodeJS PATH 자동 설정
+    }
+
     environment {
         PROJECT_DIR = '.'
         FRONTEND_DIR = "${PROJECT_DIR}/frontend"
         BACKEND_DIR = "${PROJECT_DIR}/backend"
 
-        // Docker Hub 정보
         DOCKER_HUB_CREDENTIAL_ID = 'dockerhub-cred'
         DOCKER_HUB_USER = 'bonghyerin'
 
-        // Docker 이미지 이름
         DOCKER_FRONTEND_IMAGE = "${DOCKER_HUB_USER}/prham-frontend"
         DOCKER_BACKEND_IMAGE  = "${DOCKER_HUB_USER}/prham-backend"
 
-        // 이미지 태그 (빌드 번호)
         IMAGE_TAG = "${BUILD_NUMBER}"
 
-        // EC2 배포 정보
         EC2_USER = 'ubuntu'
         EC2_HOST = '3.39.246.235'
         EC2_PATH = '/home/ubuntu/app'
@@ -37,14 +37,10 @@ pipeline {
             steps {
                 echo '=== Building Backend (Gradle) ==='
                 dir(BACKEND_DIR) {
-                    script {
-                        if (fileExists('./gradlew')) {
-                            sh 'chmod +x ./gradlew'
-                            sh './gradlew clean build -x test'
-                        } else {
-                            error "gradlew not found!"
-                        }
-                    }
+                    sh '''
+                        chmod +x ./gradlew
+                        ./gradlew clean build -x test
+                    '''
                 }
                 echo '✅ Backend 빌드 완료!'
             }
@@ -53,14 +49,11 @@ pipeline {
         stage('Build Frontend') {
             steps {
                 echo '=== Building Frontend (npm) ==='
-                script {
-                    // ✅ NodeJS Plugin 환경 경로 추가
-                    def nodeHome = tool name: 'NodeJS-LTS', type: 'NodeJSInstallation'
-                    env.PATH = "${nodeHome}/bin:${env.PATH}"
-                }
                 dir(FRONTEND_DIR) {
-                    sh 'npm install'
-                    sh 'npm run build'
+                    sh '''
+                        npm install
+                        npm run build
+                    '''
                 }
                 echo '✅ Frontend 빌드 완료!'
             }
@@ -112,23 +105,13 @@ pipeline {
                         sh """
                             ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
                                 set -e
-                                echo "📂 배포 디렉토리 이동 중..."
                                 cd ${EC2_PATH} || exit 1
-
-                                echo "🧹 기존 컨테이너 중지 및 정리..."
                                 docker compose down || true
-
-                                echo "🪣 최신 이미지 Pull 중..."
                                 export IMAGE_TAG=${IMAGE_TAG}
                                 docker compose pull
-
-                                echo "🚀 서비스 재시작..."
                                 docker compose up -d
-
-                                echo "🧽 불필요한 이미지 정리..."
                                 docker image prune -f
-
-                                echo "✅ 배포 완료! 서비스가 http://3.39.246.235:8080 에서 실행 중입니다."
+                                echo "✅ 배포 완료! http://3.39.246.235:8080"
                             '
                         """
                     }
