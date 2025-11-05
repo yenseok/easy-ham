@@ -140,21 +140,26 @@ EOF
     }
 
     post {
-        success {
-            echo '=== Pipeline 성공! ==='
-            echo "Backend: ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}"
-            echo "Frontend: ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}"
-        }
-        failure {
-            echo '=== Pipeline 실패! ==='
-            echo '로그를 확인하세요.'
-        }
-        always {
-            echo '=== Cleaning up workspace Docker images ==='
-            sh """
-                docker rmi ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} || true
-                docker rmi ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} || true
-            """
-        }
+    success {
+        echo '=== ✅ Pipeline 성공! ==='
+        echo "Backend: ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}"
+        echo "Frontend: ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}"
+        
+        echo '=== 🧹 Cleaning up workspace Docker images ==='
+        sh """
+            docker rmi ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} || true
+            docker rmi ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} || true
+        """
     }
+    failure {
+        echo '=== ❌ Pipeline 실패! ==='
+        echo '로그를 확인하세요.'
+        
+        // 실패 시에도 정리
+        sh """
+            docker rmi ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} || true
+            docker rmi ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} || true
+        """
+    }
+}
 }
