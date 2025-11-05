@@ -7,8 +7,8 @@ pipeline {
         BACKEND_DIR = "${PROJECT_DIR}/backend"
 
         // Docker Hub 정보
-        DOCKER_HUB_CREDENTIAL_ID = 'dockerhub-jenkins'  // 수정
-        DOCKER_HUB_USER = 'bonghyerin'  // 본인 계정 확인
+        DOCKER_HUB_CREDENTIAL_ID = 'dockerhub-jenkins'
+        DOCKER_HUB_USER = 'bonghyerin'
 
         // Docker 이미지 이름
         DOCKER_FRONTEND_IMAGE = "${DOCKER_HUB_USER}/prham-frontend"
@@ -17,6 +17,11 @@ pipeline {
         // 이미지 태그
         IMAGE_TAG = "${BUILD_NUMBER}"
 
+        // 배포 서버 정보
+        DEPLOY_SERVER_USER = 'ubuntu'
+        DEPLOY_SERVER_IP = '3.39.246.235'
+        DEPLOY_SERVER_CREDENTIAL_ID = 'ec2-deploy-key'
+        
         // 배포 경로
         DEPLOY_PATH = '/home/ubuntu/app'
     }
@@ -48,7 +53,7 @@ pipeline {
 
         stage('Build Frontend') {
             tools {
-                nodejs 'NodeJS-LTS'  // Jenkins에 NodeJS 설치 필요
+                nodejs 'NodeJS-LTS'
             }
             steps {
                 echo '=== Building Frontend (npm) ==='
@@ -108,9 +113,9 @@ pipeline {
         stage('Deploy to Server') {
             steps {
                 echo '=== Deploying on Remote Server ==='
-                sshagent(credentials: ['ec2-deploy-key']) {  // 수정
+                sshagent(credentials: [DEPLOY_SERVER_CREDENTIAL_ID]) {
                     sh """
-                        ssh -o StrictHostKeyChecking=no ubuntu@3.39.246.235 << EOF
+                        ssh -o StrictHostKeyChecking=no ${DEPLOY_SERVER_USER}@${DEPLOY_SERVER_IP} << 'EOF'
                             cd ${DEPLOY_PATH}
 
                             echo "IMAGE_TAG=${IMAGE_TAG}" > .env
@@ -120,13 +125,14 @@ pipeline {
                             docker pull ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}
 
                             echo "Starting services..."
-                            docker compose --env-file .env up -d backend frontend mysql redis
+                            docker compose --env-file .env up -d backend frontend mysql mongodb
 
                             echo "Cleaning up old images..."
                             docker image prune -f
 
+                            echo "Deployment complete!"
                             docker compose ps
-                        EOF
+EOF
                     """
                 }
             }
