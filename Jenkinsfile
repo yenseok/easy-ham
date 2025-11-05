@@ -17,11 +17,6 @@ pipeline {
         // 이미지 태그
         IMAGE_TAG = "${BUILD_NUMBER}"
 
-        // 배포 서버 정보
-        DEPLOY_SERVER_USER = 'ubuntu'
-        DEPLOY_SERVER_IP = '3.39.246.235'
-        DEPLOY_SERVER_CREDENTIAL_ID = 'ec2-deploy-key'
-        
         // 배포 경로
         DEPLOY_PATH = '/home/ubuntu/app'
     }
@@ -97,7 +92,6 @@ pipeline {
             steps {
                 echo '=== Pushing Images to Docker Hub ==='
                 script {
-                    // 방법 1: 호스트 로그인 세션 활용 (먼저 시도)
                     sh """
                         echo "=== Backend 이미지 푸시 중... ==="
                         docker push ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}
@@ -107,60 +101,36 @@ pipeline {
                         docker push ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}
                         docker push ${DOCKER_FRONTEND_IMAGE}:latest
                     """
-                    
-                    // 방법 2: 위가 안되면 아래 주석 해제하고 위 코드는 주석 처리
-                    /*
-                    withCredentials([usernamePassword(
-                        credentialsId: DOCKER_HUB_CREDENTIAL_ID,
-                        usernameVariable: 'DOCKER_USER',
-                        passwordVariable: 'DOCKER_PASS'
-                    )]) {
-                        sh '''
-                            echo "=== Docker Hub 로그인 중... ==="
-                            echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                            
-                            echo "=== Backend 이미지 푸시 중... ==="
-                            docker push ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}
-                            docker push ${DOCKER_BACKEND_IMAGE}:latest
-                            
-                            echo "=== Frontend 이미지 푸시 중... ==="
-                            docker push ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}
-                            docker push ${DOCKER_FRONTEND_IMAGE}:latest
-                            
-                            docker logout
-                        '''
-                    }
-                    */
                 }
                 echo '✅ Docker Hub에 이미지 푸시 완료!'
             }
         }
 
         stage('Deploy to Server') {
-    steps {
-        echo '=== Deploying on Local Server ==='
-        script {
-            sh """
-                cd ${DEPLOY_PATH}
-                
-                echo "IMAGE_TAG=${IMAGE_TAG}" > .env
-                
-                echo "Pulling latest images..."
-                docker pull ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}
-                docker pull ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}
-                
-                echo "Starting services..."
-                docker compose --env-file .env up -d backend frontend mysql mongodb
-                
-                echo "Cleaning up old images..."
-                docker image prune -f
-                
-                echo "✅ Deployment complete!"
-                docker compose ps
-            """
+            steps {
+                echo '=== Deploying on Local Server ==='
+                script {
+                    sh """
+                        cd ${DEPLOY_PATH}
+                        
+                        echo "IMAGE_TAG=${IMAGE_TAG}" > .env
+                        
+                        echo "Pulling latest images..."
+                        docker pull ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}
+                        docker pull ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}
+                        
+                        echo "Starting services..."
+                        docker compose --env-file .env up -d backend frontend mysql mongodb
+                        
+                        echo "Cleaning up old images..."
+                        docker image prune -f
+                        
+                        echo "✅ Deployment complete!"
+                        docker compose ps
+                    """
+                }
+            }
         }
-    }
-}
     }
 
     post {
