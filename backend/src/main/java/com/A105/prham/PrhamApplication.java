@@ -6,7 +6,9 @@ import org.springframework.data.mongodb.repository.config.EnableMongoRepositorie
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
-@EnableMongoRepositories
+@EnableMongoRepositories(basePackages = {
+		"com.A105.prham.notification"
+})
 @EnableJpaAuditing
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
 public class PrhamApplication {

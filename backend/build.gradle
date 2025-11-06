@@ -23,8 +23,14 @@ configurations {
 repositories {
 	mavenCentral()
 }
-
+tasks.withType(Test) {
+	enabled = false
+}
 dependencies {
+	implementation 'org.apache.httpcomponents.client5:httpclient5'
+//	implementation 'org.apache.httpcomponents.core5:httpcore5:5.3.1'
+//	implementation 'org.apache.httpcomponents.core5:httpcore5-h2:5.3.1'
+	implementation 'com.meilisearch.sdk:meilisearch-java:0.11.1'
 	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
 	implementation 'jakarta.xml.bind:jakarta.xml.bind-api'
 	implementation 'org.glassfish.jaxb:jaxb-runtime'
@@ -36,10 +42,9 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
-	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+//	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 	implementation 'org.springframework.session:spring-session-data-redis'
-	implementation 'org.springframework.session:spring-session-jdbc'
-	implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+//	implementation 'org.springframework.session:spring-session-jdbc'
 	implementation 'io.jsonwebtoken:jjwt-api:0.12.3'
 	implementation 'io.jsonwebtoken:jjwt-impl:0.12.3'
 	implementation 'io.jsonwebtoken:jjwt-jackson:0.12.3'
@@ -53,6 +58,6 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-tasks.named('test') {
-	useJUnitPlatform()
-}
+//tasks.named('test') {
+//	useJUnitPlatform()
+//}

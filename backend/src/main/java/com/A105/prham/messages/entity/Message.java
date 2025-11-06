@@ -27,7 +27,7 @@ public class Message {
     private String userId;
 
     @Column(name = "timestamp")
-    private String timestamp;
+    private Long timestamp;
 
     @Column(name = "original_text", columnDefinition = "TEXT")
     private String originalText;

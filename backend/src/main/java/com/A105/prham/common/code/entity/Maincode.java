@@ -1,10 +1,7 @@
-package com.A105.prham.common.domain;
+package com.A105.prham.common.code.entity;
 
-import com.A105.prham.user_notice.entity.UserNotice;
-import com.A105.prham.user_notice_like.entity.UserNoticeLike;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
-import lombok.Cleanup;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -33,4 +30,8 @@ public class Maincode {
 
     @Column(name = "is_used", nullable = false)
     private Boolean isUsed;
+
+    // 추가 (양방향 매핑)
+    @OneToMany(mappedBy = "maincode", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<Subcode> subcodes = new ArrayList<>();
 }

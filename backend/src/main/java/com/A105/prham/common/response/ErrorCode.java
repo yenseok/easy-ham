@@ -22,6 +22,7 @@ public enum ErrorCode {
     USER_NOT_FOUND(404, HttpStatus.NOT_FOUND, "해당 유저를 찾을 수 없습니다."),
     NOTICE_NOT_FOUND(404, HttpStatus.NOT_FOUND, "해당 공지사항을 찾을 수 없습니다."),
     FILE_NOT_FOUND(404, HttpStatus.NOT_FOUND, "파일을 찾을 수 없습니다."),
+    KEYWORD_NOT_FOUND(404, HttpStatus.NOT_FOUND, "해당 키워드를 찾을 수 없습니다."),
 
     //405 METHOD NOT ALLOWED
     METHOD_NOT_ALLOWED(405, HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 메소드입니다."),

@@ -2,8 +2,8 @@ package com.A105.prham.notice.entity;
 
 import com.A105.prham.channel.entity.Channel;
 import com.A105.prham.common.domain.BaseTimeEntity;
-import com.A105.prham.common.domain.Maincode;
-import com.A105.prham.common.domain.Subcode;
+import com.A105.prham.common.code.entity.Maincode;
+import com.A105.prham.common.code.entity.Subcode;
 import com.A105.prham.team.entity.Team;
 import com.A105.prham.user_notice.entity.UserNotice;
 import com.A105.prham.user_notice_like.entity.UserNoticeLike;

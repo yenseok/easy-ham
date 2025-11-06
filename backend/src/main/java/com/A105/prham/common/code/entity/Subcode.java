@@ -1,16 +1,10 @@
-package com.A105.prham.common.domain;
+package com.A105.prham.common.code.entity;
 
-import com.A105.prham.common.domain.Maincode;
-import com.A105.prham.user_notice.entity.UserNotice;
-import com.A105.prham.user_notice_like.entity.UserNoticeLike;
-import com.A105.prham.webhook.entity.Post;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -23,8 +17,10 @@ public class Subcode {
     @Column(name = "code_id")
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "upper_code_id")
+    @JsonIgnore
     private Maincode maincode;
 
     @Column(name = "sub_code", nullable = false, length = 10)

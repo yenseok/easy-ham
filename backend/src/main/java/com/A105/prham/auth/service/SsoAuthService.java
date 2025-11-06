@@ -1,8 +1,6 @@
 package com.A105.prham.auth.service;
 
-import com.A105.prham.auth.dto.response.AccessTokenResponse;
-import com.A105.prham.auth.dto.response.RefreshTokenResponse;
-import com.A105.prham.auth.dto.response.UserInfoResponse;
+import com.A105.prham.auth.dto.response.*;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
+import org.w3c.dom.*;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -37,6 +37,11 @@ public class SsoAuthService {
     @Value("${ssafy.sso.user-info-url}")
     private String userInfoUrl;
 
+    @Value("${ssafy.openAPI.key}")
+    private String ssafyOpenAPIKey;
+    @Value("${ssafy.openAPI.user-detail-url}")
+    private String userDetailUrl;
+
     private final RestTemplate restTemplate;
 
     public AccessTokenResponse getAccessToken(String code) {
@@ -44,7 +49,6 @@ public class SsoAuthService {
             HttpHeaders headers = new HttpHeaders() ;
             headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
             headers.setAccept(List.of(MediaType.APPLICATION_JSON));
-
             MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
             params.add("grant_type", "authorization_code");
             params.add("client_id", clientId);
@@ -81,6 +85,74 @@ public class SsoAuthService {
     private String preview(String s) {
         int max = 400;
         return s == null ? "null" : (s.length() > max ? s.substring(0, max) + "..." : s);
+    }
+
+
+    public DetailUserInfoResponse getDetailUserInfo(String accessToken, String userId) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(accessToken);
+            headers.setAccept(List.of(MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML)); // JSON 우선
+
+            HttpEntity<?> request = new HttpEntity<>(headers);
+
+            String url = String.format("%s/%s?apiKey=%s", userDetailUrl, userId, ssafyOpenAPIKey);
+            log.info("요청 URL: {}", url);
+
+            ResponseEntity<Map> response = restTemplate.exchange(
+                    url, HttpMethod.GET, request, Map.class);
+
+            Map<String, Object> body = response.getBody();
+            if (body == null) {
+                throw new IllegalStateException("응답 본문이 비어 있습니다.");
+            }
+
+            log.info("응답 본문: {}", body);
+
+            return DetailUserInfoResponse.builder()
+                    .name((String) body.get("name"))
+                    .email((String) body.get("email"))
+                    .edu((String) body.get("edu"))
+                    .entRegn((String) body.get("entRegn"))
+                    .retireYn((String) body.get("retireYn"))
+                    .clss((String) body.get("clss"))
+                    .build();
+
+        } catch (Exception e) {
+            log.error("사용자 상세 정보 조회 실패: {}", e.getMessage(), e);
+            throw new RuntimeException("SSAFY 사용자 상세 정보 조회 실패", e);
+        }
+    }
+
+    private String getTagValue(Document doc, String tag) {
+        NodeList list = doc.getElementsByTagName(tag);
+        if (list.getLength() > 0) {
+            return list.item(0).getTextContent();
+        }
+        return "";
+    }
+
+    public DetailUserInfoResponse getFullUserInfo(String accessToken) {
+        try {
+            // 1. 기본 유저 정보 조회 (userId, email, name 등)
+            UserInfoResponse basic = getUserInfo(accessToken);
+
+            // 2. 상세 정보 조회 (edu, entRegn 등)
+            DetailUserInfoResponse detail = getDetailUserInfo(accessToken, basic.getUserId());
+            log.info(detail.getEdu(),detail.getEntRegn());
+            // 3. 두 응답을 병합해서 반환
+            return DetailUserInfoResponse.builder()
+                    .userId(basic.getUserId())
+                    .email(basic.getEmail())
+                    .name(basic.getName())
+                    .edu(detail.getEdu())
+                    .entRegn(detail.getEntRegn())
+                    .build();
+
+        } catch (Exception e) {
+            log.error("전체 사용자 정보 조회 실패: {}", e.getMessage(), e);
+            throw new RuntimeException("SSAFY 전체 사용자 정보 조회 실패", e);
+        }
     }
 
 
