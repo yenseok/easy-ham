@@ -14,7 +14,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  ArrowLeft,
   User,
   Camera,
   GraduationCap,
@@ -24,6 +23,7 @@ import {
   Save,
   X,
 } from "lucide-react";
+import { PageLayout } from "@/components/layouts/PageLayout";
 import {
   CAMPUS_OPTIONS,
   JOB_OPTIONS,
@@ -137,28 +137,7 @@ export function MyPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* 헤더 */}
-      <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
-        <button
-          onClick={() => navigate("/dashboard")}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-          <span style={{ fontWeight: 500 }}>대시보드로 돌아가기</span>
-        </button>
-
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-[var(--brand-orange)] flex items-center justify-center">
-            <User className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-xl" style={{ fontWeight: 700 }}>
-            편리햄!
-          </span>
-        </div>
-      </header>
-
-      {/* 메인 컨텐츠 */}
+    <PageLayout>
       <div className="max-w-4xl mx-auto p-8">
         <div className="mb-6">
           <h1 className="text-3xl mb-2" style={{ fontWeight: 700 }}>
@@ -504,6 +483,6 @@ export function MyPage() {
           </div>
         </div>
       </div>
-    </div>
+    </PageLayout>
   );
 }

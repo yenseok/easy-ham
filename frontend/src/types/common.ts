@@ -3,10 +3,9 @@
  */
 
 export interface ApiResponse<T> {
-  success: boolean;
+  status: number;
+  message: string;
   data: T;
-  message?: string;
-  error?: string;
 }
 
 export interface PaginationParams {

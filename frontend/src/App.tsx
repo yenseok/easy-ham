@@ -79,8 +79,8 @@ export default function App() {
         {/* Header */}
         <header className="flex items-center px-8 py-6">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-[var(--brand-orange)] flex items-center justify-center">
-              <span className="text-xl">🐹</span>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center">
+              <img src="/images/logo/logo.png" alt="logo" className="w-full h-full object-contain" />
             </div>
             <span className="text-2xl" style={{ fontWeight: 700 }}>편리햄!</span>
           </div>

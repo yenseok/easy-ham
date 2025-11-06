@@ -1,27 +1,58 @@
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, Lightbulb } from 'lucide-react';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Lightbulb } from "lucide-react";
+import { getSsoLoginUrl } from "@/services/api/auth";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { toast } from "sonner";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuthStore();
 
-  const handleSSAFYLogin = () => {
-    // TODO: SSAFY SSO 연동
-    // 1. SSO 팝업 열림
-    // 2. 백엔드가 토큰 받아서 유저 확인
-    // 3. 백엔드 응답에 따라 분기
+  const handleSSAFYLogin = async () => {
+    setIsLoading(true);
+    try {
+      // 1. SSO 로그인 URL 받기
+      const response = await getSsoLoginUrl();
 
-    // 와이어프레임용: 항상 최초 로그인으로 간주
-    const isFirstLogin = true;
-
-    // 실제로는 백엔드 응답을 기다린 후:
-    setTimeout(() => {
-      if (isFirstLogin) {
-        navigate('/signup');
-      } else {
-        navigate('/dashboard');
+      if (response.status !== 200) {
+        toast.error("SSO URL 조회 실패");
+        setIsLoading(false);
+        return;
       }
-    }, 500);
+
+      const ssoBaseUrl = response.data;
+
+      // 2. 쿼리 파라미터 추가
+      const params = new URLSearchParams({
+        client_id:
+          import.meta.env.VITE_SSO_CLIENT_ID ||
+          (() => {
+            throw new Error(
+              "VITE_SSO_CLIENT_ID is not defined in environment variables"
+            );
+          })(),
+        redirect_uri:
+          import.meta.env.VITE_SSO_REDIRECT_URI ||
+          (() => {
+            throw new Error(
+              "VITE_SSO_REDIRECT_URI is not defined in environment variables"
+            );
+          })(),
+        response_type: "code",
+      });
+
+      const loginUrl = `${ssoBaseUrl}?${params.toString()}`;
+
+      // 3. SSAFY SSO 페이지로 리다이렉트
+      window.location.href = loginUrl;
+    } catch (error) {
+      console.error("SSO 로그인 실패:", error);
+      toast.error("로그인 중 오류가 발생했습니다");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -35,14 +66,19 @@ export function LoginPage() {
 
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-12">
-            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-              <span className="text-2xl">🐹</span>
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center">
+              <img src="/images/logo/logo.png" alt="logo" className="w-full h-full object-contain" />
             </div>
-            <span className="text-3xl" style={{ fontWeight: 700 }}>편리햄!</span>
+            <span className="text-3xl" style={{ fontWeight: 700 }}>
+              편리햄!
+            </span>
           </div>
 
           <div className="space-y-6 max-w-md">
-            <h1 className="text-5xl" style={{ fontWeight: 700, lineHeight: 1.2 }}>
+            <h1
+              className="text-5xl"
+              style={{ fontWeight: 700, lineHeight: 1.2 }}
+            >
               공지사항 관리,
               <br />
               이제 쉽게 시작하세요
@@ -71,7 +107,9 @@ export function LoginPage() {
             </div>
             <div>
               <h3 style={{ fontWeight: 600 }}>실시간 알림</h3>
-              <p className="text-sm text-white/80">중요한 공지를 놓치지 마세요</p>
+              <p className="text-sm text-white/80">
+                중요한 공지를 놓치지 마세요
+              </p>
             </div>
           </div>
           <div className="flex items-start gap-3">
@@ -91,7 +129,7 @@ export function LoginPage() {
         <div className="w-full max-w-md space-y-8">
           {/* Back Button */}
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate("/")}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -100,10 +138,12 @@ export function LoginPage() {
 
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center gap-2 justify-center">
-            <div className="w-10 h-10 rounded-xl bg-[var(--brand-orange)] flex items-center justify-center">
-              <span className="text-xl">🐹</span>
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center">
+              <img src="/images/logo/logo.png" alt="logo" className="w-full h-full object-contain" />
             </div>
-            <span className="text-2xl" style={{ fontWeight: 700 }}>편리햄!</span>
+            <span className="text-2xl" style={{ fontWeight: 700 }}>
+              편리햄!
+            </span>
           </div>
 
           <div className="space-y-2 text-center">
@@ -119,10 +159,13 @@ export function LoginPage() {
           <div className="space-y-8">
             <Button
               onClick={handleSSAFYLogin}
-              className="w-full bg-[var(--brand-orange)] hover:bg-[var(--brand-orange-dark)] text-white py-7"
+              disabled={isLoading}
+              className="w-full bg-[var(--brand-orange)] hover:bg-[var(--brand-orange-dark)] text-white py-7 disabled:bg-gray-400 disabled:cursor-not-allowed"
               style={{ fontWeight: 600 }}
             >
-              <span className="text-lg">SSAFY SSO로 로그인</span>
+              <span className="text-lg">
+                {isLoading ? "SSAFY SSO로 이동 중..." : "SSAFY SSO로 로그인"}
+              </span>
             </Button>
 
             <div className="text-center space-y-3">
@@ -130,7 +173,10 @@ export function LoginPage() {
                 SSAFY 교육생만 이용 가능합니다
               </p>
               <div className="pt-4 px-6 py-4 bg-gray-50 rounded-lg space-y-2">
-                <p className="text-xs text-gray-600 flex items-center gap-1.5" style={{ fontWeight: 500 }}>
+                <p
+                  className="text-xs text-gray-600 flex items-center gap-1.5"
+                  style={{ fontWeight: 500 }}
+                >
                   <Lightbulb className="w-3.5 h-3.5" />
                   최초 로그인 시
                 </p>

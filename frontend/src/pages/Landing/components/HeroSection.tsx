@@ -7,14 +7,14 @@ interface HeroSectionProps {
 
 export function HeroSection({ onLoginClick, onScrollToFeatures }: HeroSectionProps) {
   return (
-    <section className="min-h-screen flex flex-col bg-gradient-to-br from-white via-[#FFF5EE] to-[#FFE8D6] py-4">
+    <section className="min-h-screen flex flex-col bg-gradient-to-br from-white via-[#FFF5EE] to-[#FFE8D6] p-12">
       {/* Header */}
-      <header className="flex items-center px-4 sm:px-6 md:px-8 py-6">
+      <header className="flex items-center">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-[var(--brand-orange)] flex items-center justify-center">
-            <span className="text-xl">🐹</span>
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center">
+            <img src="/images/logo/logo.png" alt="logo" className="w-full h-full object-contain" />
           </div>
-          <span className="text-2xl" style={{ fontWeight: 700 }}>편리햄!</span>
+          <span className="text-3xl text-black" style={{ fontWeight: 700 }}>편리햄!</span>
         </div>
       </header>
 
@@ -60,7 +60,7 @@ export function HeroSection({ onLoginClick, onScrollToFeatures }: HeroSectionPro
       </div>
 
       {/* Scroll Indicator */}
-      <div className="pb-12 flex justify-center">
+      <div className="flex justify-center">
         <button
           onClick={onScrollToFeatures}
           className="animate-bounce cursor-pointer hover:opacity-70 transition-opacity"

@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { ProtectedRoute } from "./ProtectedRoute";
 import LandingPage from "../pages/Landing";
 import { LoginPage } from "../pages/Login";
+import { CallbackPage } from "../pages/Callback";
 import { SignUpPage } from "../pages/SignUp";
 import DashboardPage from "../pages/Dashboard";
 import CalendarPage from "../pages/Calendar";
@@ -15,6 +16,10 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     element: <LoginPage />,
+  },
+  {
+    path: "/callback",
+    element: <CallbackPage />,
   },
   {
     path: "/signup",
