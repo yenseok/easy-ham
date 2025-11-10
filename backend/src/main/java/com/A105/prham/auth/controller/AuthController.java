@@ -1,5 +1,7 @@
 package com.A105.prham.auth.controller;
 
+import java.util.Map;
+
 import com.A105.prham.auth.dto.request.RefreshTokenRequest;
 import com.A105.prham.auth.dto.response.AccessTokenResponse;
 import com.A105.prham.auth.dto.response.DetailUserInfoResponse;
@@ -12,9 +14,14 @@ import com.A105.prham.common.response.ErrorCode;
 import com.A105.prham.common.response.SuccessCode;
 import com.A105.prham.user.entity.User;
 import com.A105.prham.user.service.UserService;
+
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -43,13 +50,16 @@ public class AuthController {
     }
 
     @GetMapping("/sso/callback")
-    public ApiResponseDto<LoginResponse> callback(@RequestParam("code") String code) {
+    public ApiResponseDto<LoginResponse> callback(@RequestParam("code") String code, HttpServletResponse response) {
         try {
             // 1.액세스 토큰 획득
             AccessTokenResponse tokenResponse = ssoAuthService.getAccessToken(code);
 
             // 2.사용자 기본 + 상세 정보 조회 (합쳐진 메서드)
             DetailUserInfoResponse userInfo = ssoAuthService.getFullUserInfo(tokenResponse.getAccessToken());
+
+            // token cookie에 저장
+            addTokenCookies(response, tokenResponse);
 
             // 3.로그인 응답 DTO 구성
             LoginResponse loginResponse = LoginResponse.builder()
@@ -82,8 +92,86 @@ public class AuthController {
 
     // 테스트용 토큰 갱신 API
     @PostMapping("/refresh")
-    public ApiResponseDto<RefreshTokenResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
-        RefreshTokenResponse response = ssoAuthService.refreshToken(request.getRefreshToken());
-        return ApiResponseDto.success(SuccessCode.REFRESH_SUCCESS, response);
+    public ApiResponseDto<RefreshTokenResponse> refreshToken(@RequestBody RefreshTokenRequest request, HttpServletResponse response) {
+        RefreshTokenResponse refreshResponse = ssoAuthService.refreshToken(request.getRefreshToken());
+
+        // 새 토큰을 쿠키에도 저정
+        AccessTokenResponse tokenResponse = AccessTokenResponse.builder()
+            .accessToken(refreshResponse.getAccessToken())
+            .refreshToken(refreshResponse.getRefreshToken())
+            .build();
+        addTokenCookies(response, tokenResponse);
+        return ApiResponseDto.success(SuccessCode.REFRESH_SUCCESS, refreshResponse);
+    }
+
+    @PostMapping("/logout")
+    public ApiResponseDto<SuccessCode> logout(HttpServletResponse response) {
+        clearTokenCookies(response);
+        return ApiResponseDto.success(SuccessCode.SUCCESS);
+    }
+
+    // 토큰을 받아서 쿠키에 저장 test용
+    @Profile("local")
+    @PostMapping("/test/set-cookie")
+    public ApiResponseDto<Void> setTestCookie(@RequestBody Map<String, String> request, HttpServletResponse response) {
+        String accessToken = request.get("accessToken");
+        String refreshToken = request.get("refreshToken");
+
+        if (accessToken == null) {
+            return ApiResponseDto.fail(ErrorCode.BAD_REQUEST);
+        }
+
+        Cookie accessTokenCookie = createCookie("accessToken", accessToken, "/", 60*60);
+        response.addCookie(accessTokenCookie);
+
+        if (refreshToken != null) {
+            Cookie refreshTokenCookie = createCookie("refreshToken", refreshToken, "/api/v1/auth/refresh", 60*60*24*7);
+        }
+        return ApiResponseDto.success(SuccessCode.SUCCESS);
+    }
+
+    //내가 만든 쿠키~
+    // 토큰을 httponly 쿠키에 저장
+    private void addTokenCookies(HttpServletResponse response, AccessTokenResponse tokenResponse) {
+        // access token cookie
+        Cookie accessTokenCookie = createCookie(
+            "accessToken",
+            tokenResponse.getAccessToken(),
+            "/",
+            60*60
+        );
+        response.addCookie(accessTokenCookie);
+
+        Cookie refreshTokenCookie = createCookie(
+            "refreshToken",
+            tokenResponse.getRefreshToken(),
+            "/api/v1/auth/refresh",
+            60*60*24*7
+        );
+        response.addCookie(refreshTokenCookie);
+    }
+
+    //httponly cookie 생성
+    private Cookie createCookie(String name, String value, String path, int maxAge) {
+        Cookie cookie = new Cookie(name, value);
+        cookie.setHttpOnly(true);
+        cookie.setSecure(true);
+        cookie.setPath(path);
+        cookie.setMaxAge(maxAge);
+        cookie.setAttribute("SameSite", "Lax");
+        return cookie;
+    }
+
+    //token cookie 삭제
+    private void clearTokenCookies(HttpServletResponse response) {
+        Cookie accesTokenCookie = new Cookie("accessToken", null);
+        accesTokenCookie.setMaxAge(0);
+        accesTokenCookie.setPath("/");
+        response.addCookie(accesTokenCookie);
+
+        Cookie refreshTokenCookie = new Cookie("refreshToken", null);
+        refreshTokenCookie.setMaxAge(0);
+        refreshTokenCookie.setPath("/api/v1/auth/refresh");
+        response.addCookie(refreshTokenCookie);
     }
 }

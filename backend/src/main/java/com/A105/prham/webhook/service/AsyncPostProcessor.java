@@ -102,7 +102,7 @@ public class AsyncPostProcessor {
 			// llm에서 분류 완료된 공지사항만 전송
 			if (savedPost.getStatus() == PostStatus.PROCESSED) {
 								ssePostService.sendNewPost(savedPost);
-				log.info("sse: 새 공지사항 전송 완료", savedPost.getPostId());
+				log.info("sse: 새 공지사항 전송 완료, postId={}", savedPost.getPostId());
 			}
 		} catch (Exception e) {
 			log.error("[비동기] post 처리 실패: {}", postId, e);
