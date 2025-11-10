@@ -20,7 +20,7 @@ pipeline {
 
         EC2_USER = 'ubuntu'
         EC2_HOST = '3.39.246.235'
-        EC2_PATH = '/home/ubuntu/app'
+        EC2_PATH = '/home/ubuntu/app/release'
         SSH_CREDENTIAL_ID = 'ec2-deploy-key'
     }
 
@@ -126,7 +126,7 @@ pipeline {
                 script {
                     sshagent(credentials: ["${SSH_CREDENTIAL_ID}"]) {
                         sh """
-                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} '
+                            ssh -o StrictHostKeyChecking=no ${EC2_USER}@${EC2_HOST} "
                                 set -e
                                 cd ${EC2_PATH} || exit 1
                                 docker compose down || true
@@ -134,8 +134,8 @@ pipeline {
                                 docker compose pull
                                 docker compose up -d
                                 docker image prune -f
-                                echo "✅ 배포 완료! https://pyeonriham.site"
-                            '
+                                echo '✅ 배포 완료! https://pyeonriham.site'
+                            "
                         """
                     }
                 }
