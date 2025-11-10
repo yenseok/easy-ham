@@ -1,5 +1,10 @@
 package com.A105.prham.webhook.service;
 
+import java.util.List;
+
+import com.A105.prham.mattermost.dto.MattermostTeam;
+import com.A105.prham.mattermost.service.MattermostAdminService;
+import com.A105.prham.messages.service.MattermostService;
 import com.A105.prham.webhook.dto.MattermostWebhookDto;
 import com.A105.prham.webhook.entity.Post;
 import com.A105.prham.webhook.entity.PostStatus;
@@ -18,6 +23,8 @@ public class WebhookIngestionService {
 
 	private final PostRepository postRepository;
 	private final ApplicationEventPublisher eventPublisher; // 이벤트 발행기
+	private final MattermostService mattermostService;
+	private final MattermostAdminService mattermostAdminService;
 
 	/**
 	 * Mattermost 웹훅 페이로드를 받아 DB에 PENDING 상태로 저장하고
@@ -31,6 +38,9 @@ public class WebhookIngestionService {
 			return;
 		}
 
+		//팀 명 추가
+		String teamName = getTeamName(payload.getTeamId(), payload.getUserId());
+
 		// 2. 최소 정보로 Post Entity 생성 (PENDING 상태)
 		Post post = new Post();
 		post.setPostId(payload.getPostId());
@@ -43,6 +53,9 @@ public class WebhookIngestionService {
 		post.setChannelName(payload.getChannelName());
 		// 3.  원본 File ID 문자열 저장 (비동기 프로세서가 이 값을 사용)
 		post.setFileIds(payload.getFileIds());
+		//팀 정보
+		post.setTeamId(payload.getTeamId());
+		post.setTeamName(teamName);
 
 		// 4. DB에 저장
 		Post savedPost = postRepository.save(post);
@@ -51,5 +64,22 @@ public class WebhookIngestionService {
 		// 5. 비동기 처리를 위해 이벤트 발행
 		eventPublisher.publishEvent(new PostReceivedEvent(this, savedPost.getId()));
 		log.info("Published PostReceivedEvent for DB ID: {}", savedPost.getId());
+	}
+
+	//팀 아이디로 팀명조회
+	private String getTeamName(String teamId, String userId) {
+		try {
+			List<MattermostTeam> teams = mattermostAdminService.getTeamsByUserId(userId);
+
+			return teams.stream()
+				.filter(team -> teamId.equals(team.getId()))
+				.map(MattermostTeam::getDisplayName)
+				.findFirst()
+				.orElseGet(() -> {
+					return "unknow teamname";
+				});
+		} catch (Exception e) {
+			return "unknown teamname";
+		}
 	}
 }
