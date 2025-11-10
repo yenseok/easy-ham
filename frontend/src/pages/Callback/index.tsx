@@ -53,7 +53,7 @@ export function CallbackPage() {
 
         const { data } = response;
 
-        console.log("SSO 콜백 응답 데이터:", data);
+        // console.log("SSO 콜백 응답 데이터:", data);
 
         // 3. 응답 데이터 검증
         if (!data?.token?.access_token || !data?.token?.refresh_token) {

@@ -1,4 +1,5 @@
 import { User, CalendarIcon, Edit3 } from 'lucide-react';
+import { formatExactDateTime } from '@/utils/dateFormatter';
 
 interface MessageMetaProps {
   channel: string;
@@ -35,14 +36,14 @@ export const MessageMeta = ({
         <div className="flex items-center gap-2">
           <CalendarIcon className="w-4 h-4 text-gray-500" />
           <span className="font-medium">작성일:</span>
-          <span>{createdAt}</span>
+          <span>{formatExactDateTime(createdAt)}</span>
         </div>
 
         {createdAt !== updatedAt && (
           <div className="flex items-center gap-2">
             <Edit3 className="w-4 h-4 text-gray-500" />
             <span className="font-medium">수정일:</span>
-            <span>{updatedAt}</span>
+            <span>{formatExactDateTime(updatedAt)}</span>
           </div>
         )}
       </div>

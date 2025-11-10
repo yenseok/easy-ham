@@ -7,10 +7,11 @@ export type Category = "학사" | "취업";
 export type Subcategory = "할일" | "특강" | "정보" | "행사";
 
 export interface Attachment {
-  id: number;
-  type: "image" | "file";
+  id: string; // 백엔드 API에서 string으로 반환
+  type: "image" | "file" | "pdf" | "excel";
   name: string;
   url: string;
+  mimeType?: string;
   size?: number;
 }
 

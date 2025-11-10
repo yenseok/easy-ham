@@ -1,408 +1,284 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  User,
-  Camera,
-  GraduationCap,
-  Briefcase,
-  Code,
-  Bell,
-  Save,
-  X,
-} from "lucide-react";
+import { Briefcase, Code, Save, X, LogOut } from "lucide-react";
 import { PageLayout } from "@/components/layouts/PageLayout";
-import {
-  CAMPUS_OPTIONS,
-  JOB_OPTIONS,
-  TECH_STACK_OPTIONS,
-} from "@/constants/options";
+import { getUserProfile, updateUserProfile, deleteUser } from "@/services/api/auth";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { getPositions, getSkills } from "@/services/api/codes";
+import type { UserProfileResponse } from "@/services/api/auth";
+import type { Position, Skill } from "@/services/api/codes";
+
+const styles = `
+  #classroom::-webkit-outer-spin-button,
+  #classroom::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  #classroom {
+    -moz-appearance: textfield;
+  }
+`;
 
 export function MyPage() {
   const navigate = useNavigate();
+  const logout = useAuthStore((state) => state.logout);
 
-  // 프로필 정보 상태
-  const [nickname, setNickname] = useState("김싸피");
-  const [profileImage, setProfileImage] = useState("");
-  const [campus, setCampus] = useState("서울");
-  const [classNumber, setClassNumber] = useState("1");
-  const [selectedJobs, setSelectedJobs] = useState<string[]>([
-    "백엔드 개발자",
-    "풀스택 개발자",
-  ]);
+  // 프로필 정보
+  const [userProfile, setUserProfile] = useState<UserProfileResponse | null>(
+    null
+  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  // 구독 키워드 상태
-  const [subscribedKeywords, setSubscribedKeywords] = useState<string[]>([
-    "프로젝트",
-    "취업",
-    "특강",
-  ]);
-  const [customKeyword, setCustomKeyword] = useState("");
+  // 수정 가능한 상태
+  const [classroom, setClassroom] = useState("");
+  const [selectedPositionIds, setSelectedPositionIds] = useState<number[]>([]);
+  const [selectedSkillIds, setSelectedSkillIds] = useState<number[]>([]);
 
-  // 기술 스택 상태
-  const [selectedTechStack, setSelectedTechStack] = useState<string[]>([
-    "Java",
-    "Spring",
-    "MySQL",
-    "React",
-  ]);
-  const [customTech, setCustomTech] = useState("");
+  // 초기 상태 저장 (변경사항 감지용)
+  const [initialClassroom, setInitialClassroom] = useState("");
+  const [initialPositionIds, setInitialPositionIds] = useState<number[]>([]);
+  const [initialSkillIds, setInitialSkillIds] = useState<number[]>([]);
 
-  const availableKeywords = [
-    "프로젝트",
-    "취업",
-    "특강",
-    "공지",
-    "행사",
-    "MT",
-    "스터디",
-    "멘토링",
-    "채용",
-    "코딩테스트",
-    "알고리즘",
-    "면접",
-    "포트폴리오",
-    "제출",
-    "발표",
-  ];
+  // 코드 데이터
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
 
-  // 희망 직무 토글
-  const handleToggleJob = (job: string) => {
-    if (selectedJobs.includes(job)) {
-      setSelectedJobs(selectedJobs.filter((j) => j !== job));
+  // 데이터 로드
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+
+        // 포지션, 기술, 프로필 목록 조회
+        const [positionsRes, skillsRes, profileRes] = await Promise.all([
+          getPositions(),
+          getSkills(),
+          getUserProfile(),
+        ]);
+
+        // 포지션 설정
+        let positionsData: Position[] = [];
+        if (positionsRes.data?.positions) {
+          positionsData = positionsRes.data.positions;
+          setPositions(positionsData);
+        }
+
+        // 기술 설정
+        let skillsData: Skill[] = [];
+        if (skillsRes.data?.skills) {
+          skillsData = skillsRes.data.skills;
+          setSkills(skillsData);
+        }
+
+        // 사용자 프로필 설정
+        if (profileRes.data) {
+          setUserProfile(profileRes.data);
+          const classroomValue = profileRes.data.classroom.toString();
+          setClassroom(classroomValue);
+          setInitialClassroom(classroomValue);
+
+          // 포지션 ID 매핑
+          if (profileRes.data.userPositions && positionsData.length > 0) {
+            const positionIds = profileRes.data.userPositions
+              .map(
+                (posName) => positionsData.find((p) => p.name === posName)?.id
+              )
+              .filter((id): id is number => id !== undefined);
+            setSelectedPositionIds(positionIds);
+            setInitialPositionIds(positionIds);
+          }
+
+          // 기술 ID 매핑
+          if (profileRes.data.userSkills && skillsData.length > 0) {
+            const skillIds = profileRes.data.userSkills
+              .map(
+                (skillName) => skillsData.find((s) => s.name === skillName)?.id
+              )
+              .filter((id): id is number => id !== undefined);
+            setSelectedSkillIds(skillIds);
+            setInitialSkillIds(skillIds);
+          }
+        }
+      } catch (error) {
+        console.error("데이터 로드 실패:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
+  // 포지션 토글
+  const handleTogglePosition = (positionId: number) => {
+    if (selectedPositionIds.includes(positionId)) {
+      setSelectedPositionIds(
+        selectedPositionIds.filter((id) => id !== positionId)
+      );
     } else {
-      setSelectedJobs([...selectedJobs, job]);
+      setSelectedPositionIds([...selectedPositionIds, positionId]);
     }
   };
 
-  // 기술 스택 추가
-  const handleAddTech = (tech: string) => {
-    if (!selectedTechStack.includes(tech)) {
-      setSelectedTechStack([...selectedTechStack, tech]);
+  // 기술 추가/제거
+  const handleAddSkill = (skillId: number) => {
+    if (!selectedSkillIds.includes(skillId)) {
+      setSelectedSkillIds([...selectedSkillIds, skillId]);
     }
   };
 
-  const handleRemoveTech = (tech: string) => {
-    setSelectedTechStack(selectedTechStack.filter((t) => t !== tech));
+  const handleRemoveSkill = (skillId: number) => {
+    setSelectedSkillIds(selectedSkillIds.filter((id) => id !== skillId));
   };
 
-  const handleAddCustomTech = () => {
-    if (customTech.trim() && !selectedTechStack.includes(customTech.trim())) {
-      setSelectedTechStack([...selectedTechStack, customTech.trim()]);
-      setCustomTech("");
+  // 변경사항 감지
+  const hasChanges =
+    classroom !== initialClassroom ||
+    selectedPositionIds.length !== initialPositionIds.length ||
+    selectedPositionIds.some((id) => !initialPositionIds.includes(id)) ||
+    selectedSkillIds.length !== initialSkillIds.length ||
+    selectedSkillIds.some((id) => !initialSkillIds.includes(id));
+
+  // 저장
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+
+      const updateData = {
+        classroom: parseInt(classroom),
+        positionIds: selectedPositionIds,
+        skillIds: selectedSkillIds,
+      };
+
+      const response = await updateUserProfile(updateData);
+      console.log("[MyPage] 저장 응답:", response);
+
+      // 저장 성공 후 초기값 업데이트
+      setInitialClassroom(classroom);
+      setInitialPositionIds(selectedPositionIds);
+      setInitialSkillIds(selectedSkillIds);
+
+      alert("프로필이 저장되었습니다!");
+      // 대시보드로 이동
+      navigate("/dashboard");
+    } catch (error) {
+      console.error("저장 실패:", error);
+      alert("프로필 저장에 실패했습니다.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  // 구독 키워드 추가
-  const handleAddKeyword = (keyword: string) => {
-    if (
-      subscribedKeywords.length < 5 &&
-      !subscribedKeywords.includes(keyword)
-    ) {
-      setSubscribedKeywords([...subscribedKeywords, keyword]);
+  // 회원탈퇴
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      "정말 회원탈퇴 하시겠습니까? 이 작업은 되돌릴 수 없습니다."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      await deleteUser();
+      console.log("[MyPage] 회원탈퇴 성공");
+
+      // 로그아웃 처리
+      logout();
+
+      alert("회원탈퇴가 완료되었습니다.");
+      // 로그인 페이지로 이동
+      navigate("/login");
+    } catch (error) {
+      console.error("회원탈퇴 실패:", error);
+      alert("회원탈퇴에 실패했습니다.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
-  const handleRemoveKeyword = (keyword: string) => {
-    setSubscribedKeywords(subscribedKeywords.filter((k) => k !== keyword));
-  };
+  if (isLoading) {
+    return (
+      <PageLayout>
+        <div className="max-w-4xl mx-auto p-8 text-center">
+          <p>로딩 중...</p>
+        </div>
+      </PageLayout>
+    );
+  }
 
-  const handleAddCustomKeyword = () => {
-    if (
-      customKeyword.trim() &&
-      subscribedKeywords.length < 5 &&
-      !subscribedKeywords.includes(customKeyword.trim())
-    ) {
-      setSubscribedKeywords([...subscribedKeywords, customKeyword.trim()]);
-      setCustomKeyword("");
-    }
-  };
-
-  // 저장 핸들러
-  const handleSave = () => {
-    // TODO: 백엔드에 저장
-    alert("프로필이 저장되었습니다!");
-  };
+  if (!userProfile) {
+    return (
+      <PageLayout>
+        <div className="max-w-4xl mx-auto p-8 text-center">
+          <p>사용자 정보를 불러올 수 없습니다.</p>
+        </div>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>
+      <style>{styles}</style>
       <div className="max-w-4xl mx-auto p-8">
-        <div className="mb-6">
-          <h1 className="text-3xl mb-2" style={{ fontWeight: 700 }}>
-            마이페이지
+        <div className="mb-8">
+          <h1 className="text-3xl" style={{ fontWeight: 700 }}>
+            안녕하세요,{" "}
+            <span className="text-[var(--brand-orange)]">
+              {userProfile.name}
+            </span>
+            님
           </h1>
-          <p className="text-gray-600">
-            회원 정보를 수정하고 알림 설정을 관리하세요
-          </p>
         </div>
 
         <div className="space-y-6">
-          {/* 프로필 정보 */}
+          {/* 회원정보 */}
           <Card className="p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <User className="w-5 h-5 text-[var(--brand-orange)]" />
-              <h2 className="text-xl" style={{ fontWeight: 700 }}>
-                프로필 정보
-              </h2>
+            <h2 className="text-xl mb-2" style={{ fontWeight: 700 }}>
+              회원정보
+            </h2>
+
+            {/* 이메일 - 읽기 전용 */}
+            <div className="flex items-center gap-4 mb-1">
+              <span className="text-sm text-gray-600 w-16">이메일</span>
+              <p className="text-sm">{userProfile.email}</p>
             </div>
 
-            <div className="space-y-6">
-              {/* 프로필 사진 */}
-              <div>
-                <Label className="mb-2 block">프로필 사진</Label>
-                <div className="flex items-center gap-4">
-                  <div className="w-24 h-24 rounded-full bg-[var(--brand-orange)] flex items-center justify-center relative group cursor-pointer">
-                    {profileImage ? (
-                      <img
-                        src={profileImage}
-                        alt="Profile"
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    ) : (
-                      <User className="w-12 h-12 text-white" />
-                    )}
-                    <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Camera className="w-8 h-8 text-white" />
-                    </div>
-                  </div>
-                  <div>
-                    <Button variant="outline" size="sm">
-                      사진 업로드
-                    </Button>
-                    <p className="text-xs text-gray-500 mt-2">
-                      JPG, PNG 형식 (최대 5MB)
-                    </p>
-                  </div>
-                </div>
-              </div>
+            {/* 소속 정보 한 줄 */}
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-600 w-16 mr-2">소속</span>
+              <div className="flex items-center gap-1 flex-1">
+                {/* 캠퍼스 */}
+                <span className="text-sm text-gray-700">
+                  {userProfile.campus}
+                </span>
 
-              {/* 닉네임 */}
-              <div>
-                <Label htmlFor="nickname" className="mb-2 block">
-                  닉네임
-                </Label>
-                <Input
-                  id="nickname"
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  placeholder="닉네임을 입력하세요"
-                  className="max-w-md"
-                />
-              </div>
-            </div>
-          </Card>
+                {/* 기수 */}
+                <span className="text-sm text-gray-700 mr-1">
+                  {userProfile.generation}기
+                </span>
 
-          {/* 캠퍼스 및 반 정보 */}
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <GraduationCap className="w-5 h-5 text-[var(--brand-orange)]" />
-              <h2 className="text-xl" style={{ fontWeight: 700 }}>
-                캠퍼스 및 반 정보
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 max-w-md">
-              <div>
-                <Label htmlFor="campus" className="mb-2 block">
-                  캠퍼스
-                </Label>
-                <Select value={campus} onValueChange={setCampus}>
-                  <SelectTrigger id="campus">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CAMPUS_OPTIONS.map((option) => (
-                      <SelectItem key={option} value={option}>
-                        {option}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="class" className="mb-2 block">
-                  반
-                </Label>
-                <Input
-                  id="class"
-                  type="number"
-                  value={classNumber}
-                  onChange={(e) => setClassNumber(e.target.value)}
-                  placeholder="반 번호"
-                  min="1"
-                  max="99"
-                />
-              </div>
-            </div>
-          </Card>
-
-          {/* 희망 직무 */}
-          <Card className="p-6">
-            <div className="flex items-center gap-2 mb-6">
-              <Briefcase className="w-5 h-5 text-[var(--brand-orange)]" />
-              <h2 className="text-xl" style={{ fontWeight: 700 }}>
-                희망 직무
-              </h2>
-            </div>
-
-            <div className="space-y-4">
-              {/* 선택된 직무 */}
-              {selectedJobs.length > 0 && (
-                <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg">
-                  {selectedJobs.map((job) => (
-                    <Badge
-                      key={job}
-                      className="bg-[var(--brand-orange)] text-white px-3 py-1.5 flex items-center gap-2"
-                    >
-                      {job}
-                      <button
-                        onClick={() => handleToggleJob(job)}
-                        className="hover:opacity-70"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-
-              {/* 직무 선택 그리드 */}
-              <div className="p-4 border rounded-lg space-y-3">
-                <p
-                  className="text-sm text-gray-600"
-                  style={{ fontWeight: 500 }}
-                >
-                  자주 선택하는 직무
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                  {JOB_OPTIONS.map((job) => (
-                    <button
-                      key={job}
-                      type="button"
-                      onClick={() => handleToggleJob(job)}
-                      disabled={selectedJobs.includes(job)}
-                      className={`px-4 py-3 text-sm rounded-lg border transition-colors ${
-                        selectedJobs.includes(job)
-                          ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                          : "bg-white hover:bg-[var(--brand-orange-light)] hover:border-[var(--brand-orange)] border-gray-300"
-                      }`}
-                      style={{ fontWeight: 500 }}
-                    >
-                      {job}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* 구독 키워드 */}
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <Bell className="w-5 h-5 text-[var(--brand-orange)]" />
-                <h2 className="text-xl" style={{ fontWeight: 700 }}>
-                  구독 키워드
-                </h2>
-              </div>
-              <span className="text-sm text-gray-500">
-                {subscribedKeywords.length} / 5
-              </span>
-            </div>
-
-            <div className="space-y-4">
-              <p className="text-sm text-gray-600">
-                관심 있는 키워드를 선택하면 관련 공지사항을 우선적으로
-                알려드립니다.
-              </p>
-
-              {/* 선택된 키워드 */}
-              {subscribedKeywords.length > 0 && (
-                <div>
-                  <Label className="mb-2 block text-xs">선택된 키워드</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {subscribedKeywords.map((keyword) => (
-                      <Badge
-                        key={keyword}
-                        className="bg-[var(--brand-orange)] text-white px-3 py-1.5 flex items-center gap-2"
-                      >
-                        {keyword}
-                        <button
-                          onClick={() => handleRemoveKeyword(keyword)}
-                          className="hover:opacity-70"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <Separator />
-
-              {/* 사용 가능한 키워드 */}
-              <div>
-                <Label className="mb-2 block text-xs">사용 가능한 키워드</Label>
-                <div className="flex flex-wrap gap-2">
-                  {availableKeywords
-                    .filter((k) => !subscribedKeywords.includes(k))
-                    .map((keyword) => (
-                      <Badge
-                        key={keyword}
-                        variant="outline"
-                        className={`px-3 py-1.5 cursor-pointer transition-colors ${
-                          subscribedKeywords.length >= 5
-                            ? "opacity-50 cursor-not-allowed"
-                            : "hover:bg-[var(--brand-orange-light)] hover:border-[var(--brand-orange)]"
-                        }`}
-                        onClick={() => handleAddKeyword(keyword)}
-                      >
-                        {keyword}
-                      </Badge>
-                    ))}
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* 직접 입력 */}
-              <div>
-                <Label className="mb-2 block text-xs">직접 입력</Label>
-                <div className="flex gap-2">
+                {/* 반 - 수정 가능 */}
+                <div className="flex items-center gap-1.5">
                   <Input
-                    placeholder="키워드를 입력하세요"
-                    value={customKeyword}
-                    onChange={(e) => setCustomKeyword(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddCustomKeyword();
-                      }
-                    }}
-                    disabled={subscribedKeywords.length >= 5}
+                    id="classroom"
+                    type="number"
+                    value={classroom}
+                    onChange={(e) => setClassroom(e.target.value)}
+                    min="1"
+                    max="99"
+                    className="w-12 h-8 text-center"
                   />
-                  <Button
-                    onClick={handleAddCustomKeyword}
-                    variant="outline"
-                    disabled={subscribedKeywords.length >= 5}
-                    className="border-[var(--brand-orange)] text-[var(--brand-orange)] hover:bg-[var(--brand-orange-light)]"
-                  >
-                    추가
-                  </Button>
+                  <label htmlFor="classroom" className="text-sm text-gray-700">
+                    반
+                  </label>
                 </div>
               </div>
             </div>
@@ -410,7 +286,7 @@ export function MyPage() {
 
           {/* 기술 스택 */}
           <Card className="p-6">
-            <div className="flex items-center gap-2 mb-6">
+            <div className="flex items-center gap-2">
               <Code className="w-5 h-5 text-[var(--brand-orange)]" />
               <h2 className="text-xl" style={{ fontWeight: 700 }}>
                 기술 스택
@@ -419,22 +295,25 @@ export function MyPage() {
 
             <div className="space-y-4">
               {/* 선택된 기술 스택 */}
-              {selectedTechStack.length > 0 && (
+              {selectedSkillIds.length > 0 && (
                 <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg">
-                  {selectedTechStack.map((tech) => (
-                    <Badge
-                      key={tech}
-                      className="bg-[var(--brand-orange)] text-white px-3 py-1.5 flex items-center gap-2"
-                    >
-                      {tech}
-                      <button
-                        onClick={() => handleRemoveTech(tech)}
-                        className="hover:opacity-70"
+                  {selectedSkillIds.map((skillId) => {
+                    const skill = skills.find((s) => s.id === skillId);
+                    return skill ? (
+                      <Badge
+                        key={skillId}
+                        className="bg-[var(--brand-orange)] text-white px-3 py-1.5 flex items-center gap-2"
                       >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </Badge>
-                  ))}
+                        {skill.name}
+                        <button
+                          onClick={() => handleRemoveSkill(skillId)}
+                          className="hover:opacity-70"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ) : null;
+                  })}
                 </div>
               )}
 
@@ -444,23 +323,86 @@ export function MyPage() {
                   className="text-sm text-gray-600"
                   style={{ fontWeight: 500 }}
                 >
-                  자주 사용하는 기술
+                  기술 선택
                 </p>
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 max-h-48 overflow-y-auto">
-                  {TECH_STACK_OPTIONS.map((tech) => (
+                  {skills.map((skill) => (
                     <button
-                      key={tech}
+                      key={skill.id}
                       type="button"
-                      onClick={() => handleAddTech(tech)}
-                      disabled={selectedTechStack.includes(tech)}
+                      onClick={() => handleAddSkill(skill.id)}
+                      disabled={selectedSkillIds.includes(skill.id)}
                       className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                        selectedTechStack.includes(tech)
+                        selectedSkillIds.includes(skill.id)
                           ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                           : "bg-white hover:bg-[var(--brand-orange-light)] hover:border-[var(--brand-orange)] border-gray-300"
                       }`}
                       style={{ fontWeight: 500 }}
                     >
-                      {tech}
+                      {skill.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          {/* 희망 직무 */}
+          <Card className="p-6">
+            <div className="flex items-center gap-2">
+              <Briefcase className="w-5 h-5 text-[var(--brand-orange)]" />
+              <h2 className="text-xl" style={{ fontWeight: 700 }}>
+                희망 직무
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              {/* 선택된 직무 */}
+              {selectedPositionIds.length > 0 && (
+                <div className="flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg">
+                  {selectedPositionIds.map((posId) => {
+                    const position = positions.find((p) => p.id === posId);
+                    return position ? (
+                      <Badge
+                        key={posId}
+                        className="bg-[var(--brand-orange)] text-white px-3 py-1.5 flex items-center gap-2"
+                      >
+                        {position.name}
+                        <button
+                          onClick={() => handleTogglePosition(posId)}
+                          className="hover:opacity-70"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ) : null;
+                  })}
+                </div>
+              )}
+
+              {/* 직무 선택 그리드 */}
+              <div className="p-4 border rounded-lg space-y-3">
+                <p
+                  className="text-sm text-gray-600"
+                  style={{ fontWeight: 500 }}
+                >
+                  직무 선택
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                  {positions.map((position) => (
+                    <button
+                      key={position.id}
+                      type="button"
+                      onClick={() => handleTogglePosition(position.id)}
+                      disabled={selectedPositionIds.includes(position.id)}
+                      className={`px-4 py-3 text-sm rounded-lg border transition-colors ${
+                        selectedPositionIds.includes(position.id)
+                          ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                          : "bg-white hover:bg-[var(--brand-orange-light)] hover:border-[var(--brand-orange)] border-gray-300"
+                      }`}
+                      style={{ fontWeight: 500 }}
+                    >
+                      {position.name}
                     </button>
                   ))}
                 </div>
@@ -475,10 +417,24 @@ export function MyPage() {
             </Button>
             <Button
               onClick={handleSave}
-              className="bg-[var(--brand-orange)] hover:bg-[var(--brand-orange-dark)] text-white"
+              disabled={!hasChanges || isSaving}
+              className="bg-[var(--brand-orange)] hover:bg-[var(--brand-orange-dark)] text-white disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Save className="w-4 h-4 mr-2" />
-              저장하기
+              {isSaving ? "저장 중..." : "저장하기"}
+            </Button>
+          </div>
+
+          {/* 회원탈퇴 버튼 */}
+          <div className="flex justify-end border-t pt-6 mt-6">
+            <Button
+              onClick={handleDeleteAccount}
+              disabled={isDeleting}
+              variant="outline"
+              className="text-red-600 border-red-300 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              {isDeleting ? "처리 중..." : "회원탈퇴"}
             </Button>
           </div>
         </div>

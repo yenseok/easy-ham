@@ -1,20 +1,21 @@
-import { useNavigate } from 'react-router-dom';
-import { Bell, User } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useLocation, useNavigate } from 'react-router-dom';
+import PillNav from '@/components/common/PillNav';
 import { NotificationDropdown } from './NotificationDropdown';
 import { ProfileMenu } from './ProfileMenu';
 
-interface HeaderProps {
-  showBackButton?: boolean;
-  onBack?: () => void;
-}
-
-export const Header = ({ showBackButton, onBack }: HeaderProps) => {
+export const Header = () => {
+  const location = useLocation();
   const navigate = useNavigate();
 
+  const navItems = [
+    { label: '홈', href: '/dashboard' },
+    { label: '검색', href: '/search' },
+    { label: '캘린더', href: '/calendar' }
+  ];
+
   return (
-    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8">
-      {/* 로고 및 앱명 */}
+    <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 relative">
+      {/* 좌측 로고 및 앱명 */}
       <div className="flex items-center gap-2">
         <button
           onClick={() => navigate('/dashboard')}
@@ -25,6 +26,19 @@ export const Header = ({ showBackButton, onBack }: HeaderProps) => {
           </div>
           <span className="text-xl" style={{ fontWeight: 700 }}>편리햄!</span>
         </button>
+      </div>
+
+      {/* 중앙 네비게이션 */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+        <PillNav
+          items={navItems}
+          activeHref={location.pathname}
+          baseColor="#FF8A3D"
+          pillColor="#ffffff"
+          hoveredPillTextColor="#ffffff"
+          pillTextColor="#1a1a1a"
+          initialLoadAnimation={false}
+        />
       </div>
 
       {/* 우측 액션 (알림, 프로필) */}

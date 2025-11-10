@@ -21,6 +21,7 @@ import {
   type Skill,
 } from "@/services/api/codes";
 import { signup, type SignupRequest } from "@/services/api/auth";
+import { initializeNotificationSettings } from "@/services/api/notifications";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "sonner";
 
@@ -66,7 +67,7 @@ export function SignUpPage() {
 
           // SSO 데이터에서 entRegn이 있으면 자동으로 캠퍼스 설정
           if (ssoData?.entRegn) {
-            const campusName = ssoData.entRegn + "캠퍼스";
+            const campusName = ssoData.entRegn;
             if (map[campusName]) {
               const campusIdValue = String(map[campusName]);
               setCampusId(campusIdValue);
@@ -128,6 +129,39 @@ export function SignUpPage() {
     setSelectedSkillIds(selectedSkillIds.filter((id) => id !== skillId));
   };
 
+  // 디버그용: 버튼 disabled 상태 로깅
+  useEffect(() => {
+    const isButtonDisabled =
+      isLoading ||
+      !name ||
+      !email ||
+      !generation ||
+      !campusId ||
+      !classroom ||
+      selectedPositionIds.length === 0;
+
+    // console.log("🔘 제출 버튼 상태 디버그:", {
+    //   disabled: isButtonDisabled,
+    //   isLoading: isLoading,
+    //   name: `"${name}" (${name ? "✓" : "✗"})`,
+    //   email: `"${email}" (${email ? "✓" : "✗"})`,
+    //   generation: `"${generation}" (${generation ? "✓" : "✗"})`,
+    //   campusId: `"${campusId}" (${campusId ? "✓" : "✗"})`,
+    //   classroom: `"${classroom}" (${classroom ? "✓" : "✗"})`,
+    //   selectedPositionIds: `[${selectedPositionIds.join(", ")}] (${
+    //     selectedPositionIds.length > 0 ? "✓" : "✗"
+    //   })`,
+    // });
+  }, [
+    isLoading,
+    name,
+    email,
+    generation,
+    campusId,
+    classroom,
+    selectedPositionIds,
+  ]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -156,11 +190,25 @@ export function SignUpPage() {
       };
 
       const response = await signup(signupData);
-      console.log("회원가입 응답:", response);
+      // console.log("회원가입 응답:", response);
 
       if (response.status === 200) {
-        toast.success("회원가입 성공했습니다!");
+        // toast.success("회원가입 성공했습니다!");
         clearSsoData(); // SSO 데이터 제거
+
+        // 알림 설정 초기화
+        try {
+          const notificationResponse = await initializeNotificationSettings();
+          // console.log("알림 설정 초기화 응답:", notificationResponse);
+
+          if (notificationResponse.status === 201) {
+            // console.log("알림 설정이 초기화되었습니다.");
+          }
+        } catch (notificationError) {
+          // console.error("알림 설정 초기화 실패:", notificationError);
+          // 알림 설정 초기화 실패는 로그만 남기고 진행
+        }
+
         // 회원가입 성공 후 대시보드로 이동 (이미 로그인된 상태)
         setTimeout(() => {
           navigate("/dashboard");

@@ -5,6 +5,7 @@ import {
   filterNoticesByCategories,
   filterNoticesBySearch,
   filterNoticesByPeriod,
+  filterNoticesByBookmark,
   sortNotices,
 } from '@/utils/filterUtils';
 import type { Notice } from '@/types/notice';
@@ -38,6 +39,7 @@ export const useNoticeFilter = (notices: Notice[]): UseNoticeFilterResult => {
     searchQuery,
     periodFilter,
     sortBy,
+    showBookmarkedOnly,
   } = useFilterStore();
 
   const filteredNotices = useMemo(() => {
@@ -59,7 +61,10 @@ export const useNoticeFilter = (notices: Notice[]): UseNoticeFilterResult => {
     // 4. 기간 필터
     result = filterNoticesByPeriod(result, periodFilter);
 
-    // 5. 정렬
+    // 5. 북마크 필터
+    result = filterNoticesByBookmark(result, showBookmarkedOnly);
+
+    // 6. 정렬
     result = sortNotices(result, sortBy);
 
     return result;
@@ -70,6 +75,7 @@ export const useNoticeFilter = (notices: Notice[]): UseNoticeFilterResult => {
     selectedCareerCategories,
     searchQuery,
     periodFilter,
+    showBookmarkedOnly,
     sortBy,
   ]);
 
@@ -80,6 +86,7 @@ export const useNoticeFilter = (notices: Notice[]): UseNoticeFilterResult => {
     selectedCareerCategories.length > 0 ||
     searchQuery.trim() !== '' ||
     periodFilter !== '전체' ||
+    showBookmarkedOnly ||
     sortBy !== 'latest';
 
   return {
