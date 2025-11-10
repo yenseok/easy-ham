@@ -30,33 +30,33 @@ export const router = createBrowserRouter([
   {
     path: "/dashboard",
     element: (
-      // <ProtectedRoute>
+      <ProtectedRoute>
         <DashboardPage />
-      // </ProtectedRoute>
+      </ProtectedRoute>
     ),
   },
   {
     path: "/search",
     element: (
-      // <ProtectedRoute>
+      <ProtectedRoute>
         <SearchPage />
-      // </ProtectedRoute>
+      </ProtectedRoute>
     ),
   },
   {
     path: "/calendar",
     element: (
-      // <ProtectedRoute>
+      <ProtectedRoute>
         <CalendarPage />
-      // </ProtectedRoute>
+      </ProtectedRoute>
     ),
   },
   {
     path: "/mypage",
     element: (
-      // <ProtectedRoute>
+      <ProtectedRoute>
         <MyPage />
-      // </ProtectedRoute>
+      </ProtectedRoute>
     ),
   },
   {

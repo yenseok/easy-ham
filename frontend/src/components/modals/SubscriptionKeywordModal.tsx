@@ -27,7 +27,6 @@ const availableKeywords = [
   "특강",
   "공지",
   "행사",
-  "MT",
   "스터디",
   "멘토링",
   "채용",
@@ -235,13 +234,17 @@ export function SubscriptionKeywordModal({
                 <span className="text-sm text-gray-500">시간</span>
                 <Button
                   size="sm"
-                  variant="ghost"
+                  variant="outline"
                   onClick={handleSaveDeadlineHours}
                   disabled={
                     isSavingDeadline ||
                     localDeadlineHours === deadlineAlertHours
                   }
-                  className="h-8 w-8 p-0"
+                  className={`h-8 w-8 p-0 ${
+                    localDeadlineHours !== deadlineAlertHours
+                      ? "border-[var(--brand-orange)] text-[var(--brand-orange)] hover:bg-[var(--brand-orange-light)]"
+                      : ""
+                  }`}
                 >
                   {isSavingDeadline ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -320,7 +323,9 @@ export function SubscriptionKeywordModal({
             <Label className="mb-2 block text-xs">사용 가능한 키워드</Label>
             <div className="flex flex-wrap gap-2">
               {availableKeywords
-                .filter((k) => !subscribedKeywords.some((sub) => sub.keyword === k))
+                .filter(
+                  (k) => !subscribedKeywords.some((sub) => sub.keyword === k)
+                )
                 .map((keyword) => (
                   <Badge
                     key={keyword}

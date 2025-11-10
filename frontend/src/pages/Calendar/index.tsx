@@ -132,7 +132,9 @@ export default function CalendarPage() {
   const filteredEvents = useMemo(() => {
     const filtered = events.filter((event) => {
       // 채널 필터 - 모든 채널이 선택된 경우 필터링 안 함
-      const allChannelsSelected = channelOptions.every(ch => selectedChannels.includes(ch));
+      const allChannelsSelected = channelOptions.every((ch) =>
+        selectedChannels.includes(ch)
+      );
       if (!allChannelsSelected && !selectedChannels.includes(event.channel)) {
         return false;
       }
@@ -140,12 +142,18 @@ export default function CalendarPage() {
       // 카테고리 필터 - 모든 카테고리가 선택된 경우 필터링 안 함
       if (event.category === "학사") {
         const allAcademicSelected = selectedAcademicCategories.length === 4;
-        if (!allAcademicSelected && !selectedAcademicCategories.includes(event.subcategory)) {
+        if (
+          !allAcademicSelected &&
+          !selectedAcademicCategories.includes(event.subcategory)
+        ) {
           return false;
         }
       } else if (event.category === "취업") {
         const allCareerSelected = selectedCareerCategories.length === 4;
-        if (!allCareerSelected && !selectedCareerCategories.includes(event.subcategory)) {
+        if (
+          !allCareerSelected &&
+          !selectedCareerCategories.includes(event.subcategory)
+        ) {
           return false;
         }
       }
@@ -153,17 +161,23 @@ export default function CalendarPage() {
       return true;
     });
 
-    console.log('[캘린더 필터링]', {
-      전체이벤트: events.length,
-      필터링후: filtered.length,
-      선택된채널: selectedChannels,
-      학사카테고리: selectedAcademicCategories,
-      취업카테고리: selectedCareerCategories,
-      샘플이벤트: events.slice(0, 1).map(e => ({ 제목: e.title, 채널: e.channel, 카테고리: e.category, 서브카테고리: e.subcategory }))
-    });
+    // console.log('[캘린더 필터링]', {
+    //   전체이벤트: events.length,
+    //   필터링후: filtered.length,
+    //   선택된채널: selectedChannels,
+    //   학사카테고리: selectedAcademicCategories,
+    //   취업카테고리: selectedCareerCategories,
+    //   샘플이벤트: events.slice(0, 1).map(e => ({ 제목: e.title, 채널: e.channel, 카테고리: e.category, 서브카테고리: e.subcategory }))
+    // });
 
     return filtered;
-  }, [events, selectedChannels, selectedAcademicCategories, selectedCareerCategories, channelOptions]);
+  }, [
+    events,
+    selectedChannels,
+    selectedAcademicCategories,
+    selectedCareerCategories,
+    channelOptions,
+  ]);
 
   // 날짜별 이벤트 가져오기
   const getEventsForDate = (date: Date): Notice[] => {
@@ -171,21 +185,25 @@ export default function CalendarPage() {
       // deadline 날짜와 비교
       if (!event.deadline) return false;
 
-      const deadlineDate = typeof event.deadline === 'string'
-        ? new Date(event.deadline)
-        : event.deadline;
+      const deadlineDate =
+        typeof event.deadline === "string"
+          ? new Date(event.deadline)
+          : event.deadline;
 
       const isSame = isSameDay(deadlineDate, date);
 
       // 디버깅용 로그 (첫 번째 이벤트만)
-      if (filteredEvents.indexOf(event) === 0 && date.getDate() === new Date().getDate()) {
-        console.log('[날짜별 이벤트]', {
-          날짜: date.toLocaleDateString(),
-          이벤트제목: event.title,
-          deadline: event.deadline,
-          deadlineDate: deadlineDate.toLocaleDateString(),
-          isSame
-        });
+      if (
+        filteredEvents.indexOf(event) === 0 &&
+        date.getDate() === new Date().getDate()
+      ) {
+        // console.log('[날짜별 이벤트]', {
+        //   날짜: date.toLocaleDateString(),
+        //   이벤트제목: event.title,
+        //   deadline: event.deadline,
+        //   deadlineDate: deadlineDate.toLocaleDateString(),
+        //   isSame
+        // });
       }
 
       return isSame;

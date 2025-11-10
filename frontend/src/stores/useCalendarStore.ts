@@ -7,20 +7,24 @@
  * - SSE 실시간 업데이트 대응
  */
 
-import { create } from 'zustand';
-import { searchApi } from '@/services/api/search';
-import { getNoticeCategories, mapCategoriesToIds, type NoticeCategory } from '@/services/api/codes';
-import type { Notice, Subcategory } from '@/types/notice';
-import type { SearchParams } from '@/types/api';
+import { create } from "zustand";
+import { searchApi } from "@/services/api/search";
+import {
+  getNoticeCategories,
+  mapCategoriesToIds,
+  type NoticeCategory,
+} from "@/services/api/codes";
+import type { Notice, Subcategory } from "@/types/notice";
+import type { SearchParams } from "@/types/api";
 
 interface DateRange {
   start: string; // ISO 8601 timestamp
-  end: string;   // ISO 8601 timestamp
+  end: string; // ISO 8601 timestamp
 }
 
 interface CalendarState {
   // 데이터
-  events: Notice[];           // 전체 이벤트 (1년치)
+  events: Notice[]; // 전체 이벤트 (1년치)
   loadedRange: DateRange | null; // 현재 로드된 기간
   isLoading: boolean;
   categories: NoticeCategory[]; // 카테고리 코드 데이터
@@ -78,13 +82,13 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
 
   // 초기 필터: 전체 선택
   selectedChannels: [
-    '13기-공지사항',
-    '13기-취업공고',
-    '13기-취업정보',
-    '서울1반-공지사항',
+    "13기-공지사항",
+    "13기-취업공고",
+    "13기-취업정보",
+    "서울1반-공지사항",
   ],
-  selectedAcademicCategories: ['할일', '특강', '정보', '행사'],
-  selectedCareerCategories: ['할일', '특강', '정보', '행사'],
+  selectedAcademicCategories: ["할일", "특강", "정보", "행사"],
+  selectedCareerCategories: ["할일", "특강", "정보", "행사"],
 
   /**
    * 카테고리 코드 로드
@@ -94,7 +98,7 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
       const response = await getNoticeCategories();
       set({ categories: response.data });
     } catch (error) {
-      console.error('[캘린더] 카테고리 로드 실패:', error);
+      // console.error("[캘린더] 카테고리 로드 실패:", error);
     }
   },
 
@@ -140,14 +144,14 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
         isLoading: false,
       });
 
-      console.log(`[캘린더] ${calendarEvents.length}개 이벤트 로드 완료 (${new Date(parseInt(range.start)).toLocaleDateString()} ~ ${new Date(parseInt(range.end)).toLocaleDateString()})`);
-      console.log('[캘린더] 로드된 이벤트 샘플:', calendarEvents.slice(0, 3).map(e => ({
-        title: e.title,
-        deadline: e.deadline,
-        deadlineType: typeof e.deadline
-      })));
+      // console.log(`[캘린더] ${calendarEvents.length}개 이벤트 로드 완료 (${new Date(parseInt(range.start)).toLocaleDateString()} ~ ${new Date(parseInt(range.end)).toLocaleDateString()})`);
+      // console.log('[캘린더] 로드된 이벤트 샘플:', calendarEvents.slice(0, 3).map(e => ({
+      //   title: e.title,
+      //   deadline: e.deadline,
+      //   deadlineType: typeof e.deadline
+      // })));
     } catch (error) {
-      console.error('[캘린더] 이벤트 로드 실패:', error);
+      // console.error('[캘린더] 이벤트 로드 실패:', error);
       set({ isLoading: false });
     }
   },
@@ -184,7 +188,9 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
    */
   toggleAcademicCategory: (category: Subcategory) =>
     set((state) => ({
-      selectedAcademicCategories: state.selectedAcademicCategories.includes(category)
+      selectedAcademicCategories: state.selectedAcademicCategories.includes(
+        category
+      )
         ? state.selectedAcademicCategories.filter((c) => c !== category)
         : [...state.selectedAcademicCategories, category],
     })),
@@ -194,7 +200,9 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
    */
   toggleCareerCategory: (category: Subcategory) =>
     set((state) => ({
-      selectedCareerCategories: state.selectedCareerCategories.includes(category)
+      selectedCareerCategories: state.selectedCareerCategories.includes(
+        category
+      )
         ? state.selectedCareerCategories.filter((c) => c !== category)
         : [...state.selectedCareerCategories, category],
     })),
@@ -205,12 +213,12 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   resetFilters: () =>
     set({
       selectedChannels: [
-        '13기-공지사항',
-        '13기-취업공고',
-        '13기-취업정보',
-        '서울1반-공지사항',
+        "13기-공지사항",
+        "13기-취업공고",
+        "13기-취업정보",
+        "서울1반-공지사항",
       ],
-      selectedAcademicCategories: ['할일', '특강', '정보', '행사'],
-      selectedCareerCategories: ['할일', '특강', '정보', '행사'],
+      selectedAcademicCategories: ["할일", "특강", "정보", "행사"],
+      selectedCareerCategories: ["할일", "특강", "정보", "행사"],
     }),
 }));

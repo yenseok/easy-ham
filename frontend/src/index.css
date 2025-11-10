@@ -3453,3 +3453,41 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* ========== Switch Component - State-based Colors ========== */
+/* Root background */
+[data-state="checked"] {
+  background-color: var(--brand-orange);
+}
+
+[data-state="unchecked"] {
+  background-color: var(--switch-background);
+}
+
+/* Thumb (원) - Default (Light mode) */
+[data-slot="switch-thumb"] {
+  background-color: var(--card);
+}
+
+/* Thumb - Dark mode */
+.dark [data-state="unchecked"][data-slot="switch-thumb"] {
+  background-color: var(--card-foreground);
+}
+
+.dark [data-state="checked"][data-slot="switch-thumb"] {
+  background-color: var(--primary-foreground);
+}
+
+/* Thumb - Animation/Transform */
+[data-state="unchecked"][data-slot="switch-thumb"] {
+  transform: translateX(0);
+}
+
+[data-state="checked"][data-slot="switch-thumb"] {
+  transform: translateX(calc(100% - 2px));
+}
+
+/* Switch Cursor */
+[data-slot="switch"] {
+  cursor: pointer;
+}
