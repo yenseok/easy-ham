@@ -21,15 +21,15 @@ public class SearchController {
     private final SearchService searchService;
 
     /**
-     * 게시물 검색 (개선된 버전)
+     * 게시물 검색 (Post 기반 - 개선된 버전)
      *
-     * @param keyword 검색어 (선택)
+     * @param keyword 검색어 (선택) - title, cleanedText, userId, channelName, campusList에서 검색
      * @param channelIds 채널 ID 리스트 (다중 선택, 선택)
-     * @param categoryIds 카테고리 ID 리스트 (다중 선택, 선택)
+     * @param categoryIds 카테고리 ID 리스트 (subCategory 기준, 다중 선택, 선택)
      * @param startDate 시작 날짜 timestamp (선택)
      * @param endDate 종료 날짜 timestamp (선택)
      * @param isLiked 좋아요 필터 (선택)
-     * @param sort 정렬 기준 (기본: mmCreatedAt:desc)
+     * @param sort 정렬 기준 (기본: timestamp:desc)
      * @param page 페이지 번호 (0-based, 기본: 0)
      * @param size 페이지 크기 (기본: 20)
      */
@@ -41,7 +41,7 @@ public class SearchController {
             @RequestParam(required = false) Long startDate,
             @RequestParam(required = false) Long endDate,
             @RequestParam(required = false) Boolean isLiked,
-            @RequestParam(defaultValue = "mmCreatedAt:desc") String sort,
+            @RequestParam(defaultValue = "timestamp:desc") String sort,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
         try {
@@ -61,9 +61,10 @@ public class SearchController {
             log.info("📥 Search request received:");
             log.info("   - keyword: {}", keyword);
             log.info("   - channelIds: {}", channelIds);
-            log.info("   - categoryIds: {}", categoryIds);
+            log.info("   - categoryIds (subCategory): {}", categoryIds);
             log.info("   - dateRange: {} ~ {}", startDate, endDate);
             log.info("   - isLiked: {}", isLiked);
+            log.info("   - sort: {}", sort);
             log.info("   - page: {}, size: {}", page, size);
 
             // 검색 실행

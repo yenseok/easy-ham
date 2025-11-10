@@ -8,13 +8,13 @@ import java.util.List;
 @Getter
 @Setter
 public class PostSearchRequest {
-    // 검색어
+    // 검색어 (title, cleanedText, userId, channelName, campusList에서 검색)
     private String keyword;
 
     // 채널 필터 (다중 선택)
     private List<String> channelIds;
 
-    // 카테고리 필터 (다중 선택 - subCategoryId기준 통합)
+    // 카테고리 필터 (subCategory 기준, 다중 선택)
     private List<Long> categoryIds;
 
     // 날짜 범위 필터
@@ -24,8 +24,8 @@ public class PostSearchRequest {
     // 좋아요 필터 (내가 좋아요한 게시물만)
     private Boolean isLiked;
 
-    // 정렬
-    private String sort = "mmCreatedAt:desc"; // 기본값: 최신순
+    // 정렬 (timestamp:desc, timestamp:asc)
+    private String sort = "timestamp:desc"; // 기본값: 최신순
 
     // 페이징
     private int page = 0;

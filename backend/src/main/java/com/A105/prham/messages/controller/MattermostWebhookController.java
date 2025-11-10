@@ -39,7 +39,7 @@ public class MattermostWebhookController {
             messageService.saveMessage(processed);
 
             // 3. Meilisearch 저장 (ProcessedMessage 직접 인덱싱)
-            searchService.indexMessage(processed);
+//            searchService.indexMessage(processed);
 
             return ResponseEntity.ok("Message processed and saved");
 

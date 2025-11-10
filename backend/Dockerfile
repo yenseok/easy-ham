@@ -1,34 +1,21 @@
-
 FROM eclipse-temurin:17-jdk-jammy AS builder
-
 WORKDIR /app
-
-# Gradle Wrapper ¹× ¼³Á¤ ÆÄÀÏ º¹»ç
+# Gradle Wrapper ë° ì„¤ì • íŒŒì¼ ë³µì‚¬
 COPY build.gradle settings.gradle gradlew ./
 COPY gradle gradle
-
-# ¼Ò½º ÄÚµå º¹»ç
+# ì†ŒìŠ¤ ì½”ë“œ ë³µì‚¬
 COPY src src
-
-# Gradlew ½ÇÇà ±ÇÇÑ ºÎ¿© ¹× ºôµå
+# Gradlew ì‹¤í–‰ ê¶Œí•œ ë¶€ì—¬ ë° ë¹Œë“œ
 RUN chmod +x gradlew && ./gradlew bootJar
-
-
-
 FROM eclipse-temurin:17-jre-jammy
-
 WORKDIR /app
-
-# Å¸ÀÓÁ¸ ¼³Á¤
+# íƒ€ì„ì¡´ ì„¤ì •
 ENV TZ=Asia/Seoul
-
-# ºôµå °á°ú¹°(JAR) º¹»ç
+# ë¹Œë“œ ê²°ê³¼ë¬¼(JAR) ë³µì‚¬
 COPY --from=builder /app/build/libs/*.jar app.jar
-
-# Çï½ºÃ¼Å© 
+# í—¬ìŠ¤ì²´í¬ 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
   CMD wget -q --spider http://localhost:8080/actuator/health || exit 1
-
 EXPOSE 8080
-
 ENTRYPOINT ["java", "-jar", "app.jar"]
+

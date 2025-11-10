@@ -1,37 +1,42 @@
 package com.A105.prham.webhook.dto;
 
-import java.util.List;
-
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
 
-public record MattermostWebhookDto(
-	@JsonProperty("token") String token,
-	@JsonProperty("team_id") String teamId,
-	@JsonProperty("team_domain") String teamDomain,
-	@JsonProperty("channel_id") String channelId,
-	@JsonProperty("channel_name") String channelName,
-	@JsonProperty("timestamp") Long timestamp,
-	@JsonProperty("user_id") String userId,
-	@JsonProperty("user_name") String userName,
-	@JsonProperty("post_id") String postId,
-	@JsonProperty("text") String text,
-	@JsonProperty("trigger_word") String triggerWord,
-	@JsonProperty("file_ids") List<String> fileIds
-) {
-	// emoji 제거
-	public String getCleanedText() {
-		if(text == null) return "";
+@Data
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class MattermostWebhookDto {
+	private String token;
 
-		// 1. :emoji_name: 형태 제거
-		String cleaned = text.replaceAll(":[a-zA-Z0-9_+-]+:", "");
+	@JsonProperty("team_id")
+	private String teamId;
 
-		// 2. Unicode 이모지 제거
-		cleaned = cleaned.replaceAll("[\\p{So}\\p{Sk}]", "");
+	@JsonProperty("team_domain")
+	private String teamDomain;
 
-		// 3. 연속 공백 정리
-		cleaned = cleaned.replaceAll("\\s+", " ").trim();
+	@JsonProperty("channel_id")
+	private String channelId;
 
-		return cleaned;
-	}
+	@JsonProperty("channel_name")
+	private String channelName;
+
+	private String timestamp;
+
+	@JsonProperty("user_id")
+	private String userId;
+
+	@JsonProperty("user_name")
+	private String userName;
+
+	@JsonProperty("post_id")
+	private String postId;
+
+	private String text;
+
+	@JsonProperty("trigger_word")
+	private String triggerWord;
+
+	@JsonProperty("file_ids")
+	private String fileIds;
 }
-

@@ -1,11 +1,15 @@
 package com.A105.prham.search.service;
 
 import com.A105.prham.messages.dto.FileInfo;
-import com.A105.prham.messages.dto.ProcessedMessage;
+import com.A105.prham.messages.service.MattermostService;
+import com.A105.prham.search.dto.document.PostIndexDocument;
 import com.A105.prham.search.dto.request.PostSearchRequest;
 import com.A105.prham.search.dto.response.PostSearchItem;
 import com.A105.prham.search.dto.response.PostSearchResponse;
 import com.A105.prham.search.dto.response.SearchMetadata;
+import com.A105.prham.webhook.entity.Post;
+import com.A105.prham.webhook.service.PostProcessorService;
+import com.A105.prham.webhook.service.PostService;
 import com.meilisearch.sdk.Client;
 import com.meilisearch.sdk.Index;
 import com.meilisearch.sdk.SearchRequest;
@@ -26,7 +30,9 @@ public class SearchService {
     private final Client meilisearchClient;
     private static final String INDEX_NAME = "posts";
     private final ObjectMapper objectMapper = new ObjectMapper();
-
+    private final PostProcessorService postProcessorService;
+    private final MattermostService mattermostService;
+    private final PostService postService;
     // TODO: 좋아요 리포지토리 주입 필요
     // private final LikeRepository likeRepository;
 
@@ -41,7 +47,7 @@ public class SearchService {
     }
 
     /**
-     * 게시물 검색 (개선된 버전)
+     * 게시물 검색 (Post 기반)
      */
     public PostSearchResponse searchPosts(PostSearchRequest request) {
         try {
@@ -103,7 +109,7 @@ public class SearchService {
                 .limit(request.getSize())
                 .offset(request.getOffset())
                 .sort(sort)
-                .attributesToHighlight(new String[]{"cleanedText", "userId"})
+                .attributesToHighlight(new String[]{"title", "cleanedText"})
                 .showMatchesPosition(false);
 
         if (!filter.isEmpty()) {
@@ -142,15 +148,15 @@ public class SearchService {
             filterParts.add("(" + channelFilter + ")");
         }
 
-        // 2. 카테고리 필터 (OR - mainCategory, subCategory 모두 검색)
+        // 2. 카테고리 필터 (subCategory 기준)
         if (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty()) {
             String categoryFilter = request.getCategoryIds().stream()
-                    .map(id -> "(mainCategory = " + id + " OR subCategory = " + id + ")")
+                    .map(id -> "subCategory = " + id)
                     .collect(Collectors.joining(" OR "));
             filterParts.add("(" + categoryFilter + ")");
         }
 
-        // 3. 날짜 범위 필터 (AND) - timestamp는 이제 Long이므로 숫자 비교
+        // 3. 날짜 범위 필터 (AND)
         if (request.getStartDate() != null && request.getEndDate() != null) {
             filterParts.add("(timestamp >= " + request.getStartDate() +
                     " AND timestamp <= " + request.getEndDate() + ")");
@@ -161,9 +167,7 @@ public class SearchService {
         }
 
         // 최종 필터: 모든 조건을 AND로 결합
-        String finalFilter = String.join(" AND ", filterParts);
-
-        return finalFilter;
+        return String.join(" AND ", filterParts);
     }
 
     /**
@@ -171,14 +175,11 @@ public class SearchService {
      */
     private String determineSortOrder(SearchMode mode, String userSort) {
         // 사용자가 명시적으로 지정한 정렬이 있으면 우선
-        if (userSort != null && !userSort.equals("mmCreatedAt:desc")) {
-            // mmCreatedAt -> timestamp 변환
-            return userSort.replace("mmCreatedAt", "timestamp");
+        if (userSort != null && !userSort.equals("timestamp:desc")) {
+            return userSort;
         }
 
-        // 모드별 기본 정렬
-        // Meilisearch는 키워드가 있으면 자동으로 관련성 우선 정렬
-        // 키워드가 없으면 sort 파라미터대로 정렬
+        // 기본 정렬: 최신순
         return "timestamp:desc";
     }
 
@@ -192,19 +193,61 @@ public class SearchService {
     }
 
     /**
+     * 개별 검색 결과를 PostSearchItem으로 변환 //개별 말고, 뭉탱이로 검색할 필요가 있음.
+     */
+    private PostSearchItem convertToSearchItem(Object hit) {
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> hitMap = (Map<String, Object>) hit;
+
+            // _formatted에서 하이라이트된 content 추출
+            @SuppressWarnings("unchecked")
+            Map<String, Object> formatted = (Map<String, Object>) hitMap.get("_formatted");
+
+            String highlightedTitle = formatted != null ?
+                    (String) formatted.get("title") : (String) hitMap.get("title");
+
+            String highlightedContent = formatted != null ?
+                    (String) formatted.get("cleanedText") : (String) hitMap.get("cleanedText");
+
+            List<FileInfo> files = parseFileInfos(hitMap.get("files"));
+//여기서 검색 응답 구조 설정 가능
+            //TODO 여기 2N+1 문제 있음. 개선하고싶은 사람이 하면 됨
+            //유저 네임 찾아서 넣기
+            String userName = mattermostService.getUserNameFromID((String) hitMap.get("userId"));
+
+            //post id 찾아서 넣기
+            Long id = postService.getPostIdByMMPostId((String) hitMap.get("postId"));
+
+            return PostSearchItem.builder()
+//                    .id(getLongValue(hitMap.get("postId")))
+                    .id(id)
+                    .mmMessageId((String) hitMap.get("postId"))
+                    .title((String) hitMap.get("title"))
+                    .campusId((String) hitMap.get("campusList"))
+                    .channelName((String) hitMap.get("channelName"))
+                    .mmChannelId((String) hitMap.get("channelId"))
+                    .userName(userName)
+                    .deadline((String) hitMap.get("deadline"))
+                    .campusId((String) hitMap.get("campusId"))
+                    .content((String) hitMap.get("cleanedText"))
+                    .highlightedContent(highlightedContent != null ? highlightedContent : (String) hitMap.get("cleanedText"))
+                    .mmCreatedAt(getLongValue(hitMap.get("timestamp")))
+                    .subCategory(getLongValue(hitMap.get("subCategory")))
+                    .originalLink((String) hitMap.get("originalLink"))
+                    .files(files)
+                    .build();
+        } catch (Exception e) {
+            log.error("Failed to convert search item", e);
+            throw new RuntimeException("Failed to convert search item", e);
+        }
+    }
+
+    /**
      * 좋아요 필터링 (후처리)
      */
     private List<PostSearchItem> filterByLikes(List<PostSearchItem> items, String userId) {
         // TODO: 실제 좋아요 데이터와 연동
-        // Set<Long> likedPostIds = likeRepository.findByUserId(userId)
-        //         .stream()
-        //         .map(Like::getPostId)
-        //         .collect(Collectors.toSet());
-        //
-        // return items.stream()
-        //         .filter(item -> likedPostIds.contains(item.getId()))
-        //         .collect(Collectors.toList());
-
         log.warn("⚠️ isLiked filter requested but Like repository not implemented yet");
         return items; // 임시: 필터링 없이 반환
     }
@@ -214,8 +257,6 @@ public class SearchService {
      */
     private String getCurrentUserId() {
         // TODO: Spring Security Context에서 현재 사용자 정보 가져오기
-        // Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        // return auth.getName();
         return "temp_user_id";
     }
 
@@ -254,38 +295,6 @@ public class SearchService {
                 .build();
     }
 
-//    /**
-//     * Meilisearch Hit를 PostSearchItem으로 변환
-//     */
-//    private PostSearchItem convertToSearchItem(Object hit) {
-//        try {
-//            @SuppressWarnings("unchecked")
-//            Map<String, Object> hitMap = (Map<String, Object>) hit;
-//
-//            // _formatted에서 하이라이트된 content 추출
-//            @SuppressWarnings("unchecked")
-//            Map<String, Object> formatted = (Map<String, Object>) hitMap.get("_formatted");
-//            String highlightedContent = formatted != null ?
-//                    (String) formatted.get("cleanedText") :
-//                    (String) hitMap.get("cleanedText");
-//
-//            return PostSearchItem.builder()
-//                    .id(getLongValue(hitMap.get("postId")))  // postId를 id로 사용
-//                    .mmMessageId((String) hitMap.get("postId"))  // postId를 mmMessageId로 매핑
-//                    .mmChannelId((String) hitMap.get("channelId"))  // channelId를 mmChannelId로 매핑
-//                    .userName((String) hitMap.get("userId"))  // userId를 userName으로 사용
-//                    .content((String) hitMap.get("cleanedText"))
-//                    .highlightedContent(highlightedContent)
-//                    .mmCreatedAt(getLongValue(hitMap.get("timestamp")))  // timestamp를 mmCreatedAt로 매핑 (이미 Long)
-//                    .mainCategory(getLongValue(hitMap.get("mainCategory")))
-//                    .subCategory(getLongValue(hitMap.get("subCategory")))
-//                    .build();
-//        } catch (Exception e) {
-//            log.error("Failed to convert search item", e);
-//            throw new RuntimeException("Failed to convert search item", e);
-//        }
-//    }
-
     /**
      * Object를 Long으로 안전하게 변환
      */
@@ -316,52 +325,64 @@ public class SearchService {
         return str.replace("'", "\\'");
     }
 
-    // ========== ProcessedMessage 인덱싱 메서드 ==========
+    // ========== Post 인덱싱 메서드 ==========
 
-    public void indexMessage(ProcessedMessage message) {
+    /**
+     * Post 인덱싱 (메인 메서드)
+     */
+    public void indexPost(Post post) {
         try {
             Index index = meilisearchClient.index(INDEX_NAME);
-            Map<String, Object> document = messageToDocument(message);
+            PostIndexDocument doc = postProcessorService.preprocess(post);
 
-            String json = objectMapper.writeValueAsString(List.of(document));
+            String json = objectMapper.writeValueAsString(List.of(doc));
             index.addDocuments(json);
-            log.info("📄 JSON to send: {}", json);
-            log.info("✅ Indexed message: {}", message.getPostId());
+
+            log.info("✅ Indexed Post: {}", post.getPostId());
         } catch (Exception e) {
-            log.error("❌ Failed to index message: {}", message.getPostId(), e);
-            throw new RuntimeException("Failed to index message", e);
+            log.error("❌ Failed to index Post: {}", post.getPostId(), e);
+            throw new RuntimeException("Failed to index post", e);
         }
     }
 
-    public void indexMessages(List<ProcessedMessage> messages) {
+    /**
+     * 여러 Post 일괄 인덱싱
+     */
+    public void indexPosts(List<Post> posts) {
         try {
             Index index = meilisearchClient.index(INDEX_NAME);
 
-            List<Map<String, Object>> documents = messages.stream()
-                    .map(this::messageToDocument)
+            List<PostIndexDocument> documents = posts.stream()
+                    .map(postProcessorService::preprocess)
                     .collect(Collectors.toList());
 
             String json = objectMapper.writeValueAsString(documents);
             index.addDocuments(json);
 
-            log.info("✅ Indexed {} messages", messages.size());
+            log.info("✅ Indexed {} posts", posts.size());
         } catch (Exception e) {
-            log.error("❌ Failed to index messages", e);
-            throw new RuntimeException("Failed to index messages", e);
+            log.error("❌ Failed to index posts", e);
+            throw new RuntimeException("Failed to index posts", e);
         }
     }
 
-    public void deleteMessage(String postId) {
+    /**
+     * Post 삭제
+     */
+    public void deletePost(String postId) {
         try {
             Index index = meilisearchClient.index(INDEX_NAME);
             index.deleteDocument(postId);
-            log.info("✅ Deleted message: {}", postId);
+            log.info("✅ Deleted post: {}", postId);
         } catch (Exception e) {
-            log.error("❌ Failed to delete message: {}", postId, e);
-            throw new RuntimeException("Failed to delete message", e);
+            log.error("❌ Failed to delete post: {}", postId, e);
+            throw new RuntimeException("Failed to delete post", e);
         }
     }
 
+    /**
+     * 인덱스 통계 조회
+     */
     public Object getIndexStats() {
         try {
             Index index = meilisearchClient.index(INDEX_NAME);
@@ -372,6 +393,9 @@ public class SearchService {
         }
     }
 
+    /**
+     * 모든 문서 삭제
+     */
     public void deleteAllDocuments() {
         try {
             Index index = meilisearchClient.index(INDEX_NAME);
@@ -383,71 +407,6 @@ public class SearchService {
         }
     }
 
-    /**
-     * ProcessedMessage를 Meilisearch Document로 변환
-     * timestamp는 Long 타입으로 저장됨
-     */
-    // SearchService.java의 수정 사항
-
-// 1. messageToDocument 메서드에서 파일 정보 추가
-    private Map<String, Object> messageToDocument(ProcessedMessage message) {
-        Map<String, Object> document = new HashMap<>();
-        document.put("postId", message.getPostId());
-        document.put("channelId", message.getChannelId());
-        document.put("userId", message.getUserId());
-        document.put("cleanedText", message.getCleanedText());
-        document.put("timestamp", message.getTimestamp());
-        document.put("mainCategory", message.getMainCategory());
-        document.put("subCategory", message.getSubCategory());
-        document.put("deadline", message.getDeadline());
-        document.put("processedAt", message.getProcessedAt());
-
-        // 파일 정보 추가 (JSON으로 직렬화)
-        if (message.getFiles() != null && !message.getFiles().isEmpty()) {
-            document.put("files", message.getFiles());
-            // 파일 개수도 저장 (검색/필터에 활용 가능)
-            document.put("fileCount", message.getFiles().size());
-        } else {
-            document.put("files", null);
-            document.put("fileCount", 0);
-        }
-
-        return document;
-    }
-
-    // 2. convertToSearchItem 메서드에서 파일 정보 파싱
-    private PostSearchItem convertToSearchItem(Object hit) {
-        try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> hitMap = (Map<String, Object>) hit;
-
-            // _formatted에서 하이라이트된 content 추출
-            @SuppressWarnings("unchecked")
-            Map<String, Object> formatted = (Map<String, Object>) hitMap.get("_formatted");
-            String highlightedContent = formatted != null ?
-                    (String) formatted.get("cleanedText") :
-                    (String) hitMap.get("cleanedText");
-
-            // 파일 정보 파싱
-            List<FileInfo> files = parseFileInfos(hitMap.get("files"));
-
-            return PostSearchItem.builder()
-                    .id(getLongValue(hitMap.get("postId")))
-                    .mmMessageId((String) hitMap.get("postId"))
-                    .mmChannelId((String) hitMap.get("channelId"))
-                    .userName((String) hitMap.get("userId"))
-                    .content((String) hitMap.get("cleanedText"))
-                    .highlightedContent(highlightedContent)
-                    .mmCreatedAt(getLongValue(hitMap.get("timestamp")))
-                    .mainCategory(getLongValue(hitMap.get("mainCategory")))
-                    .subCategory(getLongValue(hitMap.get("subCategory")))
-                    .files(files)  // 파일 정보 추가
-                    .build();
-        } catch (Exception e) {
-            log.error("Failed to convert search item", e);
-            throw new RuntimeException("Failed to convert search item", e);
-        }
-    }
 
     // 3. 파일 정보 파싱 헬퍼 메서드 추가
     @SuppressWarnings("unchecked")
@@ -487,8 +446,6 @@ public class SearchService {
 
         return fileInfo;
     }
-
-    // 4. getIntValue 헬퍼 메서드 추가 (기존에 없다면)
     private Integer getIntValue(Object value) {
         if (value == null) {
             return null;
@@ -505,7 +462,4 @@ public class SearchService {
         }
         return null;
     }
-
-
-
 }

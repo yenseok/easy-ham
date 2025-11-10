@@ -4,6 +4,7 @@ import lombok.Builder;
 
 @Builder
 public record KeywordDto(
+        Long keywordId,
         String keyword
 ) {
 }

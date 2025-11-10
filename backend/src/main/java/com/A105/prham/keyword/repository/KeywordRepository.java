@@ -9,4 +9,5 @@ import java.util.List;
 public interface KeywordRepository extends JpaRepository<Keyword, Long> {
 
     List<Keyword> findByUser(User user);
+    boolean existsByUserAndWord(User user, String word);
 }

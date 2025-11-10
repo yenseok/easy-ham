@@ -18,4 +18,5 @@ public interface FileRepository extends JpaRepository<File,Long> {
 
 	// 파일 id 존재하는가
 	boolean existsByMmFileId(String mmFileId);
+
 }

@@ -9,8 +9,10 @@ import com.A105.prham.notification.dto.response.NotificationSettingGetResponse;
 import com.A105.prham.notification.service.NotificationService;
 import com.A105.prham.user.entity.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequiredArgsConstructor
@@ -51,5 +53,12 @@ public class NotificationController {
     public ApiResponseDto updateNotificationSetting(@AuthenticationPrincipal User user, @RequestBody NotificationSettingUpdateRequest  notificationSettingUpdateRequest) {
         notificationService.updateNotificationSetting(user, notificationSettingUpdateRequest);
         return ApiResponseDto.success(SuccessCode.NOTIFICATION_SETTING_UPDATE_SUCCESS);
+    }
+
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter connect(@AuthenticationPrincipal User user,
+                                              @RequestHeader(value = "Last-Event-ID", required = false, defaultValue = "")
+                                              String lastEventId) {
+        return notificationService.subscribe(user, lastEventId);
     }
 }

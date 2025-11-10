@@ -102,7 +102,7 @@ public class UserNoticeLikeService {
                         .mainCategory(userNoticeLike.getNotice().getMaincode().getMainCodeName())
                         .subCategory(userNoticeLike.getNotice().getSubcode().getSubcodeName())
                         .authorId(userNoticeLike.getNotice().getAuthorId())
-                        .authorName(userNoticeLike.getNotice().getPost().getUserName())
+                        // .authorName(userNoticeLike.getNotice().getPost().getUserName())
                         .channelName(userNoticeLike.getNotice().getChannel().getChannelName())
                         .createdAt(userNoticeLike.getUserNotice().getCreatedAt().toString())
                         .deadline(userNoticeLike.getNotice().getDeadline())

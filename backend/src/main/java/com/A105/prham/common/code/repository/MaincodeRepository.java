@@ -11,4 +11,6 @@ public interface MaincodeRepository extends JpaRepository<Maincode, Long> {
 
     // isUsed = true 인 데이터만 조회
     List<Maincode> findAllByIsUsedTrue();
+
+
 }

@@ -1,5 +1,7 @@
 package com.A105.prham.webhook.entity;
 
+import com.A105.prham.common.domain.BaseTimeEntity;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -28,8 +30,8 @@ public class File {
 	@Column(name = "mm_file_id", nullable = false, unique = true)
 	private String mmFileId;
 
-	@Column(nullable = false, name = "file_url")
-	private String fileUrl;
+	// @Column(nullable = false, name = "file_url")
+	// private String fileUrl;
 
 	@Column(nullable = false, name = "file_name")
 	private String fileName;
@@ -42,9 +44,9 @@ public class File {
 	private Post post;
 
 	@Builder
-	public File(String mmFileId, String fileUrl, String fileName, String mimeType) {
+	public File(String mmFileId, String fileName, String mimeType) {
 		this.mmFileId = mmFileId;
-		this.fileUrl = fileUrl;
+		// this.fileUrl = fileUrl;
 		this.fileName = fileName;
 		this.mimeType = mimeType;
 	}

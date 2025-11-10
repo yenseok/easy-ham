@@ -1,9 +1,8 @@
 package com.A105.prham.search.controller;
 
-import com.A105.prham.messages.entity.Message;
-import com.A105.prham.messages.repository.MessageRepository;
-import com.A105.prham.messages.service.MessageService;
 import com.A105.prham.search.service.SearchService;
+import com.A105.prham.webhook.entity.Post;
+import com.A105.prham.webhook.repository.PostRepository;
 import com.meilisearch.sdk.Client;
 import com.meilisearch.sdk.Index;
 import com.meilisearch.sdk.model.DocumentsQuery;
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -24,35 +22,33 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class SearchAdminController {
 
-    private final MessageRepository messageRepository;
-    private final MessageService messageService;
+    private final PostRepository postRepository;
     private final SearchService searchService;
     private final Client meilisearchClient;
 
-    // 전체 재색인
+    /**
+     * 전체 재색인 (Post 기반)
+     */
     @PostMapping("/reindex")
     public ResponseEntity<Map<String, Object>> reindexAll() {
-        log.info("Starting full reindex...");
+        log.info("Starting full reindex from Post entities...");
 
-        // Message Entity를 조회하여 ProcessedMessage로 변환 후 인덱싱
-        List<Message> messages = messageRepository.findAll();
-
-        List<com.A105.prham.messages.dto.ProcessedMessage> processedMessages = messages.stream()
-                .map(messageService::convertToProcessedMessage)
-                .collect(Collectors.toList());
-
-        searchService.indexMessages(processedMessages);
+        // Post Entity 조회하여 인덱싱
+        List<Post> posts = postRepository.findAll();
+        searchService.indexPosts(posts);
 
         Map<String, Object> response = new HashMap<>();
         response.put("success", true);
-        response.put("indexedCount", processedMessages.size());
-        response.put("message", "Successfully reindexed all messages");
+        response.put("indexedCount", posts.size());
+        response.put("message", "Successfully reindexed all posts");
 
-        log.info("Reindexed {} messages", processedMessages.size());
+        log.info("Reindexed {} posts", posts.size());
         return ResponseEntity.ok(response);
     }
 
-    // 색인 상태 확인
+    /**
+     * 색인 상태 확인
+     */
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> getIndexStatus() {
         try {
@@ -71,7 +67,9 @@ public class SearchAdminController {
         }
     }
 
-    // 🆕 Meilisearch에 실제로 저장된 문서 확인
+    /**
+     * Meilisearch에 실제로 저장된 문서 확인
+     */
     @GetMapping("/documents")
     public ResponseEntity<Map<String, Object>> getDocuments(
             @RequestParam(defaultValue = "0") int offset,
@@ -105,7 +103,9 @@ public class SearchAdminController {
         }
     }
 
-    // 🆕 Meilisearch 인덱스 설정 확인
+    /**
+     * Meilisearch 인덱스 설정 확인
+     */
     @GetMapping("/settings")
     public ResponseEntity<Map<String, Object>> getIndexSettings() {
         try {
@@ -126,7 +126,9 @@ public class SearchAdminController {
         }
     }
 
-    // 🆕 특정 문서 조회 (postId로)
+    /**
+     * 특정 문서 조회 (postId로)
+     */
     @GetMapping("/documents/{postId}")
     public ResponseEntity<Map<String, Object>> getDocument(@PathVariable String postId) {
         try {
@@ -147,7 +149,9 @@ public class SearchAdminController {
         }
     }
 
-    // 🆕 인덱스 완전히 삭제 (주의!)
+    /**
+     * 인덱스 완전히 삭제 (주의!)
+     */
     @DeleteMapping("/index")
     public ResponseEntity<Map<String, Object>> deleteIndex() {
         try {
@@ -168,7 +172,9 @@ public class SearchAdminController {
         }
     }
 
-    // 🆕 인덱스 Primary Key 확인
+    /**
+     * 인덱스 Primary Key 확인
+     */
     @GetMapping("/index-info")
     public ResponseEntity<Map<String, Object>> getIndexInfo() {
         try {

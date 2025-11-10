@@ -13,6 +13,8 @@ public enum ErrorCode {
     DUPLICATED_USER_NOTICE_LIKE(400, HttpStatus.BAD_REQUEST, "이미 북마크 된 공지사항입니다."),
     INVALID_WEBHOOK_PAYLOAD(400, HttpStatus.BAD_REQUEST, "유효하지 않은 웹훅 데이터입니다."),
     INVALID_USER_NOTICE_LIKE(400, HttpStatus.BAD_REQUEST, "유효하지 않은 북마크입니다."),
+    DUPLICATED_NOTIFICATION_SETTING(400, HttpStatus.BAD_REQUEST, "이미 알림 설정 초기화 된 유저입니다."),
+    DUPLICATED_KEYWORD(400, HttpStatus.BAD_REQUEST, "이미 구독된 키워드입니다."),
 
     //403 FORBIDDEN
     NOT_REGISTERED(403,HttpStatus.FORBIDDEN, "회원가입 후 이용해주세요."),
@@ -33,7 +35,9 @@ public enum ErrorCode {
     //500 INTERNAL SERVER ERROR
     INTERNAL_SERVER_ERROR(500, HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다."),
     WEBHOOK_PROCESSING_ERROR(500, HttpStatus.INTERNAL_SERVER_ERROR, "웹훅 처리 중 오류가 발생했습니다."),
-    FILE_PROCESSING_ERROR(500, HttpStatus.INTERNAL_SERVER_ERROR, "파일 처리 중 오류가 발생했습니다.");
+    FILE_PROCESSING_ERROR(500, HttpStatus.INTERNAL_SERVER_ERROR, "파일 처리 중 오류가 발생했습니다."),
+    SSE_DATA_SEND_ERROR(500, HttpStatus.INTERNAL_SERVER_ERROR, "SSE 데이터 전송 중 오류가 발생했습니다.")
+    ;
 
 
     private final int code;

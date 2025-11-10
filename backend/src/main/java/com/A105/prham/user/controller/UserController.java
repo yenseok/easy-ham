@@ -7,7 +7,9 @@ import com.A105.prham.common.response.SuccessCode;
 import com.A105.prham.user.dto.request.UserSignupRequest;
 import com.A105.prham.user.dto.request.UserUpdateRequest;
 import com.A105.prham.user.dto.response.MyInfoResponse;
+import com.A105.prham.user.dto.response.UserChannelInfoResponseDto;
 import com.A105.prham.user.entity.User;
+import com.A105.prham.user.service.UserChannelService;
 import com.A105.prham.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 import java.util.HashSet;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @RestController
@@ -26,6 +29,7 @@ public class UserController {
 
     private final UserService userService;
     private final JwtUtils jwtUtils;
+    private final UserChannelService userChannelService;
 
     /**
      * 회원가입 API
@@ -127,7 +131,16 @@ public class UserController {
         }
     }
 
-
+    //사용자 채널 목록 조회
+    @GetMapping("/me/channels")
+    public ApiResponseDto<List<UserChannelInfoResponseDto>> getMyChannels(@AuthenticationPrincipal User user){
+        try {
+            List<UserChannelInfoResponseDto> channels = userChannelService.getUserAllowedChannels(user);
+            return ApiResponseDto.success(SuccessCode.SUCCESS, channels);
+        }catch (Exception e){
+            return ApiResponseDto.fail(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
 
 }
 
