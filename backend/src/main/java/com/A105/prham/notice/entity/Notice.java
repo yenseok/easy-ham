@@ -44,9 +44,6 @@ public class Notice extends BaseTimeEntity {
 	@JoinColumn(name = "channel_id")
 	private Channel channel;
 
-	@OneToMany(mappedBy = "notice", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-	private List<UserNoticeLike> userNoticeLikes = new ArrayList<>();
-
 	@Column(name = "title", nullable = false)
 	private String title;
 
