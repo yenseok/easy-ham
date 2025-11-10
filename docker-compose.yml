@@ -62,22 +62,6 @@ services:
       - app-net
 
 
-  # === Jenkins ===
-  jenkins:
-    image: jenkins/jenkins:lts
-    container_name: app-jenkins
-    user: root
-    ports:
-      - "9006:8080"
-    environment:
-      - JENKINS_OPTS=--prefix=/jenkins
-    volumes:
-      - ./jenkins_data:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
-    restart: always
-    networks:
-      - app-net
-
 
 volumes:
   jenkins-data:
