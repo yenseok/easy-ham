@@ -27,7 +27,7 @@ export function NoticeListContainer({
   hasMore = true,
 }: NoticeListContainerProps) {
   return (
-    <div className="-mt-6 -mb-6">
+    <div>
       <NoticeList
         notices={notices}
         onBookmarkToggle={onBookmarkToggle}

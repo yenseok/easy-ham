@@ -4,10 +4,7 @@ import { CalendarHeader } from "./components/CalendarHeader";
 import { Sidebar } from "./components/Sidebar";
 import { WeekView } from "./components/WeekView";
 import { MonthView } from "./components/MonthView";
-import {
-  MessageDetailModal,
-  MessageDetail,
-} from "@/components/MessageDetailModal";
+import { MessageDetailModal, type MessageDetail } from "@/components/modals/MessageDetailModal";
 import { useCalendarStore } from "@/stores/useCalendarStore";
 import type { Notice } from "@/types/notice";
 

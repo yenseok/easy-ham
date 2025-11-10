@@ -7,19 +7,28 @@ import type { SearchResultItem, SearchFileItem } from '@/types/api';
 
 
 /**
- * mainCategory 숫자 코드 → 한글 카테고리 변환
+ * subCategory 코드를 통해 mainCategory 추론
  *
- * 현재는 null이 오지만, 나중에 LLM 파이프라인 완성 시
- * 실제 숫자 코드가 올 예정입니다.
+ * subCodeId 1-4: 학사 (EDU)
+ * subCodeId 5-8: 취업 (JOB)
  *
- * @param code - 카테고리 코드
+ * @param subCategoryCode - 서브카테고리 코드
  * @returns "학사" | "취업"
  */
-function mapMainCategory(code: number | null): "학사" | "취업" {
-  if (code === null) return "학사";  // 기본값
+function mapMainCategory(mainCategoryCode: number | null, subCategoryCode: number | null): "학사" | "취업" {
+  // subCategory로 추론 (더 신뢰할 수 있음)
+  if (subCategoryCode !== null) {
+    // subCodeId 1-4는 학사, 5-8은 취업
+    return subCategoryCode <= 4 ? "학사" : "취업";
+  }
 
-  // TODO: 백엔드 팀원에게 실제 매핑 확인 필요
-  return code === 1 ? "학사" : "취업";
+  // subCategory가 없으면 mainCategory 사용
+  if (mainCategoryCode !== null) {
+    return mainCategoryCode === 1 ? "학사" : "취업";
+  }
+
+  // 둘 다 없으면 기본값
+  return "학사";
 }
 
 /**
@@ -108,6 +117,18 @@ function convertFiles(files: SearchFileItem[] | null): Attachment[] | undefined 
  * @returns Notice 객체
  */
 export function convertSearchItemToNotice(item: SearchResultItem): Notice {
+  // 디버깅: 첫 3개 아이템만 로그
+  if (item.id <= 3) {
+    console.log('[searchMapper] API 데이터:', {
+      id: item.id,
+      title: item.title,
+      mainCategory: item.mainCategory,
+      subCategory: item.subCategory,
+      변환된_category: mapMainCategory(item.mainCategory, item.subCategory),
+      변환된_subcategory: mapSubCategory(item.subCategory)
+    });
+  }
+
   return {
     // ID: API가 항상 실제 ID 제공
     id: item.id,
@@ -123,7 +144,7 @@ export function convertSearchItemToNotice(item: SearchResultItem): Notice {
     channel: item.channelName,
 
     // 카테고리 변환
-    category: mapMainCategory(item.mainCategory),
+    category: mapMainCategory(item.mainCategory, item.subCategory),
     subcategory: mapSubCategory(item.subCategory),
 
     // 북마크 상태 (nullish coalescing: isLiked가 없으면 false)

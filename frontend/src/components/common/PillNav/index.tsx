@@ -49,10 +49,11 @@ const PillNav = ({
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const navItemsRef = useRef<HTMLDivElement>(null);
   const logoRef = useRef<HTMLAnchorElement>(null);
+  const prevActiveHrefRef = useRef<string | undefined>(activeHref);
 
   useEffect(() => {
     const layout = () => {
-      circleRefs.current.forEach(circle => {
+      circleRefs.current.forEach((circle, index) => {
         if (!circle?.parentElement) return;
 
         const pill = circle.parentElement;
@@ -67,33 +68,60 @@ const PillNav = ({
         circle.style.height = `${D}px`;
         circle.style.bottom = `-${delta}px`;
 
-        gsap.set(circle, {
-          xPercent: -50,
-          scale: 0,
-          transformOrigin: `50% ${originY}px`
-        });
-
         const label = pill.querySelector('.pill-label');
         const white = pill.querySelector('.pill-label-hover');
 
-        if (label) gsap.set(label, { y: 0 });
-        if (white) gsap.set(white, { y: h + 12, opacity: 0 });
+        // Active 상태 확인
+        const isActive = pill.classList.contains('is-active');
 
-        const index = circleRefs.current.indexOf(circle);
-        if (index === -1) return;
+        if (isActive) {
+          // Active 항목은 즉시 filled 상태로 설정 (애니메이션 없음)
+          gsap.set(circle, {
+            xPercent: -50,
+            scale: 1.2,
+            transformOrigin: `50% ${originY}px`
+          });
+          if (label) {
+            gsap.set(label, { y: -(h + 8), opacity: 0, visibility: 'hidden' });
+          }
+          if (white) {
+            // active 상태일 때는 GSAP을 완전히 무시하고 CSS만 사용
+            const whiteEl = white as HTMLElement;
+            // 모든 GSAP 애니메이션 정리
+            gsap.killTweensOf(white);
+            // 인라인 스타일 완전히 제거 후 재설정
+            whiteEl.removeAttribute('style');
+            // CSS 클래스로만 처리하도록
+            whiteEl.classList.add('force-black-text');
+          }
+        } else {
+          // 비활성 항목은 empty 상태로 설정
+          gsap.set(circle, {
+            xPercent: -50,
+            scale: 0,
+            transformOrigin: `50% ${originY}px`
+          });
+          if (label) gsap.set(label, { y: 0, opacity: 1, visibility: 'visible' });
+          if (white) gsap.set(white, { y: h + 12, opacity: 0, visibility: 'hidden' });
+        }
 
+        // 타임라인 생성 (hover용)
         tlRefs.current[index]?.kill();
         const tl = gsap.timeline({ paused: true });
 
         tl.to(circle, { scale: 1.2, xPercent: -50, duration: 2, ease, overwrite: 'auto' }, 0);
 
         if (label) {
-          tl.to(label, { y: -(h + 8), duration: 2, ease, overwrite: 'auto' }, 0);
+          tl.to(label, { y: -(h + 8), opacity: 0, duration: 2, ease, overwrite: 'auto' }, 0);
         }
 
         if (white) {
           gsap.set(white, { y: Math.ceil(h + 100), opacity: 0 });
-          tl.to(white, { y: 0, opacity: 1, duration: 2, ease, overwrite: 'auto' }, 0);
+          tl.to(white, { y: 0, opacity: 1, visibility: 'visible', duration: 2, ease, overwrite: 'auto' }, 0);
+          // hover 상태에서도 색상 설정
+          tl.call(() => {
+            (white as HTMLElement).style.setProperty('color', '#000000', 'important');
+          }, [], 0);
         }
 
         tlRefs.current[index] = tl;
@@ -138,12 +166,85 @@ const PillNav = ({
     }
 
     return () => window.removeEventListener('resize', onResize);
-  }, [items, ease, initialLoadAnimation]);
+  }, [items, ease, initialLoadAnimation, activeHref]);
+
+  // activeHref 변경 시 페이지 전환 애니메이션
+  useEffect(() => {
+    if (prevActiveHrefRef.current === activeHref) return;
+
+    const prevIndex = items.findIndex(item => item.href === prevActiveHrefRef.current);
+    const newIndex = items.findIndex(item => item.href === activeHref);
+
+    // 이전 active 항목을 empty 상태로 애니메이션
+    if (prevIndex !== -1) {
+      const circle = circleRefs.current[prevIndex];
+      const pill = circle?.parentElement;
+
+      if (circle && pill) {
+        const rect = pill.getBoundingClientRect();
+        const { height: h } = rect;
+        const label = pill.querySelector('.pill-label');
+        const white = pill.querySelector('.pill-label-hover');
+
+        activeTweenRefs.current[prevIndex]?.kill();
+
+        gsap.to(circle, { scale: 0, duration: 0.4, ease, overwrite: 'auto' });
+        if (label) gsap.to(label, { y: 0, opacity: 1, visibility: 'visible', duration: 0.4, ease, overwrite: 'auto' });
+        if (white) gsap.to(white, { y: h + 12, opacity: 0, visibility: 'hidden', duration: 0.4, ease, overwrite: 'auto' });
+      }
+    }
+
+    // 새 active 항목을 filled 상태로 애니메이션
+    if (newIndex !== -1) {
+      const circle = circleRefs.current[newIndex];
+      const pill = circle?.parentElement;
+
+      if (circle && pill) {
+        const rect = pill.getBoundingClientRect();
+        const { height: h } = rect;
+        const label = pill.querySelector('.pill-label');
+        const white = pill.querySelector('.pill-label-hover');
+
+        activeTweenRefs.current[newIndex]?.kill();
+
+        gsap.to(circle, { scale: 1.2, duration: 0.4, ease, overwrite: 'auto' });
+        if (label) {
+          gsap.to(label, { y: -(h + 8), opacity: 0, visibility: 'hidden', duration: 0.4, ease, overwrite: 'auto' });
+        }
+        if (white) {
+          const whiteEl = white as HTMLElement;
+          // 모든 GSAP 애니메이션 정리
+          gsap.killTweensOf(white);
+          // 인라인 스타일 완전히 제거
+          whiteEl.removeAttribute('style');
+          // CSS 클래스로만 처리
+          whiteEl.classList.add('force-black-text');
+          // CSS transition으로 부드럽게
+          whiteEl.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+          whiteEl.style.opacity = '1';
+          whiteEl.style.visibility = 'visible';
+          whiteEl.style.transform = 'translateY(0)';
+        }
+      }
+    }
+
+    prevActiveHrefRef.current = activeHref;
+  }, [activeHref, items, ease]);
 
   const handleEnter = (i: number) => {
+    // Active 항목은 hover 애니메이션 실행 안 함
+    if (items[i]?.href === activeHref) return;
+
     const tl = tlRefs.current[i];
     if (!tl) return;
     activeTweenRefs.current[i]?.kill();
+    
+    const pill = circleRefs.current[i]?.parentElement;
+    const white = pill?.querySelector('.pill-label-hover');
+    if (white) {
+      (white as HTMLElement).style.setProperty('color', '#000000', 'important');
+    }
+    
     activeTweenRefs.current[i] = tl.tweenTo(tl.duration(), {
       duration: 0.3,
       ease,
@@ -152,6 +253,9 @@ const PillNav = ({
   };
 
   const handleLeave = (i: number) => {
+    // Active 항목은 hover 애니메이션 역재생 안 함
+    if (items[i]?.href === activeHref) return;
+
     const tl = tlRefs.current[i];
     if (!tl) return;
     activeTweenRefs.current[i]?.kill();
