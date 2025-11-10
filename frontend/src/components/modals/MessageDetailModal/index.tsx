@@ -44,7 +44,7 @@ export const MessageDetailModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[85vh] overflow-y-auto p-8">
+      <DialogContent className="max-h-[85vh] overflow-y-auto p-8" style={{ maxWidth: '60vw' }}>
         {/* 메시지 헤더 */}
         <MessageHeader
           title={message.title}

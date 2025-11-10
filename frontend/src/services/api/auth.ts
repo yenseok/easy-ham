@@ -29,6 +29,12 @@ export interface SignupRequest {
   skillIds?: number[];
 }
 
+export interface UpdateUserRequest {
+  classroom: number;
+  positionIds: number[];
+  skillIds: number[];
+}
+
 // ===== API 함수 =====
 
 /**
@@ -54,4 +60,41 @@ export const signup = async (data: SignupRequest): Promise<ApiResponse<void>> =>
  */
 export const logout = async (): Promise<ApiResponse<void>> => {
   return apiClient.post<void>(API_ENDPOINTS.auth.logout, {});
+};
+
+/**
+ * 사용자 정보 조회
+ * @returns 사용자 프로필 정보
+ */
+export interface UserProfileResponse {
+  userId: number;
+  name: string;
+  classroom: number;
+  generation: number;
+  email: string;
+  profileImage: string | null;
+  campus: string;
+  userSkills: string[];
+  userPositions: string[];
+}
+
+export const getUserProfile = async (): Promise<ApiResponse<UserProfileResponse>> => {
+  return apiClient.get<UserProfileResponse>(API_ENDPOINTS.users.getMe);
+};
+
+/**
+ * 사용자 정보 업데이트
+ * @param data 업데이트할 사용자 정보
+ * @returns 성공 메시지
+ */
+export const updateUserProfile = async (data: UpdateUserRequest): Promise<ApiResponse<void>> => {
+  return apiClient.patch<void>(API_ENDPOINTS.users.updateMe, data);
+};
+
+/**
+ * 회원탈퇴 (계정 삭제)
+ * @returns 성공 메시지
+ */
+export const deleteUser = async (): Promise<ApiResponse<void>> => {
+  return apiClient.post<void>(API_ENDPOINTS.users.delete, {});
 };

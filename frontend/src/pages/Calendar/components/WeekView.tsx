@@ -1,25 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink } from "lucide-react";
-
-interface CalendarEvent {
-  id: number;
-  title: string;
-  startDate: Date;
-  endDate: Date;
-  startTime?: string;
-  endTime?: string;
-  description?: string;
-  location?: string;
-  channel: string;
-  category: string;
-  subcategory: string;
-}
+import type { Notice } from "@/types/notice";
 
 interface WeekViewProps {
   weekDays: Date[];
-  getEventsForDate: (date: Date) => CalendarEvent[];
-  onEventClick: (event: CalendarEvent) => void;
+  getEventsForDate: (date: Date) => Notice[];
+  onEventClick: (event: Notice) => void;
   formatDate: (date: Date) => string;
   isToday: (date: Date) => boolean;
   isSameDay: (date1: Date, date2: Date) => boolean;
@@ -121,14 +108,17 @@ export function WeekView({
                           >
                             {event.category}/{event.subcategory}
                           </Badge>
-                          {!isSameDay(event.startDate, event.endDate) && (
+                          {event.startDate && event.endDate && !isSameDay(
+                            typeof event.startDate === 'string' ? new Date(event.startDate) : event.startDate,
+                            typeof event.endDate === 'string' ? new Date(event.endDate) : event.endDate
+                          ) && (
                             <span
                               className="text-[10px] text-gray-400"
                               style={{
                                 fontWeight: 500,
                               }}
                             >
-                              {formatDate(event.startDate)}~
+                              {formatDate(typeof event.startDate === 'string' ? new Date(event.startDate) : event.startDate)}~
                             </span>
                           )}
                         </div>
@@ -155,10 +145,10 @@ export function WeekView({
                         {event.title}
                       </div>
 
-                      {/* 설명 */}
-                      {event.description && (
+                      {/* 설명 (content의 첫 줄 표시) */}
+                      {event.content && (
                         <div className="text-xs text-gray-500 truncate">
-                          {event.description}
+                          {event.content.split('\n')[0]}
                         </div>
                       )}
                     </Card>

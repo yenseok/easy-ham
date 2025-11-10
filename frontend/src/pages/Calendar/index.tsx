@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Header } from "@/components/layouts/Header";
 import { CalendarHeader } from "./components/CalendarHeader";
 import { Sidebar } from "./components/Sidebar";
@@ -8,23 +8,25 @@ import {
   MessageDetailModal,
   MessageDetail,
 } from "@/components/MessageDetailModal";
-
-// 타입 정의
-interface CalendarEvent {
-  id: number;
-  title: string;
-  startDate: Date;
-  endDate: Date;
-  startTime?: string;
-  endTime?: string;
-  description?: string;
-  location?: string;
-  channel: string;
-  category: string; // '학사' or '취업'
-  subcategory: string; // '할일', '특강', '정보', '행사'
-}
+import { useCalendarStore } from "@/stores/useCalendarStore";
+import type { Notice } from "@/types/notice";
 
 export default function CalendarPage() {
+  // Zustand 스토어에서 상태 가져오기
+  const {
+    events,
+    isLoading,
+    selectedChannels,
+    selectedAcademicCategories,
+    selectedCareerCategories,
+    loadEvents,
+    loadCategories,
+    toggleChannel,
+    toggleAcademicCategory,
+    toggleCareerCategory,
+    resetFilters,
+  } = useCalendarStore();
+
   // 채널 필터 접기/펴기 상태
   const [channelExpanded, setChannelExpanded] = useState(true);
 
@@ -40,163 +42,21 @@ export default function CalendarPage() {
   // 날짜 상태
   const [currentDate, setCurrentDate] = useState(new Date());
 
-  // 필터 상태
-  const [selectedChannels, setSelectedChannels] = useState<string[]>([
-    "전체",
-    "13기-공지사항",
-    "13기-취업공지",
-    "13기-취업정보",
-    "서울1반-공지사항",
-  ]);
-  const [selectedAcademicCategories, setSelectedAcademicCategories] = useState<
-    string[]
-  >(["할일", "특강", "정보", "행사"]);
-  const [selectedCareerCategories, setSelectedCareerCategories] = useState<
-    string[]
-  >(["할일", "특강", "정보", "행사"]);
+  // 초기 데이터 로딩
+  useEffect(() => {
+    loadEvents(new Date());
+    loadCategories();
+  }, []);
 
-  // 예제 이벤트 데이터
-  const events: CalendarEvent[] = [
-    // 10월 21일 이벤트 (4개)
-    {
-      id: 1,
-      title: "알고리즘 스터디",
-      startDate: new Date(2025, 9, 21),
-      endDate: new Date(2025, 9, 21),
-      startTime: "19:00",
-      endTime: "21:00",
-      description: "백준 문제 풀이",
-      channel: "13기-공지사항",
-      category: "학사",
-      subcategory: "정보",
-    },
-    {
-      id: 2,
-      title: "프로젝트 기획 발표",
-      startDate: new Date(2025, 9, 21),
-      endDate: new Date(2025, 9, 21),
-      startTime: "14:00",
-      endTime: "16:00",
-      description: "팀별 아이디어 발표",
-      channel: "13기-공지사항",
-      category: "학사",
-      subcategory: "할일",
-    },
-    {
-      id: 3,
-      title: "삼성 채용설명회",
-      startDate: new Date(2025, 9, 21),
-      endDate: new Date(2025, 9, 21),
-      startTime: "13:00",
-      endTime: "15:00",
-      description: "DS부문 신입 채용",
-      channel: "13기-취업정보",
-      category: "취업",
-      subcategory: "행사",
-    },
-    {
-      id: 11,
-      title: "코딩테스트 대비 특강",
-      startDate: new Date(2025, 9, 21),
-      endDate: new Date(2025, 9, 21),
-      startTime: "16:00",
-      endTime: "18:00",
-      description: "자료구조 심화",
-      channel: "13기-공지사항",
-      category: "학사",
-      subcategory: "특강",
-    },
-    // 10월 27일 이벤트 (2개)
-    {
-      id: 4,
-      title: "Vue.js 심화 특강",
-      startDate: new Date(2025, 9, 27),
-      endDate: new Date(2025, 9, 27),
-      startTime: "10:00",
-      endTime: "12:00",
-      description: "Composition API 실습",
-      channel: "13기-공지사항",
-      category: "학사",
-      subcategory: "특강",
-    },
-    {
-      id: 5,
-      title: "네트워킹 데이",
-      startDate: new Date(2025, 9, 27),
-      endDate: new Date(2025, 9, 27),
-      startTime: "18:00",
-      endTime: "20:00",
-      description: "선배 개발자와의 만남",
-      channel: "서울1반-공지사항",
-      category: "학사",
-      subcategory: "행사",
-    },
-    // 10월 28일 이벤트 (3개)
-    {
-      id: 6,
-      title: "AI 실습특강 III",
-      startDate: new Date(2025, 9, 28),
-      endDate: new Date(2025, 9, 28),
-      startTime: "13:00",
-      endTime: "17:00",
-      description: "서전 환경 셋팅 필요",
-      channel: "13기-공지사항",
-      category: "학사",
-      subcategory: "특강",
-    },
-    {
-      id: 7,
-      title: "코드 리뷰 세션",
-      startDate: new Date(2025, 9, 28),
-      endDate: new Date(2025, 9, 28),
-      startTime: "15:00",
-      endTime: "17:00",
-      description: "프로젝트 코드 리뷰",
-      channel: "13기-공지사항",
-      category: "학사",
-      subcategory: "정보",
-    },
-    {
-      id: 8,
-      title: "이력서 작성법 특강",
-      startDate: new Date(2025, 9, 28),
-      endDate: new Date(2025, 9, 28),
-      startTime: "14:00",
-      endTime: "16:00",
-      description: "IT 이력서 작성 팁",
-      channel: "13기-취업공지",
-      category: "취업",
-      subcategory: "특강",
-    },
-    // 10월 30일 이벤트 (2개)
-    {
-      id: 9,
-      title: "프로젝트 중간 발표",
-      startDate: new Date(2025, 9, 30),
-      endDate: new Date(2025, 9, 30),
-      startTime: "14:00",
-      endTime: "18:00",
-      description: "팀별 진행상황 발표",
-      channel: "13기-공지사항",
-      category: "학사",
-      subcategory: "할일",
-    },
-    {
-      id: 10,
-      title: "포트폴리오 제출",
-      startDate: new Date(2025, 9, 30),
-      endDate: new Date(2025, 9, 30),
-      description: "온라인 제출 마감",
-      channel: "13기-취업공지",
-      category: "취업",
-      subcategory: "할일",
-    },
-  ];
+  // currentDate 변경 시 범위 체크 및 자동 로딩
+  useEffect(() => {
+    loadEvents(currentDate);
+  }, [currentDate, loadEvents]);
 
+  // 채널 옵션
   const channelOptions = [
-    "전체",
     "13기-공지사항",
-    "13기-취업공지",
+    "13기-취업공고",
     "13기-취업정보",
     "서울1반-공지사항",
   ];
@@ -268,95 +128,79 @@ export default function CalendarPage() {
     );
   };
 
-  const getEventsForDate = (date: Date): CalendarEvent[] => {
-    return events.filter((event) => {
-      // 날짜 필터
-      if (!isSameDay(event.startDate, date)) return false;
-
-      // 채널 필터
-      if (
-        !selectedChannels.includes("전체") &&
-        !selectedChannels.includes(event.channel)
-      ) {
+  // 필터링된 이벤트 (useMemo로 최적화)
+  const filteredEvents = useMemo(() => {
+    const filtered = events.filter((event) => {
+      // 채널 필터 - 모든 채널이 선택된 경우 필터링 안 함
+      const allChannelsSelected = channelOptions.every(ch => selectedChannels.includes(ch));
+      if (!allChannelsSelected && !selectedChannels.includes(event.channel)) {
         return false;
       }
 
-      // 카테고리 필터 (학사 또는 취업)
-      const allCategories = [
-        ...selectedAcademicCategories,
-        ...selectedCareerCategories,
-      ];
-      if (
-        allCategories.length > 0 &&
-        !allCategories.includes(event.subcategory)
-      ) {
-        return false;
+      // 카테고리 필터 - 모든 카테고리가 선택된 경우 필터링 안 함
+      if (event.category === "학사") {
+        const allAcademicSelected = selectedAcademicCategories.length === 4;
+        if (!allAcademicSelected && !selectedAcademicCategories.includes(event.subcategory)) {
+          return false;
+        }
+      } else if (event.category === "취업") {
+        const allCareerSelected = selectedCareerCategories.length === 4;
+        if (!allCareerSelected && !selectedCareerCategories.includes(event.subcategory)) {
+          return false;
+        }
       }
 
       return true;
     });
+
+    console.log('[캘린더 필터링]', {
+      전체이벤트: events.length,
+      필터링후: filtered.length,
+      선택된채널: selectedChannels,
+      학사카테고리: selectedAcademicCategories,
+      취업카테고리: selectedCareerCategories,
+      샘플이벤트: events.slice(0, 1).map(e => ({ 제목: e.title, 채널: e.channel, 카테고리: e.category, 서브카테고리: e.subcategory }))
+    });
+
+    return filtered;
+  }, [events, selectedChannels, selectedAcademicCategories, selectedCareerCategories, channelOptions]);
+
+  // 날짜별 이벤트 가져오기
+  const getEventsForDate = (date: Date): Notice[] => {
+    const result = filteredEvents.filter((event) => {
+      // deadline 날짜와 비교
+      if (!event.deadline) return false;
+
+      const deadlineDate = typeof event.deadline === 'string'
+        ? new Date(event.deadline)
+        : event.deadline;
+
+      const isSame = isSameDay(deadlineDate, date);
+
+      // 디버깅용 로그 (첫 번째 이벤트만)
+      if (filteredEvents.indexOf(event) === 0 && date.getDate() === new Date().getDate()) {
+        console.log('[날짜별 이벤트]', {
+          날짜: date.toLocaleDateString(),
+          이벤트제목: event.title,
+          deadline: event.deadline,
+          deadlineDate: deadlineDate.toLocaleDateString(),
+          isSame
+        });
+      }
+
+      return isSame;
+    });
+
+    return result;
   };
 
-  const toggleChannel = (channel: string) => {
-    if (channel === "전체") {
-      if (selectedChannels.includes("전체")) {
-        setSelectedChannels([]);
-      } else {
-        setSelectedChannels([
-          "전체",
-          ...channelOptions.filter((c) => c !== "전체"),
-        ]);
-      }
-    } else {
-      let newChannels: string[];
-      if (selectedChannels.includes(channel)) {
-        newChannels = selectedChannels.filter(
-          (c) => c !== channel && c !== "전체"
-        );
-      } else {
-        newChannels = [...selectedChannels, channel];
-        const allOtherChannels = channelOptions.filter((c) => c !== "전체");
-        if (allOtherChannels.every((c) => newChannels.includes(c))) {
-          newChannels = ["전체", ...newChannels];
-        }
-      }
-      setSelectedChannels(newChannels);
-    }
-  };
-
-  const toggleCategory = (category: string, isAcademic: boolean) => {
+  // 카테고리 토글 (Zustand 액션 사용)
+  const handleToggleCategory = (category: string, isAcademic: boolean) => {
     if (isAcademic) {
-      if (selectedAcademicCategories.includes(category)) {
-        setSelectedAcademicCategories(
-          selectedAcademicCategories.filter((c) => c !== category)
-        );
-      } else {
-        setSelectedAcademicCategories([
-          ...selectedAcademicCategories,
-          category,
-        ]);
-      }
+      toggleAcademicCategory(category as any);
     } else {
-      if (selectedCareerCategories.includes(category)) {
-        setSelectedCareerCategories(
-          selectedCareerCategories.filter((c) => c !== category)
-        );
-      } else {
-        setSelectedCareerCategories([...selectedCareerCategories, category]);
-      }
+      toggleCareerCategory(category as any);
     }
-  };
-
-  const resetFilters = () => {
-    setSelectedChannels([
-      "전체",
-      "13기-공지사항",
-      "13기-취업공지",
-      "13기-취업정보",
-      "서울1반-공지사항",
-    ]);
-    setSelectedAcademicCategories(["할일", "특강", "정보", "행사"]);
-    setSelectedCareerCategories(["할일", "특강", "정보", "행사"]);
   };
 
   const goToPrevious = () => {
@@ -387,10 +231,6 @@ export default function CalendarPage() {
     setCurrentDate(new Date());
   };
 
-  const getMiniCalendarDays = (): Date[][] => {
-    return getMonthDays(currentDate);
-  };
-
   const [selectedWeek, setSelectedWeek] = useState<Date[]>(
     getWeekDays(new Date())
   );
@@ -406,24 +246,26 @@ export default function CalendarPage() {
     setSelectedWeek(getWeekDays(date));
   };
 
-  const handleEventClick = (event: CalendarEvent) => {
+  const handleEventClick = (event: Notice) => {
     setSelectedMessage({
       id: event.id,
-      author: "시스템",
-      timestamp: event.startDate.toISOString(),
       title: event.title,
-      content: event.description || "",
+      content: event.content,
+      author: event.author,
       category: event.category,
       subcategory: event.subcategory,
+      created_at: event.createdAt,
+      updated_at: event.updatedAt,
       channel: event.channel,
-      importance: "normal",
-      attachments: [],
-      deadline: event.startDate.toISOString(),
-      location: event.location,
-      time:
-        event.startTime && event.endTime
-          ? `${event.startTime}~${event.endTime}`
-          : undefined,
+      dday: event.dday,
+      mattermostUrl: event.mattermostUrl,
+      attachments: event.attachments?.map((att) => ({
+        id: att.id,
+        name: att.name,
+        url: att.url,
+        type: att.type,
+        mimeType: att.mimeType,
+      })),
     });
     setIsModalOpen(true);
   };
@@ -468,14 +310,13 @@ export default function CalendarPage() {
           selectedWeek={selectedWeek}
           channelOptions={channelOptions}
           getEventsForDate={getEventsForDate}
-          getMiniCalendarDays={getMiniCalendarDays}
           formatMonthYear={formatMonthYear}
           isSameDay={isSameDay}
           isToday={isToday}
           isCurrentMonth={isCurrentMonth}
           onChannelExpandToggle={() => setChannelExpanded(!channelExpanded)}
           onToggleChannel={toggleChannel}
-          onToggleCategory={toggleCategory}
+          onToggleCategory={handleToggleCategory}
           onResetFilters={resetFilters}
           onMiniCalendarWeekClick={handleMiniCalendarWeekClick}
           onMiniCalendarDateClick={handleMiniCalendarDateClick}

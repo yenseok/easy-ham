@@ -1,21 +1,9 @@
-interface CalendarEvent {
-  id: number;
-  title: string;
-  startDate: Date;
-  endDate: Date;
-  startTime?: string;
-  endTime?: string;
-  description?: string;
-  location?: string;
-  channel: string;
-  category: string;
-  subcategory: string;
-}
+import type { Notice } from "@/types/notice";
 
 interface MonthViewProps {
   monthWeeks: Date[][];
   currentDate: Date;
-  getEventsForDate: (date: Date) => CalendarEvent[];
+  getEventsForDate: (date: Date) => Notice[];
   onDateClick: (date: Date, week: Date[]) => void;
   isToday: (date: Date) => boolean;
   isCurrentMonth: (date: Date, currentDate: Date) => boolean;
@@ -87,8 +75,16 @@ export function MonthView({
                       </span>
                       {dayEvents.length > 3 && (
                         <span
-                          className="text-[10px] text-gray-500"
-                          style={{ fontWeight: 500 }}
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '3px 7px',
+                            backgroundColor: '#374151',
+                            color: 'white',
+                            borderRadius: '4px',
+                            display: 'inline-block',
+                            lineHeight: '1.2',
+                          }}
                         >
                           +{dayEvents.length - 3}
                         </span>

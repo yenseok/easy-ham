@@ -70,6 +70,14 @@ export const filterNoticesByPeriod = (
   });
 };
 
+export const filterNoticesByBookmark = (
+  notices: Notice[],
+  showBookmarkedOnly: boolean
+): Notice[] => {
+  if (!showBookmarkedOnly) return notices;
+  return notices.filter((notice) => notice.bookmarked);
+};
+
 export const sortNotices = (
   notices: Notice[],
   sortBy: SortOption

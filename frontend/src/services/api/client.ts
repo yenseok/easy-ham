@@ -184,6 +184,53 @@ export const apiClient = {
     }
   },
 
+  patch: async <T>(
+    endpoint: string,
+    data: unknown
+  ): Promise<ApiResponse<T>> => {
+    try {
+      // console.log(`[API PATCH] ${API_BASE_URL}${endpoint}`, data);
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders(),
+        },
+        body: JSON.stringify(data),
+      });
+
+      // 401 응답 처리 (토큰 갱신)
+      if (response.status === 401) {
+        handle401Response(response.headers);
+        // 새 토큰으로 재시도
+        const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+          },
+          body: JSON.stringify(data),
+        });
+        if (!retryResponse.ok) {
+          throw new Error(`HTTP error! status: ${retryResponse.status}`);
+        }
+        const retryData = await retryResponse.json();
+        // console.log(`[API PATCH RESPONSE] ${API_BASE_URL}${endpoint}`, retryData);
+        return retryData;
+      }
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const responseData = await response.json();
+      // console.log(`[API PATCH RESPONSE] ${API_BASE_URL}${endpoint}`, responseData);
+      return responseData;
+    } catch (error) {
+      // console.error("API PATCH error:", error);
+      throw error;
+    }
+  },
+
   delete: async <T>(endpoint: string): Promise<ApiResponse<T>> => {
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {

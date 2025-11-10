@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -19,7 +20,6 @@ interface SidebarProps {
   selectedWeek: Date[];
   channelOptions: string[];
   getEventsForDate: (date: Date) => any[];
-  getMiniCalendarDays: () => Date[][];
   formatMonthYear: (date: Date) => string;
   isSameDay: (date1: Date, date2: Date) => boolean;
   isToday: (date: Date) => boolean;
@@ -33,6 +33,9 @@ interface SidebarProps {
   onDateChange: (date: Date) => void;
 }
 
+// 요일 상수 정의 (한글 깨짐 방지)
+const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'] as const;
+
 export function Sidebar({
   currentDate,
   viewMode,
@@ -43,7 +46,6 @@ export function Sidebar({
   selectedWeek,
   channelOptions,
   getEventsForDate,
-  getMiniCalendarDays,
   formatMonthYear,
   isSameDay,
   isToday,
@@ -56,7 +58,52 @@ export function Sidebar({
   onMiniCalendarDateClick,
   onDateChange,
 }: SidebarProps) {
+  // 미니 캘린더 독립적인 날짜 상태
+  const [miniCalendarDate, setMiniCalendarDate] = useState(currentDate);
+
+  // 메인 캘린더 날짜가 변경되면 미니 캘린더도 따라감
+  useEffect(() => {
+    setMiniCalendarDate(currentDate);
+  }, [currentDate]);
+
+  // 미니 캘린더의 월 데이터 생성
+  const getMiniCalendarDays = (): Date[][] => {
+    const year = miniCalendarDate.getFullYear();
+    const month = miniCalendarDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    // 월 시작일의 주 시작(일요일)
+    const startDate = new Date(firstDay);
+    startDate.setDate(firstDay.getDate() - firstDay.getDay());
+
+    // 월 마지막일의 주 종료(토요일)
+    const endDate = new Date(lastDay);
+    endDate.setDate(lastDay.getDate() + (6 - lastDay.getDay()));
+
+    const weeks: Date[][] = [];
+    let currentDateCursor = new Date(startDate);
+
+    while (currentDateCursor <= endDate) {
+      const week: Date[] = [];
+      for (let i = 0; i < 7; i++) {
+        week.push(new Date(currentDateCursor));
+        currentDateCursor.setDate(currentDateCursor.getDate() + 1);
+      }
+      weeks.push(week);
+    }
+
+    return weeks;
+  };
+
   const miniCalendarWeeks = getMiniCalendarDays();
+
+  // 미니 캘린더 월 이동 (메인 캘린더는 그대로 유지)
+  const handleMiniCalendarMonthChange = (offset: number) => {
+    const newDate = new Date(miniCalendarDate);
+    newDate.setMonth(newDate.getMonth() + offset);
+    setMiniCalendarDate(newDate);
+  };
 
   const getCategoryButtonColor = (subcategory: string, isSelected: boolean) => {
     if (!isSelected) return "bg-white text-gray-600 border-gray-200";
@@ -89,26 +136,18 @@ export function Sidebar({
             variant="ghost"
             size="icon"
             className="w-6 h-6"
-            onClick={() => {
-              const newDate = new Date(currentDate);
-              newDate.setMonth(newDate.getMonth() - 1);
-              onDateChange(newDate);
-            }}
+            onClick={() => handleMiniCalendarMonthChange(-1)}
           >
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <div className="text-sm" style={{ fontWeight: 700 }}>
-            {formatMonthYear(currentDate)}
+          <div className="text-base" style={{ fontWeight: 700 }}>
+            {formatMonthYear(miniCalendarDate)}
           </div>
           <Button
             variant="ghost"
             size="icon"
             className="w-6 h-6"
-            onClick={() => {
-              const newDate = new Date(currentDate);
-              newDate.setMonth(newDate.getMonth() + 1);
-              onDateChange(newDate);
-            }}
+            onClick={() => handleMiniCalendarMonthChange(1)}
           >
             <ChevronRight className="w-4 h-4" />
           </Button>
@@ -166,7 +205,7 @@ export function Sidebar({
                 {week.map((date, dayIdx) => {
                   const hasEvents = getEventsForDate(date).length > 0;
                   const today = isToday(date);
-                  const currentMonth = isCurrentMonth(date, currentDate);
+                  const currentMonth = isCurrentMonth(date, miniCalendarDate);
 
                   return (
                     <div
@@ -217,7 +256,7 @@ export function Sidebar({
           >
             <Hash className="w-3.5 h-3.5 text-gray-500" />
             <h3
-              className="text-xs text-gray-600 flex-1 text-left"
+              className="text-sm text-gray-600 flex-1 text-left"
               style={{ fontWeight: 700 }}
             >
               채널
@@ -234,7 +273,7 @@ export function Sidebar({
                 <button
                   key={channel}
                   onClick={() => onToggleChannel(channel)}
-                  className="w-full h-8 px-3 rounded-md text-xs text-left flex items-center gap-2 transition-colors hover:bg-gray-100"
+                  className="w-full h-8 px-3 rounded-md text-sm text-left flex items-center gap-2 transition-colors hover:bg-gray-100"
                   style={{
                     fontWeight: selectedChannels.includes(channel) ? 700 : 500,
                   }}
@@ -271,7 +310,7 @@ export function Sidebar({
         <div>
           <div className="flex items-center gap-1.5 mb-2">
             <GraduationCap className="w-3.5 h-3.5 text-gray-500" />
-            <span className="text-xs text-gray-600" style={{ fontWeight: 700 }}>
+            <span className="text-sm text-gray-600" style={{ fontWeight: 700 }}>
               학사
             </span>
           </div>
@@ -280,14 +319,14 @@ export function Sidebar({
               <button
                 key={category}
                 onClick={() => onToggleCategory(category, true)}
-                className={`h-8 rounded-md text-xs flex items-center justify-center gap-1 border transition-colors ${getCategoryButtonColor(
+                className={`h-8 rounded-md text-sm flex items-center justify-center gap-1 border transition-colors ${getCategoryButtonColor(
                   category,
                   selectedAcademicCategories.includes(category)
                 )}`}
                 style={{ fontWeight: 500 }}
               >
                 {selectedAcademicCategories.includes(category) && (
-                  <span className="text-[10px]">✓</span>
+                  <span className="text-xs">✓</span>
                 )}
                 {category}
               </button>
@@ -299,7 +338,7 @@ export function Sidebar({
         <div>
           <div className="flex items-center gap-1.5 mb-2">
             <Briefcase className="w-3.5 h-3.5 text-gray-500" />
-            <span className="text-xs text-gray-600" style={{ fontWeight: 700 }}>
+            <span className="text-sm text-gray-600" style={{ fontWeight: 700 }}>
               취업
             </span>
           </div>
@@ -308,14 +347,14 @@ export function Sidebar({
               <button
                 key={category}
                 onClick={() => onToggleCategory(category, false)}
-                className={`h-8 rounded-md text-xs flex items-center justify-center gap-1 border transition-colors ${getCategoryButtonColor(
+                className={`h-8 rounded-md text-sm flex items-center justify-center gap-1 border transition-colors ${getCategoryButtonColor(
                   category,
                   selectedCareerCategories.includes(category)
                 )}`}
                 style={{ fontWeight: 500 }}
               >
                 {selectedCareerCategories.includes(category) && (
-                  <span className="text-[10px]">✓</span>
+                  <span className="text-xs">✓</span>
                 )}
                 {category}
               </button>

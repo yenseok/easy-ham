@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, AlertCircle, CheckCircle, Info } from 'lucide-react';
+import { Bell, AlertCircle, CheckCircle, Info, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -7,9 +7,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useNotificationStore } from '@/stores/useNotificationStore';
+import { SubscriptionKeywordModal } from '@/components/modals/SubscriptionKeywordModal';
 
 export const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isKeywordModalOpen, setIsKeywordModalOpen] = useState(false);
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationStore();
 
   const getNotificationIcon = (type: string) => {
@@ -59,14 +61,26 @@ export const NotificationDropdown = () => {
         <div className="p-4 border-b bg-white sticky top-0 z-10">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-bold">알림</h3>
-            {unreadCount > 0 && (
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  모두 읽음
+                </button>
+              )}
               <button
-                onClick={markAllAsRead}
-                className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsKeywordModalOpen(true);
+                }}
+                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                title="구독 키워드 관리"
               >
-                모두 읽음
+                <Settings className="w-4 h-4 text-gray-600" />
               </button>
-            )}
+            </div>
           </div>
         </div>
 
@@ -101,6 +115,12 @@ export const NotificationDropdown = () => {
           )}
         </div>
       </DropdownMenuContent>
+
+      {/* 구독 키워드 관리 모달 */}
+      <SubscriptionKeywordModal
+        isOpen={isKeywordModalOpen}
+        onOpenChange={setIsKeywordModalOpen}
+      />
     </DropdownMenu>
   );
 };
