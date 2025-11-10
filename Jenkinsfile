@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     tools {
-        nodejs 'NodeJS-LTS'   // ✅ Declarative 방식으로 NodeJS PATH 자동 설정
+        nodejs 'NodeJS-LTS'
     }
 
     environment {
@@ -10,7 +10,6 @@ pipeline {
         FRONTEND_DIR = "${PROJECT_DIR}/frontend"
         BACKEND_DIR = "${PROJECT_DIR}/backend"
 
-        // ✅ Jenkins credential ID 수정 완료
         DOCKER_HUB_CREDENTIAL_ID = 'dockerhub-jenkins'
         DOCKER_HUB_USER = 'bonghyerin'
 
@@ -64,6 +63,13 @@ pipeline {
             steps {
                 echo '=== Building Docker Images ==='
                 script {
+                    // ✅ 빌드 전에 이전 이미지 삭제
+                    sh """
+                        echo '🗑️  이전 이미지 삭제 중...'
+                        docker rmi ${DOCKER_BACKEND_IMAGE}:latest || true
+                        docker rmi ${DOCKER_FRONTEND_IMAGE}:latest || true
+                    """
+                    
                     dir(BACKEND_DIR) {
                         sh """
                             docker build -t ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} .
@@ -95,6 +101,22 @@ pipeline {
                     """
                 }
                 echo '✅ Docker Hub 푸시 완료!'
+            }
+        }
+
+        stage('Cleanup Local Images') {
+            steps {
+                echo '=== 🧹 Jenkins 서버 이미지 정리 ==='
+                sh """
+                    # 푸시한 이미지 삭제 (로컬에만 남아있는 빌드 넘버 태그)
+                    docker rmi ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} || true
+                    docker rmi ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} || true
+                    
+                    # dangling 이미지 정리 (<none> 태그 이미지들)
+                    docker image prune -f
+                    
+                    echo '✅ Jenkins 서버 이미지 정리 완료!'
+                """
             }
         }
 
