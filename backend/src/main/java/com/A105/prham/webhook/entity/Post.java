@@ -34,6 +34,9 @@ public class Post {
 	@Column(name = "user_id", nullable = false)
 	private String userId;
 
+	@Column(name = "user_name")
+	private String userName;
+
 	@Column(name = "webhook_timestamp")
 	private String webhookTimestamp;
 
@@ -74,6 +77,12 @@ public class Post {
 
 	@Column(name = "created_at", nullable = false)
 	private String createdAt;
+
+	@Column(name = "team_id", nullable = false)
+	private String teamId;
+
+	@Column(name = "team_name", nullable = false)
+	private String teamName;
 
 	@PrePersist
 	protected void onCreate() {

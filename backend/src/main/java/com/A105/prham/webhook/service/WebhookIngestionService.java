@@ -36,6 +36,7 @@ public class WebhookIngestionService {
 		post.setPostId(payload.getPostId());
 		post.setChannelId(payload.getChannelId());
 		post.setUserId(payload.getUserId());
+		post.setUserName(payload.getUserName());
 		post.setOriginalText(payload.getText());
 		post.setWebhookTimestamp(payload.getTimestamp());
 		post.setStatus(PostStatus.PENDING);

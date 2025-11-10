@@ -3,6 +3,7 @@ package com.A105.prham.webhook.service;
 // ✨ 필요한 임포트 추가
 import com.A105.prham.classification.dto.LlmClassificationResult;
 import com.A105.prham.classification.service.LlmClassificationService;
+import com.A105.prham.sse.service.SsePostService;
 import com.A105.prham.search.service.SearchService;
 import com.A105.prham.webhook.entity.File;
 import com.A105.prham.webhook.entity.Post;
@@ -20,7 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.util.StringUtils; // ✨ StringUtils 임포트
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Arrays; // ✨ Arrays 임포트
 import java.util.List;
 
@@ -31,9 +34,11 @@ public class AsyncPostProcessor {
 
 	private final PostRepository postRepository;
 	private final EmojiRemoveService emojiRemovalService;
-	private final MattermostFileService fileService;
 	private final LlmClassificationService llmService;
+	private final SsePostService ssePostService;
 	private final SearchService searchService;
+
+	private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
 	@Async
 	@TransactionalEventListener
@@ -52,29 +57,6 @@ public class AsyncPostProcessor {
 			// 1. 상태 변경: PROCESSING
 			post.setStatus(PostStatus.PROCESSING);
 
-//			String fileIdsString = post.getFileIds();
-
-			//프론트에서는 파일 id로 직접 파일 다운로드 받기때문에, 저장할 필요 없습니다.
-//			if (StringUtils.hasText(fileIdsString)) {
-//				log.info("[비동기] 처리할 파일 존재: {}", fileIdsString);
-//				List<String> fileIdList = Arrays.asList(fileIdsString.split(","));
-//
-//				for(String fileId : fileIdList) {
-//					if (StringUtils.hasText(fileId)) {
-//						File fileEntity = fileService.getFileInfoAndCreateEntity(fileId.trim());
-//
-//						if(fileEntity != null) {
-//							post.addFile(fileEntity);
-//							log.info("파일 엔티티 만들어졌음: {}", fileId);
-//						} else {
-//							log.warn("[비동기] 파일 처리 실패, 파일 아이디: {}", fileId);
-//							fileProcessingFailed = true;
-//						}
-//					}
-//				}
-//			}
-			//TODO 필요시 파일 메타 데이터만 받아서 저장
-
 			// 3. 텍스트 전처리
 			String cleanedText = emojiRemovalService.removeEmojis(post.getOriginalText());
 			post.setCleanedText(cleanedText); //llm 전 원본 메시지 저장
@@ -89,7 +71,13 @@ public class AsyncPostProcessor {
 			post.setTitle(result.getTitle());
 			post.setMainCategory(result.getMainCategory());
 			post.setSubCategory(result.getSubCategory());
-			post.setDeadline(result.getDeadline());
+
+			if (result.getDeadline() != null && !result.getDeadline().isBlank()) {
+				LocalDateTime adjustedDeadline = parseAndAdjustDeadline(result.getDeadline());
+				if (adjustedDeadline != null) {
+					post.setDeadline(adjustedDeadline.format(ISO_FORMATTER));
+				}
+			}
 
 			if (result.getCampusList() != null && !result.getCampusList().isEmpty()) {
 				post.setCampusList(String.join(",", result.getCampusList()));
@@ -109,12 +97,37 @@ public class AsyncPostProcessor {
 			//6. meilisearch에 저장
 			searchService.indexPost(post);
 
+			Post savedPost = postRepository.save(post);
+
+			// llm에서 분류 완료된 공지사항만 전송
+			if (savedPost.getStatus() == PostStatus.PROCESSED) {
+								ssePostService.sendNewPost(savedPost);
+				log.info("sse: 새 공지사항 전송 완료", savedPost.getPostId());
+			}
 		} catch (Exception e) {
 			log.error("[비동기] post 처리 실패: {}", postId, e);
 			if (post.getStatus() != PostStatus.FAILED) {
 				post.setStatus(PostStatus.FAILED);
 				postRepository.save(post);
 			}
+		}
+	}
+
+	//deadline 문자열을 파싱하고 연도 보정
+	private LocalDateTime parseAndAdjustDeadline(String deadlineStr) {
+		try {
+			LocalDateTime deadline = LocalDateTime.parse(deadlineStr, ISO_FORMATTER);
+
+			int currentYear = LocalDate.now().getYear();
+			int deadlineYear = deadline.getYear();
+
+			//deadline이 2023으로 나오면 현재 연도로 변경
+			if (deadlineYear == 2023 || deadlineYear < currentYear - 1) {
+				return  deadline.withYear(currentYear);
+			}
+			return deadline;
+		} catch (Exception e) {
+			return null;
 		}
 	}
 }

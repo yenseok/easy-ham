@@ -30,17 +30,7 @@ public class TestDataController {
             log.info("Creating test post: {}", request);
 
             // 1. Post Entity 생성
-            Post post = new Post();
-            post.setPostId(request.getMmMessageId());
-            post.setChannelId(request.getMmChannelId());
-            post.setUserId(request.getMmUserId() != null ? request.getMmUserId() : "test_user");
-            post.setWebhookTimestamp(String.valueOf(request.getMmCreatedAt() != null ?
-                    request.getMmCreatedAt() :
-                    System.currentTimeMillis()));
-            post.setCleanedText(request.getContent());
-            post.setTitle(extractTitle(request.getContent())); // 첫 줄을 제목으로
-            post.setSubCategory(request.getSubCategory() != null ? String.valueOf(request.getSubCategory()) : null);
-            post.setDeadline(null);
+            Post post = request.convertPost();
             post.setProcessedAt(java.time.LocalDateTime.now().toString());
 
             // 2. DB에 저장
@@ -79,17 +69,7 @@ public class TestDataController {
             int successCount = 0;
             for (CreateTestPostRequest request : requests) {
                 try {
-                    Post post = new Post();
-                    post.setPostId(request.getMmMessageId());
-                    post.setChannelId(request.getMmChannelId());
-                    post.setUserId(request.getMmUserId() != null ? request.getMmUserId() : "test_user");
-                    post.setWebhookTimestamp(String.valueOf(request.getMmCreatedAt() != null ?
-                            request.getMmCreatedAt() :
-                            System.currentTimeMillis()));
-                    post.setCleanedText(request.getContent());
-                    post.setTitle(extractTitle(request.getContent()));
-                    post.setSubCategory(request.getSubCategory() != null ? String.valueOf(request.getSubCategory()) : null);
-                    post.setDeadline(null);
+                    Post post = request.convertPost();
                     post.setProcessedAt(java.time.LocalDateTime.now().toString());
 
                     Post savedPost = postRepository.save(post);
