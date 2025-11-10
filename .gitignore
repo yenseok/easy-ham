@@ -204,3 +204,7 @@ build/
 CLAUDE.md
 project_guide.md
 my_notes/
+
+# Jenkins data (never commit)
+jenkins_data/
+jenkins_data_cp/
