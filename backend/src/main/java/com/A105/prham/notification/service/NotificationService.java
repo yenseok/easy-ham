@@ -15,14 +15,16 @@ import com.A105.prham.notification.entity.Notification;
 import com.A105.prham.notification_setting.entity.NotificationSetting;
 import com.A105.prham.notification_setting.repository.NotificationSettingRepository;
 import com.A105.prham.user.entity.User;
+import com.A105.prham.webhook.entity.Post;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.mongodb.core.mapping.Document;
+import org.bson.Document;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -178,5 +180,23 @@ public class NotificationService {
         return emitters.entrySet().stream()
                 .filter(entry -> entry.getKey().startsWith(userId))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    //키워드 매칭 알림
+    public void sendKeywordMatchingNotification(User user, Post post){
+        List<Keyword> keywordList = keywordRepository.findByUser(user);
+        List<Keyword> matchedKeywordList = new ArrayList<>();
+        for(Keyword keyword : keywordList){
+            if(post.getTitle().contains(keyword.getWord()) || post.getCleanedText().contains(keyword.getWord())){
+                matchedKeywordList.add(keyword);
+            }
+        }
+
+        Document data = new Document()
+                .append("notice_id", post.getId())
+                .append("title", post.getTitle())
+                .append("match_keyword",matchedKeywordList);
+
+        send(user, data, NotificationType.KEYWORD_MATCHING);
     }
 }
