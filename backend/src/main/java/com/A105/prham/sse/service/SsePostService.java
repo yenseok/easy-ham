@@ -8,6 +8,7 @@ import org.springframework.boot.autoconfigure.graphql.GraphQlProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import com.A105.prham.sse.dto.PostNotificationDto;
 import com.A105.prham.webhook.entity.Post;
 
 import lombok.extern.slf4j.Slf4j;
@@ -35,23 +36,38 @@ public class SsePostService {
 		emitter.onCompletion(() -> {
 			this.emitters.remove(emitterId);
 			this.emitterChannelMap.remove(emitterId);
-			log.info("sse 연결 끊김: {}", emitterId);
+			log.info("sse 연결 정상 종료: {}", emitterId);
 		});
-		emitter.onTimeout(() -> emitter.complete());
+
+		emitter.onTimeout(() -> {
+			this.emitters.remove(emitterId);
+			this.emitterChannelMap.remove(emitterId);
+			emitter.complete();
+		});
+
+		emitter.onError(e -> {
+			this.emitters.remove(emitterId);
+			this.emitterChannelMap.remove(emitterId);
+		});
 
 		// 503 오류 방지용 더미 데이터
 		try {
 			emitter.send(SseEmitter.event().name("connected").data("stream connected"));
 		} catch (Exception e) {
 			log.warn("dummy data do bo nae gi shil pae", e);
+			this.emitters.remove(emitterId);
+			this.emitterChannelMap.remove(emitterId);
 		}
 		return emitter;
 	}
 
+	// 새 공지사항을 구독자들에게 전송
 	// AsyncPostProcessor가 호출할 메서드
 	public void sendNewPost(Post post) {
 		String targetChannelId = post.getChannelId();
 		//postnotificationdto 추가
+
+		PostNotificationDto dto = PostNotificationDto.from(post);
 
 		emitterChannelMap.forEach((emitterId, allowedChannels) -> {
 			if (allowedChannels.contains(targetChannelId)) {
@@ -61,9 +77,12 @@ public class SsePostService {
 				if (emitter != null) {
 					try {
 						//newPost 이벤트로 공지 데이터 전송
-						emitter.send(SseEmitter.event().name("newPost").data(post)); // DTO 전송
+						emitter.send(SseEmitter.event().name("newPost").data(dto)); // DTO 전송
 					} catch (Exception e) {
 						log.warn("sse로 공지사항 전송 실패 {}: {}", emitterId, e.getMessage());
+						//실패한 emitter는 제거
+						emitters.remove(emitterId);
+						emitterChannelMap.remove(emitterId);
 					}
 				}
 			}

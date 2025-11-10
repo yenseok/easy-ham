@@ -29,8 +29,7 @@ public enum SuccessCode {
     POST_CREATED(201, HttpStatus.CREATED, "메시지가 저장되었습니다."),
     BOOKMARK_SAVE_SUCCESS(201, HttpStatus.CREATED, "북마크 저장 성공"),
     KEYWORD_ADD_SUCCESS(201, HttpStatus.CREATED, "키워드 구독 성공"),
-    NOTIFICATION_SETTING_CREATE_SUCCESS(201,HttpStatus.CREATED, "알림 설정 생성 성공"),
-    ;
+    NOTIFICATION_SETTING_CREATE_SUCCESS(201,HttpStatus.CREATED, "알림 설정 생성 성공");
 
 
     private final int code;

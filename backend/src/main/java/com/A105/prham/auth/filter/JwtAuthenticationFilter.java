@@ -5,6 +5,7 @@ import com.A105.prham.user.entity.User;
 import com.A105.prham.user.service.UserService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +37,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // 1️⃣ 요청 헤더에서 JWT 추출
             String token = extractToken(request);
 
+            //header에 없으면 쿠키에서 추출
+            if (token == null) {
+                token = extractTokenFromCookie(request);
+            }
+
             if (token != null && !jwtUtils.isTokenExpired(token)) {
                 // 2️⃣ SSAFY SSO의 sub(UUID) 추출
                 String ssoSubId = jwtUtils.getUserIdFromToken(token);
@@ -64,6 +70,19 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    //쿠키에서 토큰 추출
+    private String extractTokenFromCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("accessToken".equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
     }
 
     /**
