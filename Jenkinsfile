@@ -134,7 +134,7 @@ pipeline {
                                 docker compose pull
                                 docker compose up -d
                                 docker image prune -f
-                                echo "✅ 배포 완료! http://3.39.246.235:8080"
+                                echo "✅ 배포 완료! https://pyeonriham.site"
                             '
                         """
                     }
