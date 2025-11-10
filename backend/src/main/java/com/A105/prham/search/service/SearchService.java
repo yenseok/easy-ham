@@ -7,6 +7,7 @@ import com.A105.prham.search.dto.request.PostSearchRequest;
 import com.A105.prham.search.dto.response.PostSearchItem;
 import com.A105.prham.search.dto.response.PostSearchResponse;
 import com.A105.prham.search.dto.response.SearchMetadata;
+import com.A105.prham.user_notice_like.repository.UserNoticeLikeRepository;
 import com.A105.prham.webhook.entity.Post;
 import com.A105.prham.webhook.service.PostProcessorService;
 import com.A105.prham.webhook.service.PostService;
@@ -18,6 +19,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.A105.prham.user.entity.User;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,8 +37,7 @@ public class SearchService {
     private final PostProcessorService postProcessorService;
     private final MattermostService mattermostService;
     private final PostService postService;
-    // TODO: 좋아요 리포지토리 주입 필요
-    // private final LikeRepository likeRepository;
+    private final UserNoticeLikeRepository userNoticeLikeRepository;
 
     /**
      * 검색 모드 정의
@@ -246,18 +249,62 @@ public class SearchService {
     /**
      * 좋아요 필터링 (후처리)
      */
-    private List<PostSearchItem> filterByLikes(List<PostSearchItem> items, String userId) {
-        // TODO: 실제 좋아요 데이터와 연동
-        log.warn("⚠️ isLiked filter requested but Like repository not implemented yet");
-        return items; // 임시: 필터링 없이 반환
+    private List<PostSearchItem> filterByLikes(List<PostSearchItem> items, Long userId) {
+        if (userId == null) {
+            log.warn("⚠️ Cannot filter by likes: userId is null");
+            return items;
+        }
+        try {
+            // 사용자가 좋아요한 게시물 ID 목록 조회
+            Set<Long> likedPostIds = userNoticeLikeRepository.findLikedPostIdsByUserId(userId);
+
+            if (likedPostIds.isEmpty()) {
+                log.info("ℹ️ User {} has no liked posts", userId);
+                return new ArrayList<>();
+            }
+
+            // 좋아요한 게시물만 필터링
+            List<PostSearchItem> filteredItems = items.stream()
+                    .filter(item -> likedPostIds.contains(item.getId()))
+                    .collect(Collectors.toList());
+
+            log.info("✅ Filtered by likes: {} → {} items", items.size(), filteredItems.size());
+            return filteredItems;
+
+        } catch (Exception e) {
+            log.error("❌ Failed to filter by likes for user {}", userId, e);
+            return items;
+        }
     }
 
     /**
      * 현재 사용자 ID 가져오기
      */
-    private String getCurrentUserId() {
-        // TODO: Spring Security Context에서 현재 사용자 정보 가져오기
-        return "temp_user_id";
+    private Long getCurrentUserId() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            if (authentication == null || !authentication.isAuthenticated()) {
+                log.warn("⚠️ No authenticated user found");
+                return null;
+            }
+
+            // JwtAuthenticationFilter에서 설정한 User 객체 가져오기
+            Object principal = authentication.getPrincipal();
+
+            if (principal instanceof User) {
+                User user = (User) principal;
+                log.info("name : {} , Id : {} ",user.getName(),user.getId());
+                return user.getId();  // User 엔티티의 ID 반환
+            }
+
+            log.warn("⚠️ Principal is not a User instance: {}", principal.getClass());
+            return null;
+
+        } catch (Exception e) {
+            log.error("❌ Failed to get current user ID", e);
+            return null;
+        }
     }
 
     /**

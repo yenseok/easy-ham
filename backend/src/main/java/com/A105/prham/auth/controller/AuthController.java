@@ -12,6 +12,7 @@ import com.A105.prham.common.response.ErrorCode;
 import com.A105.prham.common.response.SuccessCode;
 import com.A105.prham.user.entity.User;
 import com.A105.prham.user.service.UserService;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +36,11 @@ public class AuthController {
     private final SsoAuthService ssoAuthService;
     private final UserService userService;
     private final JwtUtils jwtUtils;
+
+    @PostConstruct
+    public void init() {
+        log.info("✅ SSO Redirect URI = {}", redirectUri);
+    }
 
     @GetMapping("/sso/login-url")
     public ApiResponseDto<String> getURL() {
