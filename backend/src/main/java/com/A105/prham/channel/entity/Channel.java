@@ -35,8 +35,5 @@ public class Channel extends BaseTimeEntity {
     private List<Notice> notices = new ArrayList<>();
 
     @OneToMany(mappedBy = "channel", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private List<UserNoticeLike> userNoticeLikes = new ArrayList<>();
-
-    @OneToMany(mappedBy = "channel", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<UserNotice> userNotices = new ArrayList<>();
 }

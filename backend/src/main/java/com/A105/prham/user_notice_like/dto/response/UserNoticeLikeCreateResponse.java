@@ -4,7 +4,7 @@ import lombok.Builder;
 
 @Builder
 public record UserNoticeLikeCreateResponse(
-        Long userNoticeId,
+        Long postId,
         Boolean isLiked
 ) {
 }

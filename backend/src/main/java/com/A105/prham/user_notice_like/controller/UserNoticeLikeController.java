@@ -15,14 +15,14 @@ public class UserNoticeLikeController {
 
     private final UserNoticeLikeService userNoticeLikeService;
 
-    @PostMapping("/{userNoticeId}")
-    public ApiResponseDto addBookmark(@UserId(required = true) Long userId, @PathVariable Long userNoticeId) {
-        return ApiResponseDto.success(SuccessCode.BOOKMARK_SAVE_SUCCESS, userNoticeLikeService.saveBookmarks(userId, userNoticeId));
+    @PostMapping("/{postId}")
+    public ApiResponseDto addBookmark(@UserId(required = true) Long userId, @PathVariable Long postId) {
+        return ApiResponseDto.success(SuccessCode.BOOKMARK_SAVE_SUCCESS, userNoticeLikeService.saveBookmarks(userId, postId));
     }
 
-    @DeleteMapping("/{userNoticeId}")
-    public ApiResponseDto deleteBookmark(@UserId(required = true) Long userId, @PathVariable Long userNoticeId) {
-        return ApiResponseDto.success(SuccessCode.BOOKMARK_DELETE_SUCCESS, userNoticeLikeService.deleteBookmarks(userId, userNoticeId));
+    @DeleteMapping("/{postId}")
+    public ApiResponseDto deleteBookmark(@UserId(required = true) Long userId, @PathVariable Long postId) {
+        return ApiResponseDto.success(SuccessCode.BOOKMARK_DELETE_SUCCESS, userNoticeLikeService.deleteBookmarks(userId, postId));
     }
 
     @GetMapping
