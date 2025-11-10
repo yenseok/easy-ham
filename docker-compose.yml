@@ -56,7 +56,6 @@ services:
     depends_on:
       - backend
       - frontend
-      - jenkins
     restart: always
     networks:
       - app-net
