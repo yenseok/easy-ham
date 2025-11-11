@@ -50,9 +50,6 @@ public class UserNotice extends BaseTimeEntity {
     @Column(name = "is_completed", nullable = false)
     private Boolean isCompleted;
 
-    @OneToMany(mappedBy = "userNotice", fetch = FetchType.LAZY)
-    private List<UserNoticeLike> userNoticeLikes = new ArrayList<>();
-
     @Builder
     public UserNotice(User user, Notice notice, Channel channel, Team team, Post post, Boolean isCompleted) {
         this.user = user;

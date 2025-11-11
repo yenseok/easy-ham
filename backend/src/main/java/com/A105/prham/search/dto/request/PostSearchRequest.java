@@ -1,5 +1,6 @@
 package com.A105.prham.search.dto.request;
 
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -7,6 +8,7 @@ import java.util.List;
 
 @Getter
 @Setter
+@Builder
 public class PostSearchRequest {
     // 검색어 (title, cleanedText, userId, channelName, campusList에서 검색)
     private String keyword;
@@ -23,6 +25,8 @@ public class PostSearchRequest {
 
     // 좋아요 필터 (내가 좋아요한 게시물만)
     private Boolean isLiked;
+    // 완료 필터 (내가 완료한 게시물만)
+    private Boolean isCompleted;
 
     // 정렬 (timestamp:desc, timestamp:asc)
     private String sort = "timestamp:desc"; // 기본값: 최신순

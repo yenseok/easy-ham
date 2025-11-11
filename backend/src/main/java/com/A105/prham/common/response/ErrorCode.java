@@ -22,7 +22,7 @@ public enum ErrorCode {
     //404 NOT FOUND
     NOT_FOUND(404, HttpStatus.NOT_FOUND, "해당 API를 찾을 수 없습니다."),
     USER_NOT_FOUND(404, HttpStatus.NOT_FOUND, "해당 유저를 찾을 수 없습니다."),
-    NOTICE_NOT_FOUND(404, HttpStatus.NOT_FOUND, "해당 공지사항을 찾을 수 없습니다."),
+    POST_NOT_FOUND(404, HttpStatus.NOT_FOUND, "해당 공지사항을 찾을 수 없습니다."),
     FILE_NOT_FOUND(404, HttpStatus.NOT_FOUND, "파일을 찾을 수 없습니다."),
     KEYWORD_NOT_FOUND(404, HttpStatus.NOT_FOUND, "해당 키워드를 찾을 수 없습니다."),
 
@@ -36,8 +36,8 @@ public enum ErrorCode {
     INTERNAL_SERVER_ERROR(500, HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류입니다."),
     WEBHOOK_PROCESSING_ERROR(500, HttpStatus.INTERNAL_SERVER_ERROR, "웹훅 처리 중 오류가 발생했습니다."),
     FILE_PROCESSING_ERROR(500, HttpStatus.INTERNAL_SERVER_ERROR, "파일 처리 중 오류가 발생했습니다."),
-    SSE_DATA_SEND_ERROR(500, HttpStatus.INTERNAL_SERVER_ERROR, "SSE 데이터 전송 중 오류가 발생했습니다.")
-    ;
+    SSE_DATA_SEND_ERROR(500, HttpStatus.INTERNAL_SERVER_ERROR, "SSE 데이터 전송 중 오류가 발생했습니다."),
+    USER_NOTICE_NOT_FOUND(500, HttpStatus.INTERNAL_SERVER_ERROR, "user에게 존재하지 않는 공지입니다.");
 
 
     private final int code;
