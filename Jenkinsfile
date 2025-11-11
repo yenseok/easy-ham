@@ -33,7 +33,7 @@ pipeline {
             steps {
                 echo '=== Checking out code from GitLab ==='
                 git branch: 'release',
-                    credentialsId: 'gitlab-api-token',
+                    credentialsId: 'gitlab-token',
                     url: 'https://lab.ssafy.com/s13-final/S13P31A105.git'
             }
         }
