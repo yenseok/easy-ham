@@ -23,7 +23,7 @@ pipeline {
         // ✅ 배포 서버 정보
         EC2_USER = 'ubuntu'
         EC2_HOST = '3.39.246.235'
-        EC2_PATH = '/home/ubuntu/app/release'
+        EC2_PATH = '/home/ubuntu/deploy'
         SSH_CREDENTIAL_ID = 'ec2-deploy-key'
     }
 
