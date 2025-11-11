@@ -1,5 +1,6 @@
 package com.A105.prham.search.dto.request;
 
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -7,6 +8,7 @@ import java.util.List;
 
 @Getter
 @Setter
+@Builder
 public class PostSearchRequest {
     // 검색어 (title, cleanedText, userId, channelName, campusList에서 검색)
     private String keyword;

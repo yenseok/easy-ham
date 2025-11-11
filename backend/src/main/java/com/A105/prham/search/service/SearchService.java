@@ -53,11 +53,10 @@ public class SearchService {
     /**
      * 게시물 검색 (Post 기반)
      */
-    public PostSearchResponse searchPosts(PostSearchRequest request) {
+    public PostSearchResponse searchPosts(PostSearchRequest request,Long userId) {
         try {
             // 1. 검색 모드 결정
             SearchMode mode = determineSearchMode(request);
-            log.info("🔍 Search Mode: {}", mode);
 
             // 2. Meilisearch 검색 실행
             SearchResult meilisearchResult = executeSearch(request, mode);
@@ -66,8 +65,7 @@ public class SearchService {
             List<PostSearchItem> items = convertToSearchItems(meilisearchResult);
 
             // 4. 사용자별 데이터 추가 (isLiked, isCompleted)
-            Long currentUserId = getCurrentUserId();
-            items = enrichWithUserData(items, currentUserId);
+            items = enrichWithUserData(items, userId);
 
             // 5. 좋아요 필터 적용 (후처리)
             if (Boolean.TRUE.equals(request.getIsLiked())) {
