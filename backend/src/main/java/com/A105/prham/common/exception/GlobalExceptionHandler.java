@@ -12,6 +12,7 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
@@ -20,6 +21,12 @@ import org.springframework.web.servlet.NoHandlerFoundException;
 @RestControllerAdvice
 @RequiredArgsConstructor
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(AsyncRequestTimeoutException.class)
+    public void handleAsyncTimeoutException(AsyncRequestTimeoutException e) {
+        log.warn("⏰ SSE 연결 타임아웃");
+        // 아무것도 반환하지 않음!
+    }
 
     @ExceptionHandler(value = {MethodArgumentNotValidException.class})
     public ResponseEntity<ApiResponseDto<?>> handlerMethodArgumentNotValidException(Exception e) {
