@@ -20,9 +20,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import com.A105.prham.user.entity.User;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -77,7 +74,7 @@ public class SearchService {
 
             // 6. 완료 필터 적용 (후처리)
             if (request.getIsCompleted() != null) {
-                if (Boolean.TRUE.equals(request.getIsCompleted())) {
+                if (request.getIsCompleted()) {
                     items = items.stream()
                             .filter(item -> Boolean.TRUE.equals(item.getIsCompleted()))
                             .collect(Collectors.toList());
@@ -184,13 +181,6 @@ public class SearchService {
         }
 
         SearchRequest searchRequest = builder.build();
-
-        // 디버깅 로그
-        log.info("📊 Search Request:");
-        log.info("   - Query: '{}'", request.hasKeyword() ? request.getKeyword() : "(empty)");
-        log.info("   - Filter: {}", filter.isEmpty() ? "(none)" : filter);
-        log.info("   - Sort: {}", sort[0]);
-        log.info("   - Pagination: offset={}, limit={}", request.getOffset(), request.getSize());
 
         SearchResult result = (SearchResult) index.search(searchRequest);
 
@@ -307,38 +297,6 @@ public class SearchService {
         } catch (Exception e) {
             log.error("Failed to convert search item", e);
             throw new RuntimeException("Failed to convert search item", e);
-        }
-    }
-
-
-
-    /**
-     * 현재 사용자 ID 가져오기
-     */
-    private Long getCurrentUserId() {
-        try {
-            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-
-            if (authentication == null || !authentication.isAuthenticated()) {
-                log.warn("⚠️ No authenticated user found");
-                return null;
-            }
-
-            // JwtAuthenticationFilter에서 설정한 User 객체 가져오기
-            Object principal = authentication.getPrincipal();
-
-            if (principal instanceof User) {
-                User user = (User) principal;
-                log.info("name : {} , Id : {} ",user.getName(),user.getId());
-                return user.getId();  // User 엔티티의 ID 반환
-            }
-
-            log.warn("⚠️ Principal is not a User instance: {}", principal.getClass());
-            return null;
-
-        } catch (Exception e) {
-            log.error("❌ Failed to get current user ID", e);
-            return null;
         }
     }
 
