@@ -15,6 +15,7 @@ import com.A105.prham.notification.entity.Notification;
 import com.A105.prham.notification_setting.entity.NotificationSetting;
 import com.A105.prham.notification_setting.repository.NotificationSettingRepository;
 import com.A105.prham.user.entity.User;
+import com.A105.prham.user.repository.UserRepository;
 import com.A105.prham.webhook.entity.Post;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +44,7 @@ public class NotificationService {
     private final Map<String, Notification> eventCache = new ConcurrentHashMap<>();
     private final Long TIME_OUT = 60L * 1000;
     private final NotificationRepository notificationRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public void addKeyword(User user, KeywordCreateRequest keywordCreateRequest) {
@@ -140,11 +142,11 @@ public class NotificationService {
         return sseEmitter;
     }
 
-    public void send(User receiver, Document eventData, NotificationType notificationType){
+    public void send(User receiver, Document eventData, String type){
         Notification notification = new Notification(
                 null, // MongoDB에서 자동 생성
                 receiver.getId(),
-                notificationType.name(),
+                type,
                 eventData, // 자유구조 알림 데이터
                 LocalDateTime.now(),
                 false // isRead
@@ -183,20 +185,26 @@ public class NotificationService {
     }
 
     //키워드 매칭 알림
-    public void sendKeywordMatchingNotification(User user, Post post){
-        List<Keyword> keywordList = keywordRepository.findByUser(user);
-        List<Keyword> matchedKeywordList = new ArrayList<>();
-        for(Keyword keyword : keywordList){
-            if(post.getTitle().contains(keyword.getWord()) || post.getCleanedText().contains(keyword.getWord())){
-                matchedKeywordList.add(keyword);
+    public void sendKeywordMatchingNotification(Post post){
+        List<User> userList = userRepository.findUsersWithKeywords();
+        for(User user : userList){
+            List<Keyword> keywordList = keywordRepository.findByUser(user);
+            List<String> matchedKeywordList = new ArrayList<>();
+
+            for(Keyword keyword : keywordList){
+                if(post.getTitle().contains(keyword.getWord()) || post.getCleanedText().contains(keyword.getWord())){
+                    matchedKeywordList.add(keyword.getWord());
+                }
+            }
+
+            if(!matchedKeywordList.isEmpty()){
+                Document data = new Document()
+                        .append("notice_id", post.getId())
+                        .append("title", post.getTitle())
+                        .append("match_keyword",matchedKeywordList);
+                send(user, data, NotificationType.KEYWORD_MATCHING.name().toLowerCase());
             }
         }
 
-        Document data = new Document()
-                .append("notice_id", post.getId())
-                .append("title", post.getTitle())
-                .append("match_keyword",matchedKeywordList);
-
-        send(user, data, NotificationType.KEYWORD_MATCHING);
     }
 }
