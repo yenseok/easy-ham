@@ -29,7 +29,8 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo '=== Checking out code from GitLab ==='
-                git branch: 'release', credentialsId: 'gitlab-token',
+                git branch: 'release', 
+                credentialsId: 'gitlab-api-token',
                 url: 'https://lab.ssafy.com/s13-final/S13P31A105.git'
 
             }
