@@ -1,18 +1,34 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate } from "react-router-dom";
 import { Bookmark } from "lucide-react";
+import { BookmarksModal } from "@/components/modals/BookmarksModal";
 import type { Notice } from "@/types/notice";
 
 interface BookmarkedNoticesWidgetProps {
   notices: Notice[];
+  onRefresh?: () => Promise<void>;
 }
 
 export default function BookmarkedNoticesWidget({
   notices,
+  onRefresh,
 }: BookmarkedNoticesWidgetProps) {
-  const navigate = useNavigate();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // 모달 열기
+  const handleModalOpen = () => {
+    setIsModalOpen(true);
+  };
+
+  // 모달이 닫힐 때 북마크 데이터 갱신
+  const handleModalClose = async (open: boolean) => {
+    setIsModalOpen(open);
+    if (!open && onRefresh) {
+      await onRefresh();
+    }
+  };
 
   const getCategoryColor = (subcategory: string) => {
     switch (subcategory) {
@@ -36,23 +52,24 @@ export default function BookmarkedNoticesWidget({
   };
 
   return (
-    <Card className="shadow-md">
-      <div className="h-16 px-6 flex items-center justify-between border-b">
-        <div className="flex items-center gap-2">
-          <Bookmark className="w-5 h-5 text-[var(--brand-orange)]" />
-          <h2 className="text-lg" style={{ fontWeight: 700 }}>
-            북마크 공지
-          </h2>
+    <>
+      <Card className="shadow-md">
+        <div className="h-16 px-6 flex items-center justify-between border-b">
+          <div className="flex items-center gap-2">
+            <Bookmark className="w-5 h-5 text-(--brand-orange)" />
+            <h2 className="text-lg" style={{ fontWeight: 700 }}>
+              북마크 공지
+            </h2>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleModalOpen}
+            className="text-sm"
+          >
+            더보기
+          </Button>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate("/search")}
-          className="text-sm"
-        >
-          더보기
-        </Button>
-      </div>
       <div className="px-4 py-4">
         {notices.length === 0 ? (
           <div className="text-sm text-gray-500 text-center py-8">
@@ -96,5 +113,11 @@ export default function BookmarkedNoticesWidget({
         )}
       </div>
     </Card>
+
+    <BookmarksModal
+      open={isModalOpen}
+      onOpenChange={handleModalClose}
+    />
+    </>
   );
 }

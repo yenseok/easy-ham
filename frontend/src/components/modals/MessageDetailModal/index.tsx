@@ -1,17 +1,19 @@
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Clock, ExternalLink } from 'lucide-react';
+import { Clock, ExternalLink, ArrowLeft } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { MessageHeader } from './components/MessageHeader';
 import { MessageMeta } from './components/MessageMeta';
-import { AttachmentList, type Attachment } from './components/AttachmentList';
-import type { Subcategory } from '@/types/notice';
+import { AttachmentList } from './components/AttachmentList';
+import type { Subcategory, Attachment } from '@/types/notice';
 
 export interface MessageDetailModalProps {
   message: MessageDetail | null;
   isOpen: boolean;
   onClose: () => void;
+  showBackButton?: boolean;
+  onBack?: () => void;
 }
 
 export interface MessageDetail {
@@ -39,12 +41,27 @@ export const MessageDetailModal = ({
   message,
   isOpen,
   onClose,
+  showBackButton = false,
+  onBack,
 }: MessageDetailModalProps) => {
   if (!message) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-h-[85vh] overflow-y-auto p-8" style={{ maxWidth: '60vw' }}>
+        {/* 뒤로가기 버튼 (옵션) */}
+        {showBackButton && onBack && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="absolute top-4 left-4 flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            뒤로가기
+          </Button>
+        )}
+
         {/* 메시지 헤더 */}
         <MessageHeader
           title={message.title}
@@ -83,7 +100,7 @@ export const MessageDetailModal = ({
                 ),
                 a: ({ node, ...props }) => (
                   <a
-                    className="text-[var(--brand-orange)] hover:underline"
+                    className="text-(--brand-orange) hover:underline"
                     target="_blank"
                     rel="noopener noreferrer"
                     {...props}

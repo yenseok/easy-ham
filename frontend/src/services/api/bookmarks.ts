@@ -25,10 +25,10 @@ export const bookmarksApi = {
       ? `${API_ENDPOINTS.bookmarks.list}?${queryString}`
       : API_ENDPOINTS.bookmarks.list;
 
-    console.log('[북마크 API] 목록 조회:', endpoint);
+    // console.log('[북마크 API] 목록 조회:', endpoint);
 
     const response = await apiClient.get<BookmarksListData>(endpoint);
-    console.log('[북마크 API] 응답:', response);
+    // console.log('[북마크 API] 응답:', response);
 
     return response.data;
   },
@@ -38,10 +38,10 @@ export const bookmarksApi = {
    */
   add: async (userNoticeId: number): Promise<BookmarkToggleData> => {
     const endpoint = API_ENDPOINTS.bookmarks.add(userNoticeId);
-    console.log('[북마크 API] 추가 요청:', endpoint);
+    // console.log('[북마크 API] 추가 요청:', endpoint);
 
     const response = await apiClient.post<BookmarkToggleData>(endpoint, {});
-    console.log('[북마크 API] 추가 응답:', response);
+    // console.log('[북마크 API] 추가 응답:', response);
 
     return response.data;
   },
@@ -51,10 +51,10 @@ export const bookmarksApi = {
    */
   remove: async (userNoticeId: number): Promise<BookmarkToggleData> => {
     const endpoint = API_ENDPOINTS.bookmarks.remove(userNoticeId);
-    console.log('[북마크 API] 삭제 요청:', endpoint);
+    // console.log('[북마크 API] 삭제 요청:', endpoint);
 
     const response = await apiClient.delete<BookmarkToggleData>(endpoint);
-    console.log('[북마크 API] 삭제 응답:', response);
+    // console.log('[북마크 API] 삭제 응답:', response);
 
     return response.data;
   },

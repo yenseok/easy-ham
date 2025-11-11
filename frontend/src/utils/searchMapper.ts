@@ -150,8 +150,8 @@ export function convertSearchItemToNotice(item: SearchResultItem): Notice {
     // 북마크 상태 (nullish coalescing: isLiked가 없으면 false)
     bookmarked: item.isLiked ?? false,
 
-    // 완료 상태 (검색 결과에는 없으므로 기본값 false)
-    completed: false,
+    // 완료 상태 (API에서 제공하는 isCompleted 사용, 없으면 false)
+    completed: item.isCompleted ?? false,
 
     // 첨부파일 변환
     attachments: convertFiles(item.files),

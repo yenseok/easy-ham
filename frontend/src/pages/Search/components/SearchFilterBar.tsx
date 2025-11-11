@@ -21,14 +21,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CHANNEL_OPTIONS, PERIOD_OPTIONS } from "@/constants";
+import { PERIOD_OPTIONS } from "@/constants";
 import type { Subcategory, PeriodFilter } from "@/types";
+import type { UserChannel } from "@/types/api";
 
 interface SearchFilterBarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  selectedChannels: string[];
-  onChannelToggle: (channel: string) => void;
+  availableChannels: UserChannel[];
+  selectedChannels: string[];  // channelId 배열
+  onChannelToggle: (channelId: string) => void;
   selectedAcademicCategories: Subcategory[];
   onAcademicCategoryToggle: (category: Subcategory) => void;
   selectedCareerCategories: Subcategory[];
@@ -37,6 +39,8 @@ interface SearchFilterBarProps {
   onPeriodChange: (period: PeriodFilter) => void;
   showBookmarkedOnly: boolean;
   onBookmarkFilterToggle: () => void;
+  showCompletedOnly: boolean;
+  onCompletedFilterToggle: () => void;
   onReset: () => void;
   onSearch: () => void; // 검색 버튼 클릭 핸들러
 }
@@ -57,6 +61,7 @@ const getCategoryColor = (subcategory: string): string => {
 export function SearchFilterBar({
   searchQuery,
   onSearchChange,
+  availableChannels,
   selectedChannels,
   onChannelToggle,
   selectedAcademicCategories,
@@ -67,10 +72,32 @@ export function SearchFilterBar({
   onPeriodChange,
   showBookmarkedOnly,
   onBookmarkFilterToggle,
+  showCompletedOnly,
+  onCompletedFilterToggle,
   onReset,
-  onSearch, // 추가된 prop
+  onSearch,
 }: SearchFilterBarProps) {
   const [filterExpanded, setFilterExpanded] = useState(true);
+
+  // "전체" 버튼 선택 상태: 모든 채널이 선택되었을 때
+  const isAllChannelsSelected = availableChannels.length > 0 && selectedChannels.length === availableChannels.length;
+
+  // "전체" 버튼 클릭 핸들러
+  const handleAllChannelsToggle = () => {
+    if (isAllChannelsSelected) {
+      // 모두 선택 해제 (최소 1개는 선택되어야 하므로 첫 번째만 선택)
+      if (availableChannels.length > 0) {
+        onChannelToggle(availableChannels[0].channelId);
+      }
+    } else {
+      // 모두 선택
+      availableChannels.forEach(channel => {
+        if (!selectedChannels.includes(channel.channelId)) {
+          onChannelToggle(channel.channelId);
+        }
+      });
+    }
+  };
 
   return (
     <Card className="p-5 shadow-md">
@@ -93,7 +120,7 @@ export function SearchFilterBar({
         </div>
         <Button
           onClick={onSearch}
-          className="h-12 px-6 bg-[var(--brand-orange)] hover:bg-[var(--brand-orange-dark)] text-white"
+          className="h-12 px-6 bg-(--brand-orange) hover:bg-(--brand-orange-dark) text-white"
         >
           <Search className="w-4 h-4 mr-2" />
           검색
@@ -134,7 +161,7 @@ export function SearchFilterBar({
                   onClick={() => onPeriodChange(period as PeriodFilter)}
                   className={`h-8 px-4 rounded-md text-sm ${
                     periodFilter === period
-                      ? "bg-[var(--brand-orange)] text-white hover:bg-[var(--brand-orange-dark)]"
+                      ? "bg-(--brand-orange) text-white hover:bg-(--brand-orange-dark)"
                       : "bg-white hover:bg-gray-50"
                   }`}
                   style={{ fontWeight: 500 }}
@@ -169,6 +196,22 @@ export function SearchFilterBar({
                 <Star className={`w-4 h-4 mr-1.5 ${showBookmarkedOnly ? 'fill-current' : ''}`} />
                 북마크만
               </Button>
+
+              {/* 완료 필터 토글 */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onCompletedFilterToggle}
+                className={`h-8 px-3 rounded-md text-sm ${
+                  showCompletedOnly
+                    ? "bg-green-100 text-green-700 border-green-300 hover:bg-green-200"
+                    : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+                style={{ fontWeight: 500 }}
+              >
+                <Check className="w-4 h-4 mr-1.5" />
+                완료 숨기기
+              </Button>
             </div>
           </div>
 
@@ -182,26 +225,42 @@ export function SearchFilterBar({
               채널
             </span>
             <div className="flex gap-2 flex-wrap">
-              {CHANNEL_OPTIONS.map((channel) => {
-                const isSelected =
-                  channel === "전체"
-                    ? selectedChannels.length === CHANNEL_OPTIONS.length - 1
-                    : selectedChannels.includes(channel);
+              {/* 전체 버튼 */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAllChannelsToggle}
+                className={`h-8 px-4 rounded-md text-sm ${
+                  isAllChannelsSelected
+                    ? "bg-(--brand-orange) text-white border-(--brand-orange) hover:bg-(--brand-orange-dark)"
+                    : "bg-white hover:bg-gray-50"
+                }`}
+                style={{ fontWeight: 500 }}
+              >
+                {isAllChannelsSelected && <Check className="w-3 h-3 mr-1" />}
+                전체
+              </Button>
+
+              {/* 개별 채널 버튼들 */}
+              {availableChannels.map((channel) => {
+                const isSelected = selectedChannels.includes(channel.channelId);
+                const displayName = `${channel.teamName} - ${channel.channelName}`;
+
                 return (
                   <Button
-                    key={channel}
+                    key={channel.channelId}
                     variant="outline"
                     size="sm"
-                    onClick={() => onChannelToggle(channel)}
+                    onClick={() => onChannelToggle(channel.channelId)}
                     className={`h-8 px-4 rounded-md text-sm ${
                       isSelected
-                        ? "bg-[var(--brand-orange)] text-white border-[var(--brand-orange)] hover:bg-[var(--brand-orange-dark)]"
+                        ? "bg-(--brand-orange) text-white border-(--brand-orange) hover:bg-(--brand-orange-dark)"
                         : "bg-white hover:bg-gray-50"
                     }`}
                     style={{ fontWeight: 500 }}
                   >
                     {isSelected && <Check className="w-3 h-3 mr-1" />}
-                    {channel}
+                    {displayName}
                   </Button>
                 );
               })}

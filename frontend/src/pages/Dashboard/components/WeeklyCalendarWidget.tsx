@@ -78,7 +78,7 @@ export default function WeeklyCalendarWidget({
   return (
     <Card className="shadow-md">
       <div className="h-16 px-6 flex items-center gap-2 border-b">
-        <Calendar className="w-5 h-5 text-[var(--brand-orange)]" />
+        <Calendar className="w-5 h-5 text-(--brand-orange)" />
         <h2 className="text-lg" style={{ fontWeight: 700 }}>
           이번 주 일정
         </h2>
@@ -119,7 +119,7 @@ export default function WeeklyCalendarWidget({
                     <span
                       className={`flex items-center justify-center w-7 h-7 text-sm rounded-full ${
                         today
-                          ? "bg-[var(--brand-orange)] text-white"
+                          ? "bg-(--brand-orange) text-white"
                           : "text-gray-700"
                       }`}
                       style={{

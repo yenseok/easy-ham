@@ -67,7 +67,7 @@ export default function RecentNoticesWidget() {
   return (
     <Card className="shadow-md">
       <div className="h-16 px-6 flex items-center gap-2 border-b">
-        <Bell className="w-5 h-5 text-[var(--brand-orange)]" />
+        <Bell className="w-5 h-5 text-(--brand-orange)" />
         <h2 className="text-lg" style={{ fontWeight: 700 }}>
           최근 공지
         </h2>
