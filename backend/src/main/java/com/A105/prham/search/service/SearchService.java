@@ -261,15 +261,12 @@ public class SearchService {
             @SuppressWarnings("unchecked")
             Map<String, Object> formatted = (Map<String, Object>) hitMap.get("_formatted");
 
-            String highlightedTitle = formatted != null ?
-                    (String) formatted.get("title") : (String) hitMap.get("title");
-
             String highlightedContent = formatted != null ?
                     (String) formatted.get("cleanedText") : (String) hitMap.get("cleanedText");
 
             List<FileInfo> files = parseFileInfos(hitMap.get("files"));
 //여기서 검색 응답 구조 설정 가능
-            //TODO 여기 2N+1 문제 있음. 개선하고싶은 사람이 하면 됨
+            //TODO 여기 N+1 문제 있음. 개선하고싶은 사람이 하면 됨
             //유저 네임 찾아서 넣기
             String userName = mattermostService.getUserNameFromID((String) hitMap.get("userId"));
 
@@ -277,11 +274,11 @@ public class SearchService {
             Long id = postService.getPostIdByMMPostId((String) hitMap.get("postId"));
 
             return PostSearchItem.builder()
-//                    .id(getLongValue(hitMap.get("postId")))
                     .id(id)
                     .mmMessageId((String) hitMap.get("postId"))
                     .title((String) hitMap.get("title"))
                     .campusId((String) hitMap.get("campusList"))
+                    .teamName((String) hitMap.get("teamName"))
                     .channelName((String) hitMap.get("channelName"))
                     .mmChannelId((String) hitMap.get("channelId"))
                     .userName(userName)

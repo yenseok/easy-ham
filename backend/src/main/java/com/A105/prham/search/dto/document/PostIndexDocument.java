@@ -21,6 +21,7 @@ public class PostIndexDocument {
     private String postId;
     private String channelId;
     private String channelName;
+    private String teamName;
     private String userId;
     private String cleanedText;
     private Long timestamp;       // webhookTimestamp → long 변환
@@ -47,6 +48,7 @@ public class PostIndexDocument {
                 .userId(post.getUserId())
                 .cleanedText(post.getCleanedText())
                 .timestamp(ts != null ? ts : System.currentTimeMillis())
+                .teamName(post.getTeamName())
 //                .mainCategory(main)
                 .subCategory(sub)
                 .deadline(post.getDeadline())
