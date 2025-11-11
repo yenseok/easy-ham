@@ -6,7 +6,7 @@ import java.time.LocalDate;
 
 @Builder
 public record UserNoticeLikeDto(
-        Long noticeId,
+        Long postId,
 
         String title,
 
@@ -26,8 +26,6 @@ public record UserNoticeLikeDto(
 
         String deadline,
 
-        Boolean isLiked,
-
-        Boolean isCompleted
+        Boolean isLiked
 ) {
 }

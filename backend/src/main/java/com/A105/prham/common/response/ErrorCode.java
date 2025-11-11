@@ -22,7 +22,7 @@ public enum ErrorCode {
     //404 NOT FOUND
     NOT_FOUND(404, HttpStatus.NOT_FOUND, "해당 API를 찾을 수 없습니다."),
     USER_NOT_FOUND(404, HttpStatus.NOT_FOUND, "해당 유저를 찾을 수 없습니다."),
-    NOTICE_NOT_FOUND(404, HttpStatus.NOT_FOUND, "해당 공지사항을 찾을 수 없습니다."),
+    POST_NOT_FOUND(404, HttpStatus.NOT_FOUND, "해당 공지사항을 찾을 수 없습니다."),
     FILE_NOT_FOUND(404, HttpStatus.NOT_FOUND, "파일을 찾을 수 없습니다."),
     KEYWORD_NOT_FOUND(404, HttpStatus.NOT_FOUND, "해당 키워드를 찾을 수 없습니다."),
 

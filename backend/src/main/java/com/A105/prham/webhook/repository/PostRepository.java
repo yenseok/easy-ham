@@ -49,4 +49,5 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 			""")
 	List<Long> selectPostIdsByMMPostIds(@Param("postIds") List<String> postIds);
 
+
 }
