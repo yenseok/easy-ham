@@ -13,11 +13,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class CompletionResponse {
-    private Long completedId;
     private Long userId;
     private String userName;
     private Long postId;
     private String postTitle;
     private Boolean isCompleted;
-    private String completedAt; // 완료/수정 시각
 }
