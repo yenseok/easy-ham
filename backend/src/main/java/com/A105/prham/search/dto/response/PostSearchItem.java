@@ -13,6 +13,7 @@ import java.util.List;
 public class PostSearchItem {
     private Long id;                        // Post ID
     private String mmMessageId;             // Mattermost 메시지 ID
+    private String teamName;
     private String mmChannelId;             // Mattermost 채널 ID
     private String channelName;
     private String title;

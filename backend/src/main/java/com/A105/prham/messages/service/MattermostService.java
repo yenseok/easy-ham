@@ -33,7 +33,7 @@ public class MattermostService {
      */
     public List<FileInfo> getFileInfosForPost(String postId) {
         String url = mattermostApiUrl + "/api/v4/posts/" + postId + "/files/info";
-        log.info("Requesting Mattermost files info: {}", url);
+//        log.info("Requesting Mattermost files info: {}", url);
 
         HttpHeaders headers = new HttpHeaders();
         // Authorization: Bearer <token>
@@ -51,7 +51,7 @@ public class MattermostService {
                     String.class
             );
 
-            log.info("Mattermost response status: {}", response.getStatusCodeValue());
+//            log.info("Mattermost response status: {}", response.getStatusCodeValue());
 
             if (response.getStatusCode() == HttpStatus.OK && response.getBody() != null) {
                 return parseFileInfos(response.getBody());
@@ -79,11 +79,11 @@ public class MattermostService {
                     f.setWidth(node.path("width").asInt(0));
                     f.setHeight(node.path("height").asInt(0));
                     f.setHasPreviewImage(node.path("has_preview_image").asBoolean(false));
-                    log.info("{} 포함",f.getName());
+//                    log.info("{} 포함",f.getName());
                     list.add(f);
                 }
             }
-            log.info("Parsed {} file(s) from Mattermost", list.size());
+//            log.info("Parsed {} file(s) from Mattermost", list.size());
         } catch (Exception e) {
             log.error("Failed to parse Mattermost JSON: {}", e.getMessage(), e);
         }
@@ -146,7 +146,7 @@ public class MattermostService {
             String link = String.format("%s/%s/pl/%s",
                     mattermostApiUrl, teamName, postId);
 
-            log.info("✅ Generated Mattermost post link: {}", link);
+//            log.info("✅ Generated Mattermost post link: {}", link);
             return link;
 
         } catch (Exception e) {
@@ -158,7 +158,7 @@ public class MattermostService {
     public String getUserNameFromID(String userId) {
         try {
             String url = mattermostApiUrl + "/api/v4/users/" + userId;
-            log.info("🔍 Requesting Mattermost user info: {}", url);
+//            log.info("🔍 Requesting Mattermost user info: {}", url);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(mattermostApiToken);
@@ -184,7 +184,7 @@ public class MattermostService {
             String displayName = username != null && !username.isBlank() ? username :
                                 nickname!= null && !nickname.isBlank()?nickname : "unknown";
 
-            log.info("✅ Found username for {}: {}", userId, displayName);
+//            log.info("✅ Found username for {}: {}", userId, displayName);
             return displayName;
 
         } catch (Exception e) {

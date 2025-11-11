@@ -23,8 +23,8 @@ public class RestTemplateConfig {
 
         // 요청 로깅만 (헤더는 조작하지 않음)
         ClientHttpRequestInterceptor loggingInterceptor = (request, body, execution) -> {
-            log.info("➡️ RestTemplate request: {} {}", request.getMethod(), request.getURI());
-            log.info("➡️ Request headers: {}", request.getHeaders());
+//            log.info("➡️ RestTemplate request: {} {}", request.getMethod(), request.getURI());
+//            log.info("➡️ Request headers: {}", request.getHeaders());
             return execution.execute(request, body);
         };
 
