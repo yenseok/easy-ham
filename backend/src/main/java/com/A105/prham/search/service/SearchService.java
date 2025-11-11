@@ -2,11 +2,13 @@ package com.A105.prham.search.service;
 
 import com.A105.prham.messages.dto.FileInfo;
 import com.A105.prham.messages.service.MattermostService;
+import com.A105.prham.post_user_completed.repository.PostUserCompletedRepository;
 import com.A105.prham.search.dto.document.PostIndexDocument;
 import com.A105.prham.search.dto.request.PostSearchRequest;
 import com.A105.prham.search.dto.response.PostSearchItem;
 import com.A105.prham.search.dto.response.PostSearchResponse;
 import com.A105.prham.search.dto.response.SearchMetadata;
+import com.A105.prham.user_notice_like.repository.UserNoticeLikeRepository;
 import com.A105.prham.webhook.entity.Post;
 import com.A105.prham.webhook.service.PostProcessorService;
 import com.A105.prham.webhook.service.PostService;
@@ -18,6 +20,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import com.A105.prham.user.entity.User;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,9 +38,8 @@ public class SearchService {
     private final PostProcessorService postProcessorService;
     private final MattermostService mattermostService;
     private final PostService postService;
-    // TODO: 좋아요 리포지토리 주입 필요
-    // private final LikeRepository likeRepository;
-
+    private final UserNoticeLikeRepository userNoticeLikeRepository;
+    private final PostUserCompletedRepository postUserCompletedRepository;
     /**
      * 검색 모드 정의
      */
@@ -58,18 +62,83 @@ public class SearchService {
             // 2. Meilisearch 검색 실행
             SearchResult meilisearchResult = executeSearch(request, mode);
 
-            // 3. 좋아요 필터 적용 (후처리)
+            // 3. 검색 결과 전환
             List<PostSearchItem> items = convertToSearchItems(meilisearchResult);
+
+            // 4. 사용자별 데이터 추가 (isLiked, isCompleted)
+            Long currentUserId = getCurrentUserId();
+            items = enrichWithUserData(items, currentUserId);
+
+            // 5. 좋아요 필터 적용 (후처리)
             if (Boolean.TRUE.equals(request.getIsLiked())) {
-                items = filterByLikes(items, getCurrentUserId());
+                items = items.stream()
+                        .filter(item -> Boolean.TRUE.equals(item.getIsLiked()))
+                        .collect(Collectors.toList());
+                log.info("✅ Filtered by isLiked=true: {} items", items.size());
             }
 
-            // 4. 응답 생성
+            // 6. 완료 필터 적용 (후처리)
+            if (request.getIsCompleted() != null) {
+                if (Boolean.TRUE.equals(request.getIsCompleted())) {
+                    items = items.stream()
+                            .filter(item -> Boolean.TRUE.equals(item.getIsCompleted()))
+                            .collect(Collectors.toList());
+                    log.info("✅ Filtered by isCompleted=true: {} items", items.size());
+                } else {
+                    items = items.stream()
+                            .filter(item -> !Boolean.TRUE.equals(item.getIsCompleted()))
+                            .collect(Collectors.toList());
+                    log.info("✅ Filtered by isCompleted=false: {} items", items.size());
+                }
+            }
+
+            // 6. 응답 생성
             return buildResponse(items, meilisearchResult, request, mode);
 
         } catch (Exception e) {
             log.error("❌ Failed to search posts", e);
             throw new RuntimeException("Failed to search posts", e);
+        }
+    }
+
+    /**
+     * 검색 결과에 사용자별 데이터(좋아요, 완료 여부) 추가
+     */
+    private List<PostSearchItem> enrichWithUserData(List<PostSearchItem> items, Long userId) {
+        if (userId == null || items.isEmpty()) {
+            // 로그인하지 않은 경우 모두 false로 설정
+            items.forEach(item -> {
+                item.setIsLiked(false);
+                item.setIsCompleted(false);
+            });
+            return items;
+        }
+
+        try {
+            // 사용자가 좋아요한 게시물 ID 목록 조회
+            Set<Long> likedPostIds = userNoticeLikeRepository.findLikedPostIdsByUserId(userId);
+
+            // 사용자가 완료한 게시물 ID 목록 조회
+            Set<Long> completedPostIds = postUserCompletedRepository.findCompletedPostIdsByUserId(userId);
+
+            // 각 아이템에 isLiked, isCompleted 값 설정
+            items.forEach(item -> {
+                item.setIsLiked(likedPostIds.contains(item.getId()));
+                item.setIsCompleted(completedPostIds.contains(item.getId()));
+            });
+
+            log.info("✅ Enriched {} items with user data (userId: {}, liked: {}, completed: {})",
+                    items.size(), userId, likedPostIds.size(), completedPostIds.size());
+            return items;
+
+        } catch (Exception e) {
+            log.error("❌ Failed to enrich items with user data", e);
+            // 실패 시에도 false로 설정
+            items.forEach(item -> {
+                item.setIsLiked(false);
+                item.setIsCompleted(false);
+            });
+            return items;
         }
     }
 
@@ -243,21 +312,36 @@ public class SearchService {
         }
     }
 
-    /**
-     * 좋아요 필터링 (후처리)
-     */
-    private List<PostSearchItem> filterByLikes(List<PostSearchItem> items, String userId) {
-        // TODO: 실제 좋아요 데이터와 연동
-        log.warn("⚠️ isLiked filter requested but Like repository not implemented yet");
-        return items; // 임시: 필터링 없이 반환
-    }
+
 
     /**
      * 현재 사용자 ID 가져오기
      */
-    private String getCurrentUserId() {
-        // TODO: Spring Security Context에서 현재 사용자 정보 가져오기
-        return "temp_user_id";
+    private Long getCurrentUserId() {
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+            if (authentication == null || !authentication.isAuthenticated()) {
+                log.warn("⚠️ No authenticated user found");
+                return null;
+            }
+
+            // JwtAuthenticationFilter에서 설정한 User 객체 가져오기
+            Object principal = authentication.getPrincipal();
+
+            if (principal instanceof User) {
+                User user = (User) principal;
+                log.info("name : {} , Id : {} ",user.getName(),user.getId());
+                return user.getId();  // User 엔티티의 ID 반환
+            }
+
+            log.warn("⚠️ Principal is not a User instance: {}", principal.getClass());
+            return null;
+
+        } catch (Exception e) {
+            log.error("❌ Failed to get current user ID", e);
+            return null;
+        }
     }
 
     /**
@@ -286,6 +370,7 @@ public class SearchService {
                         .startDate(request.getStartDate())
                         .endDate(request.getEndDate())
                         .isLiked(request.getIsLiked())
+                        .isCompleted(request.getIsCompleted())
                         .build())
                 .build();
 
@@ -462,4 +547,6 @@ public class SearchService {
         }
         return null;
     }
+
+
 }

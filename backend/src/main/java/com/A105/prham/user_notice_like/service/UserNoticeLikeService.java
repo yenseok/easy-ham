@@ -16,11 +16,13 @@ import com.A105.prham.user_notice_like.repository.UserNoticeLikeRepository;
 import com.A105.prham.webhook.entity.Post;
 import com.A105.prham.webhook.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -32,18 +34,23 @@ public class UserNoticeLikeService {
     private final PostRepository postRepository;
 
     @Transactional
-    public UserNoticeLikeCreateResponse saveBookmarks(Long userId, Long postId){
+    public UserNoticeLikeCreateResponse saveBookmarks(User user, Long postId){
 
-        // 유저 유효성 검사
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+//        // 유저 유효성 검사
+//        User user = userRepository.findById(userId)
+//                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        if(user==null) throw new CustomException(ErrorCode.USER_NOT_FOUND);
 
         // 메시지 유효성 검사
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new CustomException(ErrorCode.NOTICE_NOT_FOUND));
+
+        Post post = postRepository.findPostById(postId).get();
+        log.info("{}: {}",postId,post);
+//                .orElseThrow(() -> new CustomException(ErrorCode.NOTICE_NOT_FOUND));
 
         UserNotice userNotice = userNoticeRepository.findByUserAndPost(user, post);
-
+        if (userNotice == null) {
+            throw new CustomException(ErrorCode.USER_NOTICE_NOT_FOUND);
+        }
         // 해당 유저와 게시물에 대한 북마크가 이미 있는 경우 예외 처리
         if(userNoticeLikeRepository.existsByUserAndPost(user, post)){
             throw new CustomException(ErrorCode.DUPLICATED_USER_NOTICE_LIKE);
@@ -67,17 +74,22 @@ public class UserNoticeLikeService {
     }
 
     @Transactional
-    public UserNoticeLikeDeleteResponse deleteBookmarks(Long userId, Long postId){
+    public UserNoticeLikeDeleteResponse deleteBookmarks(User user, Long postId){
 
-        // 유저 유효성 검사
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+//        // 유저 유효성 검사
+//        User user = userRepository.findById(userId)
+//                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
+        if(user==null) throw new CustomException(ErrorCode.USER_NOT_FOUND);
 
         // 메시지 유효성 검사
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOTICE_NOT_FOUND));
 
         UserNotice userNotice = userNoticeRepository.findByUserAndPost(user, post);
+
+        if (userNotice == null) {
+            throw new CustomException(ErrorCode.USER_NOTICE_NOT_FOUND);
+        }
 
         // 저장되어 있는 북마크가 맞는지 검사
         if(!userNoticeLikeRepository.existsByUserAndPost(user, post)){

@@ -26,5 +26,6 @@ public class SearchMetadata {
         private Long startDate;             // 시작 날짜
         private Long endDate;               // 종료 날짜
         private Boolean isLiked;            // 좋아요 필터 여부
+        private Boolean isCompleted; //완료 여부
     }
 }
