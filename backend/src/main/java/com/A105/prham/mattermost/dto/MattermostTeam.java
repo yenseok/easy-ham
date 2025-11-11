@@ -16,6 +16,7 @@ public class MattermostTeam {
 	@JsonProperty("id")
 	private String id;
 
+
 	@Setter
 	@JsonProperty("display_name")
 	private String displayName;
