@@ -32,18 +32,13 @@ public class UserNoticeLike extends BaseTimeEntity { //북마크
     @JoinColumn(name = "post_id")
     private Post post;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_notice_id")
-    private UserNotice userNotice;
-
     @Column(nullable = false)
     private Boolean isLiked;
 
     @Builder
-    public UserNoticeLike(User user, Post post, UserNotice userNotice, Boolean isLiked) {
+    public UserNoticeLike(User user, Post post, Boolean isLiked) {
         this.user = user;
         this.post = post;
-        this.userNotice = userNotice;
         this.isLiked = isLiked;
     }
 }
