@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -29,5 +30,16 @@ public class PositionService {
         return PositionResponse.builder()
                 .positions(positionList)
                 .build();
+    }
+
+    //Post의 positionId가 사용자 포지션 목록에 포함되는지 확인
+    public boolean isMatchingPosition(Long postPositionId, Set<Long> userPositionIds) {
+        if (postPositionId == null || userPositionIds == null || userPositionIds.isEmpty()) {
+            return false;
+        }
+
+        boolean matched = userPositionIds.contains(postPositionId);
+
+        return matched;
     }
 }

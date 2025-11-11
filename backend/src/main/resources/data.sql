@@ -25,3 +25,20 @@ INSERT IGNORE INTO subcode (upper_code_id, sub_code, sub_code_name, sub_code_des
 (2, 'LECT', '특강', '취업 - 특강', 1),
 (2, 'INFO', '정보', '취업 - 정보', 1),
 (2, 'EVT', '이벤트', '취업 - 이벤트', 1);
+
+-- 직무
+INSERT IGNORE INTO position (position_name) VALUES
+('백엔드'),
+('프론트엔드'),
+('풀스택'),
+('모바일'),
+('AI'),
+('데이터'),
+('인프라'),
+('보안'),
+('임베디드'),
+('QA'),
+('전산'),
+('기획'),
+('SW'),
+('게임');

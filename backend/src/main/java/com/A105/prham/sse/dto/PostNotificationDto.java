@@ -1,5 +1,7 @@
 package com.A105.prham.sse.dto;
 
+import java.time.format.DateTimeFormatter;
+
 import com.A105.prham.webhook.entity.Post;
 
 import lombok.Builder;
@@ -23,12 +25,14 @@ public class PostNotificationDto {
 	private String createdAt;
 	private String fileIds;
 
+	private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+
 	public static PostNotificationDto from(Post post) {
 		return PostNotificationDto.builder()
 			.id(post.getId())
 			.postId(post.getPostId())
 			.channelId(post.getChannelId())
-			.channelName(post.getUserName())
+			.channelName(post.getChannelName())
 			.userId(post.getUserId())
 			.userName(post.getUserName())
 			.title(post.getTitle())
@@ -37,7 +41,7 @@ public class PostNotificationDto {
 			.subCategory(post.getSubCategory())
 			.deadline(post.getDeadline())
 			.campusList(post.getCampusList())
-			.createdAt(post.getCreatedAt())
+			.createdAt(post.getCreatedAt() != null ? post.getCreatedAt().format(FORMATTER) : null)
 			.fileIds(post.getFileIds())
 			.build();
 	}

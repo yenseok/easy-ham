@@ -48,4 +48,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
         WHERE u.ssoSubId = :ssoSubId
     """)
     int setUserUnable(@Param("ssoSubId") String ssoSubId);
+
+    @Query("SELECT u FROM User u " +
+        "LEFT JOIN FETCH u.userPositions up " +
+        "LEFT JOIN FETCH up.position " +
+        "WHERE u.id = :userId")
+    Optional<User> findByIdWithPositions(@Param("userId") Long userId);
 }
