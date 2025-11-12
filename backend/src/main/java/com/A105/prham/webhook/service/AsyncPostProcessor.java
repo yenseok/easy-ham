@@ -163,12 +163,12 @@ public class AsyncPostProcessor {
 
 		try {
 			// position 매핑
-			Long positionId = findPositionIdByCategory(jobPosting.getPositionCategory());
+			Position position = findPositionByCategory(jobPosting.getPositionCategory());
 
 			//llm이 db에 없는 직무로 추출하면 일단 무조건 다 전산으로 때려박음
-			if (positionId == null) {
+			if (position == null) {
 				log.warn("position 매핑 실패: {}, 다 전산으로 때려박는다", jobPosting.getPositionCategory());
-				positionId = findDefaultPositionId();
+				position = findDefaultPosition();
 			}
 
 			String uniquePostId = originalPost.getPostId() + "_" + UUID.randomUUID().toString().substring(0,8);
@@ -179,7 +179,7 @@ public class AsyncPostProcessor {
 			//내용: 직무명 + url
 			String content = jobPosting.getPosition();
 			if (jobPosting.getUrl() != null && !jobPosting.getUrl().isEmpty()) {
-				content += "\n\n🔗 " + jobPosting.getUrl();
+				content += "\n|||URL|||" + jobPosting.getUrl();
 			}
 
 			// 개별 post 생성
@@ -198,7 +198,7 @@ public class AsyncPostProcessor {
 				.title(title)
 				.mainCategory(classificationResult.getMainCategory())
 				.subCategory(classificationResult.getSubCategory())
-				.positionId(positionId)
+				.position(position)
 				.deadline(parseDeadline(jobPosting.getDeadline()))
 				.campusList(classificationResult.getCampusList() != null ?
 					String.join(",", classificationResult.getCampusList()) : null)
@@ -286,5 +286,18 @@ public class AsyncPostProcessor {
 		} catch (Exception e) {
 			return null;
 		}
+	}
+
+	// position entyty 반환
+	private Position findPositionByCategory(String positionCategory) {
+		if (positionCategory == null || positionCategory.isEmpty())	{
+			return null;
+		}
+		return positionRepository.findByPositionName(positionCategory).orElse(null);
+	}
+
+	//기본 position entuty 반환
+	private Position findDefaultPosition() {
+		return positionRepository.findByPositionName("전산").orElse(null);
 	}
 }

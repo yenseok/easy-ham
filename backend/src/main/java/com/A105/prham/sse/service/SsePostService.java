@@ -1,5 +1,6 @@
 package com.A105.prham.sse.service;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -44,6 +45,10 @@ public class SsePostService {
 		// positionId 저장
 		if (userPositionIds != null && !userPositionIds.isEmpty()) {
 			this.emitterPositionIds.put(emitterId, new HashSet<>(userPositionIds));
+			log.info("sse emitterId={}, 선호 포지션={}", emitterId, userPositionIds);
+		} else {
+			this.emitterPositionIds.put(emitterId, new HashSet<>());
+			log.info("sse emitterId={}, 선호 포지션 없음",  emitterId);
 		}
 
 		emitter.onCompletion(() -> {
@@ -84,6 +89,7 @@ public class SsePostService {
 		String targetChannelId = post.getChannelId();
 		String mainCategory = post.getMainCategory();
 		String subCategory = post.getSubCategory();
+		Long postPositionId = post.getPosition().getId();
 
 		PostNotificationDto dto = PostNotificationDto.from(post);
 
@@ -98,16 +104,25 @@ public class SsePostService {
 						if ("취업".equals(mainCategory) && "채용".equals(subCategory)) {
 							Set<Long> userPositionIds = this.emitterPositionIds.get(emitterId);
 							// 사용자가 선호 포지션을 설정했으면 매칭 확인
+							log.info("🔍 채용 공고 필터링 체크: emitterId={}, 사용자포지션={}, 공고포지션={}",
+								emitterId, userPositionIds, postPositionId);
 							if (userPositionIds != null && !userPositionIds.isEmpty()) {
 								boolean isMatched = positionService.isMatchingPosition(
-									post.getPositionId(),
+									postPositionId,
 									userPositionIds
 								);
 
 								if (!isMatched) {
+									log.info("❌ 포지션 불일치로 전송 스킵: emitterId={}, 공고포지션={}, 사용자포지션={}",
+										emitterId, postPositionId, userPositionIds);
 									// 매칭 안되면 전송 안함
 									return;
+								}else {
+									log.info("✅ 포지션 매칭 성공: emitterId={}, positionId={}", emitterId, postPositionId);
 								}
+							} else {
+								log.info("⚠️ 선호 포지션 미설정 - 전송: emitterId={}", emitterId);
+
 							}
 							//사용자가 선호 포지션을 설정하지 않았으면 모든 채용 공고 전송
 						}

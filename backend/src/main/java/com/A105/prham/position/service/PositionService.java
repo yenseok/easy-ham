@@ -34,12 +34,22 @@ public class PositionService {
 
     //Post의 positionId가 사용자 포지션 목록에 포함되는지 확인
     public boolean isMatchingPosition(Long postPositionId, Set<Long> userPositionIds) {
-        if (postPositionId == null || userPositionIds == null || userPositionIds.isEmpty()) {
+        if (postPositionId == null) {
+            // 공고 직무 없음
             return false;
         }
 
-        boolean matched = userPositionIds.contains(postPositionId);
+        if (userPositionIds == null || userPositionIds.isEmpty()) {
+            //사용자 선호 직무 없음
+            return true;
+        }
 
-        return matched;
+        boolean directMatch = userPositionIds.contains(postPositionId);
+
+        if (directMatch) {
+            return true;
+        }else  {
+            return false;
+        }
     }
 }

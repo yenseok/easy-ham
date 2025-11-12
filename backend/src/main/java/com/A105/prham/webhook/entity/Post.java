@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 import com.A105.prham.common.domain.BaseTimeEntity;
+import com.A105.prham.position.entity.Position;
 
 @Entity
 @Table(name = "posts")
@@ -79,8 +80,9 @@ public class Post extends BaseTimeEntity {
 	@Column(name = "team_name", nullable = false)
 	private String teamName;
 
-	@Column(name = "position_id")
-	private Long positionId;
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "position_id")
+	private Position position;
 
 	// 상태 변경
 	public void updateStatus(PostStatus newStatus) {
@@ -122,10 +124,8 @@ public class Post extends BaseTimeEntity {
 	}
 
 	// 채용 공고 업데이트
-	public void updateJobPostingInfo(Long positionId) {
-		this.positionId = positionId;
+	public void updatePosition(Position position) {
+		this.position = position;
 	}
-
-
 
 }
