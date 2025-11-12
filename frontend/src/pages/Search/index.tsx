@@ -38,6 +38,8 @@ export default function SearchPage() {
     selectedCareerCategories,
     searchQuery,
     periodFilter,
+    customStartDate,
+    customEndDate,
     sortBy,
     showBookmarkedOnly,
     showCompletedOnly,
@@ -47,6 +49,7 @@ export default function SearchPage() {
     toggleCareerCategory,
     setSearchQuery,
     setPeriodFilter,
+    setCustomDateRange,
     setSortBy,
     toggleBookmarkFilter,
     toggleCompletedFilter,
@@ -137,35 +140,49 @@ export default function SearchPage() {
       size,
     };
 
+    // 스토어에서 최신 값을 직접 읽기 (클로저 이슈 방지)
+    const currentState = useFilterStore.getState();
+
     // 1. 키워드 필터
-    if (searchQuery && searchQuery.trim().length > 0) {
-      params.keyword = searchQuery.trim();
+    if (currentState.searchQuery && currentState.searchQuery.trim().length > 0) {
+      params.keyword = currentState.searchQuery.trim();
     }
 
     // 2. 채널 필터
     // 모든 채널 선택 = 필터 없음
-    const isAllChannelsSelected = selectedChannels.length === availableChannels.length;
-    if (!isAllChannelsSelected && selectedChannels.length > 0) {
-      params.channelIds = selectedChannels;
+    const isAllChannelsSelected = currentState.selectedChannels.length === currentState.availableChannels.length;
+    if (!isAllChannelsSelected && currentState.selectedChannels.length > 0) {
+      params.channelIds = currentState.selectedChannels;
     }
 
     // 3. 카테고리 필터
     // 학사 4개 + 취업 4개 = 총 8개
     const TOTAL_CATEGORIES = 8;
-    const totalSelectedCategories = selectedAcademicCategories.length + selectedCareerCategories.length;
+    const totalSelectedCategories = currentState.selectedAcademicCategories.length + currentState.selectedCareerCategories.length;
     const isAllCategoriesSelected = totalSelectedCategories === TOTAL_CATEGORIES;
 
     // 카테고리 데이터가 로드되었고, 모든 카테고리가 선택되지 않은 경우에만 파라미터 추가
     if (!isAllCategoriesSelected && totalSelectedCategories > 0 && categories.length > 0) {
-      const categoryIds = mapCategoriesToIds(selectedAcademicCategories, selectedCareerCategories, categories);
+      const categoryIds = mapCategoriesToIds(
+        currentState.selectedAcademicCategories,
+        currentState.selectedCareerCategories,
+        categories
+      );
       if (categoryIds.length > 0) {
         params.categoryIds = categoryIds;
       }
     }
 
     // 4. 기간 필터
-    if (periodFilter !== '전체') {
-      const range = getPeriodRange(periodFilter);
+    if (currentState.periodFilter === 'custom') {
+      // 커스텀 날짜 범위 사용
+      if (currentState.customStartDate && currentState.customEndDate) {
+        params.startDate = String(currentState.customStartDate.getTime());
+        params.endDate = String(currentState.customEndDate.getTime());
+      }
+    } else if (currentState.periodFilter !== '전체') {
+      // 프리셋 기간 필터 사용
+      const range = getPeriodRange(currentState.periodFilter);
       if (range) {
         params.startDate = range.startDate;
         params.endDate = range.endDate;
@@ -173,12 +190,12 @@ export default function SearchPage() {
     }
 
     // 5. 북마크 필터
-    if (showBookmarkedOnly) {
+    if (currentState.showBookmarkedOnly) {
       params.isLiked = true;
     }
 
     // 6. 완료 숨기기 필터 (완료되지 않은 것만 표시)
-    if (showCompletedOnly) {
+    if (currentState.showCompletedOnly) {
       params.isCompleted = false;
     }
 
@@ -385,6 +402,9 @@ export default function SearchPage() {
             onCareerCategoryToggle={toggleCareerCategory}
             periodFilter={periodFilter}
             onPeriodChange={setPeriodFilter}
+            customStartDate={customStartDate}
+            customEndDate={customEndDate}
+            onCustomDateRangeChange={setCustomDateRange}
             showBookmarkedOnly={showBookmarkedOnly}
             onBookmarkFilterToggle={toggleBookmarkFilter}
             showCompletedOnly={showCompletedOnly}

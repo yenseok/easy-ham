@@ -54,12 +54,12 @@ export default function UrgentDeadlinesWidget({
                     </Badge>
                     {dday !== null && (
                       <span
-                        className={`text-white text-xs px-2 py-0.5 rounded ${getDdayColor(
+                        className={`text-white text-xs ${dday === 0 ? 'px-1.5' : 'px-2'} py-0.5 rounded ${getDdayColor(
                           dday
                         )}`}
                         style={{ fontWeight: 600 }}
                       >
-                        D-{dday}
+                        {dday === 0 ? 'D-Day' : `D-${dday}`}
                       </span>
                     )}
                   </div>

@@ -104,12 +104,12 @@ export default function RecentNoticesWidget() {
                   </Badge>
                   {notice.dday !== null && (
                     <span
-                      className={`text-white text-xs px-2 py-0.5 rounded ${getDdayColor(
+                      className={`text-white text-xs ${notice.dday === 0 ? 'px-1.5' : 'px-2'} py-0.5 rounded ${getDdayColor(
                         notice.dday
                       )}`}
                       style={{ fontWeight: 600 }}
                     >
-                      D-{notice.dday}
+                      {notice.dday === 0 ? 'D-Day' : `D-${notice.dday}`}
                     </span>
                   )}
                 </div>

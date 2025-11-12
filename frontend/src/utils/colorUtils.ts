@@ -23,6 +23,7 @@ export const getCategoryColor = (subcategory: Subcategory) => {
  */
 export const getDdayBadgeColor = (dday: number | null) => {
   if (dday === null) return { hex: colors.dday.default };
+  if (dday < 0) return { hex: '#9CA3AF' }; // 마감된 경우 회색 (gray-400)
   if (dday <= 3) return { hex: colors.dday.urgent };
   if (dday <= 7) return { hex: colors.dday.warning };
   return { hex: colors.dday.normal };

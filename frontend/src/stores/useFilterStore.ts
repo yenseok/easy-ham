@@ -16,6 +16,8 @@ interface FilterState {
   selectedCareerCategories: Subcategory[];
   searchQuery: string;
   periodFilter: PeriodFilter;
+  customStartDate: Date | null;
+  customEndDate: Date | null;
   sortBy: SortOption;
   showBookmarkedOnly: boolean;
   showCompletedOnly: boolean;
@@ -27,6 +29,7 @@ interface FilterState {
   toggleCareerCategory: (category: Subcategory) => void;
   setSearchQuery: (query: string) => void;
   setPeriodFilter: (period: PeriodFilter) => void;
+  setCustomDateRange: (startDate: Date | null, endDate: Date | null) => void;
   setSortBy: (sortBy: SortOption) => void;
   toggleBookmarkFilter: () => void;
   toggleCompletedFilter: () => void;
@@ -40,6 +43,8 @@ const initialState = {
   selectedCareerCategories: ["할일", "특강", "정보", "행사"] as Subcategory[],
   searchQuery: "",
   periodFilter: "전체" as PeriodFilter,
+  customStartDate: null as Date | null,
+  customEndDate: null as Date | null,
   sortBy: "latest" as SortOption,
   showBookmarkedOnly: false,
   showCompletedOnly: false,
@@ -86,6 +91,14 @@ export const useFilterStore = create<FilterState>((set) => ({
 
   setPeriodFilter: (period) => set({ periodFilter: period }),
 
+  setCustomDateRange: (startDate, endDate) =>
+    set((state) => ({
+      customStartDate: startDate,
+      customEndDate: endDate,
+      // 날짜가 설정되면 custom으로, null이면 현재 periodFilter 유지
+      periodFilter: startDate && endDate ? 'custom' : state.periodFilter,
+    })),
+
   setSortBy: (sortBy) => set({ sortBy }),
 
   toggleBookmarkFilter: () =>
@@ -94,5 +107,12 @@ export const useFilterStore = create<FilterState>((set) => ({
   toggleCompletedFilter: () =>
     set((state) => ({ showCompletedOnly: !state.showCompletedOnly })),
 
-  resetFilters: () => set(initialState),
+  resetFilters: () =>
+    set((state) => ({
+      ...initialState,
+      // availableChannels는 API에서 받아온 데이터이므로 유지
+      availableChannels: state.availableChannels,
+      // 모든 채널을 다시 선택 상태로
+      selectedChannels: state.availableChannels.map(c => c.channelId),
+    })),
 }));
