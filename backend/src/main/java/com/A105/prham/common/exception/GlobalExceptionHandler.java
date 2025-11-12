@@ -3,6 +3,8 @@ package com.A105.prham.common.exception;
 
 import com.A105.prham.common.response.ApiResponseDto;
 import com.A105.prham.common.response.ErrorCode;
+
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -71,13 +73,19 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponseDto<?>> handlerException(Exception e) throws Exception {
+    public ResponseEntity<ApiResponseDto<?>> handlerException(Exception e, HttpServletRequest request) throws Exception {
         if (e.getClass().getName().contains("springdoc") || 
                 e.getClass().getName().contains("swagger") ||
                 e instanceof org.springframework.web.servlet.resource.NoResourceFoundException) {
                 throw e;
         }
         //log.error("handlerException() in GlobalExceptionHandler throw Exception : {} {}", e.getClass(), e.getMessage());
+
+        //sse 엔드포인트 예외는 로그만 남기고 null 반환
+        String uri = request.getRequestURI();
+        if (uri != null && (uri.contains("/stream") || uri.contains("/sse"))) {
+            return null;
+        }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponseDto.fail(ErrorCode.INTERNAL_SERVER_ERROR));
     }

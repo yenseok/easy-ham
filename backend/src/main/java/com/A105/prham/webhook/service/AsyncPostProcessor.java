@@ -86,7 +86,7 @@ public class AsyncPostProcessor {
 						createIndividualJobPost(post, jobPosting, result);
 					}
 
-					// 원본 post는 처리 완료로 표시
+					// 원본 post는 저장 안함
 					post.updateClassificationResult(
 						cleanedText,
 						"채용 공고 모음 파싱 완료",
@@ -173,6 +173,15 @@ public class AsyncPostProcessor {
 
 			String uniquePostId = originalPost.getPostId() + "_" + UUID.randomUUID().toString().substring(0,8);
 
+			//제목은 회사명만
+			String title = jobPosting.getCompany();
+
+			//내용: 직무명 + url
+			String content = jobPosting.getPosition();
+			if (jobPosting.getUrl() != null && !jobPosting.getUrl().isEmpty()) {
+				content += "\n\n🔗 " + jobPosting.getUrl();
+			}
+
 			// 개별 post 생성
 			Post individualPost = Post.builder()
 				.postId(uniquePostId)
@@ -184,9 +193,9 @@ public class AsyncPostProcessor {
 				.teamId(originalPost.getTeamId())
 				.teamName(originalPost.getTeamName())
 				.fileIds(null)
-				.originalText(formatJobPostingText(jobPosting))
-				.cleanedText(formatJobPostingText(jobPosting))
-				.title(jobPosting.getCompany() + " " + jobPosting.getPosition())
+				.originalText(content)
+				.cleanedText(content)
+				.title(title)
 				.mainCategory(classificationResult.getMainCategory())
 				.subCategory(classificationResult.getSubCategory())
 				.positionId(positionId)
@@ -209,6 +218,7 @@ public class AsyncPostProcessor {
 
 			// sse 전송
 			ssePostService.sendNewPost(savedPost);
+
 		} catch (Exception e) {
 			log.error("개별 채용 공고 생성 실패: {}", jobPosting.getCompany(), e);
 		}
