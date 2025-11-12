@@ -34,7 +34,7 @@ public class JobPostingParseService {
 	@Value("${llm.api.key}")
 	private String llmApiKey;
 
-	@Value("{llm.api.url}")
+	@Value("${llm.api.url}")
 	private String llmApiUrl;
 
 	public JobPostingParseResponseDto parseJobPostings(String content) {
@@ -47,7 +47,7 @@ public class JobPostingParseService {
 		String prompt = createJobParsingPrompt(content, positionList);
 
 		OpenAiChatRequest request = OpenAiChatRequest.builder()
-			.model("gpt-40")
+			.model("gpt-4o")
 			.messages(List.of(new ChatMessage("user", prompt)))
 			.responseFormat(new ResponseFormat("json_object"))
 			.build();

@@ -415,39 +415,93 @@ public class SearchService {
     /**
      * Post 인덱싱 (메인 메서드)
      */
+    // public void indexPost(Post post) {
+    //     try {
+    //         Index index = meilisearchClient.index(INDEX_NAME);
+    //         PostIndexDocument doc = postProcessorService.preprocess(post);
+    //
+    //         String json = objectMapper.writeValueAsString(List.of(doc));
+    //         index.addDocuments(json);
+    //
+    //         log.info("✅ Indexed Post: {}", post.getPostId());
+    //     } catch (Exception e) {
+    //         log.error("❌ Failed to index Post: {}", post.getPostId(), e);
+    //         throw new RuntimeException("Failed to index post", e);
+    //     }
+    // }
+
+    //단일 post 인덱싱
     public void indexPost(Post post) {
         try {
-            Index index = meilisearchClient.index(INDEX_NAME);
-            PostIndexDocument doc = postProcessorService.preprocess(post);
+            String originalLink = null;
 
-            String json = objectMapper.writeValueAsString(List.of(doc));
-            index.addDocuments(json);
+            // 개별 채용 공고는 postId에 "_" 포함되게 만들었음
+            // mm 원문 링크는 생성 안함. 왜냐? 필요 없으니까.
+            if (!post.getPostId().contains("_")) {
+                try {
+                    //원본 post만 mattermost 링크 생성
+                    var postDto = postProcessorService.preprocess(post);
+                    originalLink = postDto.getOriginalLink();
+                } catch (Exception e) {
+                    log.warn("mm 링크 생성 실패: postId={}", post.getPostId());
+                }
+            } else {
+                log.debug("개별 채용 공곤은 mm 링크 없이 인덱싱: {}", post.getPostId());
+            }
 
-            log.info("✅ Indexed Post: {}", post.getPostId());
+            PostIndexDocument document = PostIndexDocument.from(post, originalLink);
+
+            Index index = meilisearchClient.index("posts");
+            String json = objectMapper.writeValueAsString(List.of(document));
         } catch (Exception e) {
-            log.error("❌ Failed to index Post: {}", post.getPostId(), e);
-            throw new RuntimeException("Failed to index post", e);
+            throw new RuntimeException("meiliserarch 인덱싱 실패", e);
         }
     }
 
     /**
      * 여러 Post 일괄 인덱싱
      */
+    // public void indexPosts(List<Post> posts) {
+    //     try {
+    //         Index index = meilisearchClient.index(INDEX_NAME);
+    //
+    //         List<PostIndexDocument> documents = posts.stream()
+    //                 .map(postProcessorService::preprocess)
+    //                 .collect(Collectors.toList());
+    //
+    //         String json = objectMapper.writeValueAsString(documents);
+    //         index.addDocuments(json);
+    //
+    //         log.info("✅ Indexed {} posts", posts.size());
+    //     } catch (Exception e) {
+    //         log.error("❌ Failed to index posts", e);
+    //         throw new RuntimeException("Failed to index posts", e);
+    //     }
+    // }
+
     public void indexPosts(List<Post> posts) {
         try {
             Index index = meilisearchClient.index(INDEX_NAME);
 
             List<PostIndexDocument> documents = posts.stream()
-                    .map(postProcessorService::preprocess)
-                    .collect(Collectors.toList());
+                .map(post -> {
+                    String originalLink = null;
+                    if (!post.getPostId().contains("_")) {
+                        try {
+                            var postDto = postProcessorService.preprocess(post);
+                            originalLink = postDto.getOriginalLink();
+                        } catch (Exception e) {
+                            log.warn("mm링크 생성 실패: postId={}", post.getPostId());
+                        }
+                    }
+                    return PostIndexDocument.from(post, originalLink);
+                })
+                .collect(Collectors.toList());
 
             String json = objectMapper.writeValueAsString(documents);
             index.addDocuments(json);
-
-            log.info("✅ Indexed {} posts", posts.size());
         } catch (Exception e) {
-            log.error("❌ Failed to index posts", e);
-            throw new RuntimeException("Failed to index posts", e);
+            throw new RuntimeException("인덱싱 실패", e);
         }
     }
 

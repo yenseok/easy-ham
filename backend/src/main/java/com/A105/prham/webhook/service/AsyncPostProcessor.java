@@ -13,6 +13,7 @@ import com.A105.prham.webhook.entity.Post;
 import com.A105.prham.webhook.entity.PostStatus;
 import com.A105.prham.webhook.event.PostReceivedEvent;
 import com.A105.prham.webhook.repository.PostRepository;
+import com.meilisearch.sdk.Client;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -40,6 +42,7 @@ public class AsyncPostProcessor {
 	private final SearchService searchService;
 	private final JobPostingParseService jobPostingParseService;
 	private final PositionRepository positionRepository;
+	private final Client meilisearchClient;
 
 	private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
@@ -71,7 +74,7 @@ public class AsyncPostProcessor {
 			}
 
 			//채용 공고인 경우에 한번 더 llm
-			if ("취업".equals(result.getMainCategory()) && "채용".equals(result.getSubCategory())) {
+			if ("취업".equals(result.getMainCategory()) && "정보".equals(result.getSubCategory())) {
 
 				JobPostingParseResponseDto parseResult = jobPostingParseService.parseJobPostings(cleanedText);
 
@@ -168,9 +171,11 @@ public class AsyncPostProcessor {
 				positionId = findDefaultPositionId();
 			}
 
+			String uniquePostId = originalPost.getPostId() + "_" + UUID.randomUUID().toString().substring(0,8);
+
 			// 개별 post 생성
 			Post individualPost = Post.builder()
-				.postId(originalPost.getPostId() + "_" + Math.abs(jobPosting.getCompany().hashCode()))
+				.postId(uniquePostId)
 				.channelId(originalPost.getChannelId())
 				.channelName(originalPost.getChannelName())
 				.userId(originalPost.getUserId())
@@ -178,7 +183,7 @@ public class AsyncPostProcessor {
 				.webhookTimestamp(originalPost.getWebhookTimestamp())
 				.teamId(originalPost.getTeamId())
 				.teamName(originalPost.getTeamName())
-				.fileIds(originalPost.getFileIds())
+				.fileIds(null)
 				.originalText(formatJobPostingText(jobPosting))
 				.cleanedText(formatJobPostingText(jobPosting))
 				.title(jobPosting.getCompany() + " " + jobPosting.getPosition())
@@ -195,8 +200,12 @@ public class AsyncPostProcessor {
 			// 개별 채용 공고로 저장 완료
 			Post savedPost = postRepository.save(individualPost);
 
-			//meilsearch 저장
-			searchService.indexPost(savedPost);
+			try {
+				//meilsearch 저장
+				searchService.indexPost(savedPost);
+			} catch (Exception e) {
+				log.error("meilsearch 인덱싱 실패: {}", savedPost.getPostId(), e)	;
+			}
 
 			// sse 전송
 			ssePostService.sendNewPost(savedPost);

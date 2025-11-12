@@ -18,6 +18,6 @@ public class JobPostingParseResponseDto {
 		private String positionCategory;
 		private String deadline;
 		private String url;
-		private List<String> keywords;
+		// private List<String> keywords;
 	}
 }
