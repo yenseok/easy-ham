@@ -119,14 +119,14 @@ function convertFiles(files: SearchFileItem[] | null): Attachment[] | undefined 
 export function convertSearchItemToNotice(item: SearchResultItem): Notice {
   // 디버깅: 첫 3개 아이템만 로그
   if (item.id <= 3) {
-    console.log('[searchMapper] API 데이터:', {
-      id: item.id,
-      title: item.title,
-      mainCategory: item.mainCategory,
-      subCategory: item.subCategory,
-      변환된_category: mapMainCategory(item.mainCategory, item.subCategory),
-      변환된_subcategory: mapSubCategory(item.subCategory)
-    });
+    // console.log('[searchMapper] API 데이터:', {
+    //   id: item.id,
+    //   title: item.title,
+    //   mainCategory: item.mainCategory,
+    //   subCategory: item.subCategory,
+    //   변환된_category: mapMainCategory(item.mainCategory, item.subCategory),
+    //   변환된_subcategory: mapSubCategory(item.subCategory)
+    // });
   }
 
   return {
