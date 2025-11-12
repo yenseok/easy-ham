@@ -2,11 +2,13 @@ package com.A105.prham.search.service;
 
 import com.A105.prham.messages.dto.FileInfo;
 import com.A105.prham.messages.service.MattermostService;
+import com.A105.prham.post_user_completed.repository.PostUserCompletedRepository;
 import com.A105.prham.search.dto.document.PostIndexDocument;
 import com.A105.prham.search.dto.request.PostSearchRequest;
 import com.A105.prham.search.dto.response.PostSearchItem;
 import com.A105.prham.search.dto.response.PostSearchResponse;
 import com.A105.prham.search.dto.response.SearchMetadata;
+import com.A105.prham.user_notice_like.repository.UserNoticeLikeRepository;
 import com.A105.prham.webhook.entity.Post;
 import com.A105.prham.webhook.service.PostProcessorService;
 import com.A105.prham.webhook.service.PostService;
@@ -33,9 +35,8 @@ public class SearchService {
     private final PostProcessorService postProcessorService;
     private final MattermostService mattermostService;
     private final PostService postService;
-    // TODO: 좋아요 리포지토리 주입 필요
-    // private final LikeRepository likeRepository;
-
+    private final UserNoticeLikeRepository userNoticeLikeRepository;
+    private final PostUserCompletedRepository postUserCompletedRepository;
     /**
      * 검색 모드 정의
      */
@@ -49,27 +50,90 @@ public class SearchService {
     /**
      * 게시물 검색 (Post 기반)
      */
-    public PostSearchResponse searchPosts(PostSearchRequest request) {
+    public PostSearchResponse searchPosts(PostSearchRequest request,Long userId) {
         try {
             // 1. 검색 모드 결정
             SearchMode mode = determineSearchMode(request);
-            log.info("🔍 Search Mode: {}", mode);
 
             // 2. Meilisearch 검색 실행
             SearchResult meilisearchResult = executeSearch(request, mode);
 
-            // 3. 좋아요 필터 적용 (후처리)
+            // 3. 검색 결과 전환
             List<PostSearchItem> items = convertToSearchItems(meilisearchResult);
+
+            // 4. 사용자별 데이터 추가 (isLiked, isCompleted)
+            items = enrichWithUserData(items, userId);
+
+            // 5. 좋아요 필터 적용 (후처리)
             if (Boolean.TRUE.equals(request.getIsLiked())) {
-                items = filterByLikes(items, getCurrentUserId());
+                items = items.stream()
+                        .filter(item -> Boolean.TRUE.equals(item.getIsLiked()))
+                        .collect(Collectors.toList());
+                log.info("✅ Filtered by isLiked=true: {} items", items.size());
             }
 
-            // 4. 응답 생성
+            // 6. 완료 필터 적용 (후처리)
+            if (request.getIsCompleted() != null) {
+                if (request.getIsCompleted()) {
+                    items = items.stream()
+                            .filter(item -> Boolean.TRUE.equals(item.getIsCompleted()))
+                            .collect(Collectors.toList());
+                    log.info("✅ Filtered by isCompleted=true: {} items", items.size());
+                } else {
+                    items = items.stream()
+                            .filter(item -> !Boolean.TRUE.equals(item.getIsCompleted()))
+                            .collect(Collectors.toList());
+                    log.info("✅ Filtered by isCompleted=false: {} items", items.size());
+                }
+            }
+
+            // 6. 응답 생성
             return buildResponse(items, meilisearchResult, request, mode);
 
         } catch (Exception e) {
             log.error("❌ Failed to search posts", e);
             throw new RuntimeException("Failed to search posts", e);
+        }
+    }
+
+    /**
+     * 검색 결과에 사용자별 데이터(좋아요, 완료 여부) 추가
+     */
+    private List<PostSearchItem> enrichWithUserData(List<PostSearchItem> items, Long userId) {
+        if (userId == null || items.isEmpty()) {
+            // 로그인하지 않은 경우 모두 false로 설정
+            items.forEach(item -> {
+                item.setIsLiked(false);
+                item.setIsCompleted(false);
+            });
+            return items;
+        }
+
+        try {
+            // 사용자가 좋아요한 게시물 ID 목록 조회
+            Set<Long> likedPostIds = userNoticeLikeRepository.findLikedPostIdsByUserId(userId);
+
+            // 사용자가 완료한 게시물 ID 목록 조회
+            Set<Long> completedPostIds = postUserCompletedRepository.findCompletedPostIdsByUserId(userId);
+
+            // 각 아이템에 isLiked, isCompleted 값 설정
+            items.forEach(item -> {
+                item.setIsLiked(likedPostIds.contains(item.getId()));
+                item.setIsCompleted(completedPostIds.contains(item.getId()));
+            });
+
+            log.info("✅ Enriched {} items with user data (userId: {}, liked: {}, completed: {})",
+                    items.size(), userId, likedPostIds.size(), completedPostIds.size());
+            return items;
+
+        } catch (Exception e) {
+            log.error("❌ Failed to enrich items with user data", e);
+            // 실패 시에도 false로 설정
+            items.forEach(item -> {
+                item.setIsLiked(false);
+                item.setIsCompleted(false);
+            });
+            return items;
         }
     }
 
@@ -117,13 +181,6 @@ public class SearchService {
         }
 
         SearchRequest searchRequest = builder.build();
-
-        // 디버깅 로그
-        log.info("📊 Search Request:");
-        log.info("   - Query: '{}'", request.hasKeyword() ? request.getKeyword() : "(empty)");
-        log.info("   - Filter: {}", filter.isEmpty() ? "(none)" : filter);
-        log.info("   - Sort: {}", sort[0]);
-        log.info("   - Pagination: offset={}, limit={}", request.getOffset(), request.getSize());
 
         SearchResult result = (SearchResult) index.search(searchRequest);
 
@@ -204,15 +261,12 @@ public class SearchService {
             @SuppressWarnings("unchecked")
             Map<String, Object> formatted = (Map<String, Object>) hitMap.get("_formatted");
 
-            String highlightedTitle = formatted != null ?
-                    (String) formatted.get("title") : (String) hitMap.get("title");
-
             String highlightedContent = formatted != null ?
                     (String) formatted.get("cleanedText") : (String) hitMap.get("cleanedText");
 
             List<FileInfo> files = parseFileInfos(hitMap.get("files"));
 //여기서 검색 응답 구조 설정 가능
-            //TODO 여기 2N+1 문제 있음. 개선하고싶은 사람이 하면 됨
+            //TODO 여기 N+1 문제 있음. 개선하고싶은 사람이 하면 됨
             //유저 네임 찾아서 넣기
             String userName = mattermostService.getUserNameFromID((String) hitMap.get("userId"));
 
@@ -220,11 +274,11 @@ public class SearchService {
             Long id = postService.getPostIdByMMPostId((String) hitMap.get("postId"));
 
             return PostSearchItem.builder()
-//                    .id(getLongValue(hitMap.get("postId")))
                     .id(id)
                     .mmMessageId((String) hitMap.get("postId"))
                     .title((String) hitMap.get("title"))
                     .campusId((String) hitMap.get("campusList"))
+                    .teamName((String) hitMap.get("teamName"))
                     .channelName((String) hitMap.get("channelName"))
                     .mmChannelId((String) hitMap.get("channelId"))
                     .userName(userName)
@@ -241,23 +295,6 @@ public class SearchService {
             log.error("Failed to convert search item", e);
             throw new RuntimeException("Failed to convert search item", e);
         }
-    }
-
-    /**
-     * 좋아요 필터링 (후처리)
-     */
-    private List<PostSearchItem> filterByLikes(List<PostSearchItem> items, String userId) {
-        // TODO: 실제 좋아요 데이터와 연동
-        log.warn("⚠️ isLiked filter requested but Like repository not implemented yet");
-        return items; // 임시: 필터링 없이 반환
-    }
-
-    /**
-     * 현재 사용자 ID 가져오기
-     */
-    private String getCurrentUserId() {
-        // TODO: Spring Security Context에서 현재 사용자 정보 가져오기
-        return "temp_user_id";
     }
 
     /**
@@ -286,6 +323,7 @@ public class SearchService {
                         .startDate(request.getStartDate())
                         .endDate(request.getEndDate())
                         .isLiked(request.getIsLiked())
+                        .isCompleted(request.getIsCompleted())
                         .build())
                 .build();
 
@@ -462,4 +500,6 @@ public class SearchService {
         }
         return null;
     }
+
+
 }

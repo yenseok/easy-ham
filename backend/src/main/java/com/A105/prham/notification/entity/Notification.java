@@ -5,12 +5,11 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.mongodb.core.index.Indexed;
-import org.springframework.data.mongodb.core.mapping.Document;
-
+import org.springframework.data.mongodb.core.index.Indexed;// alias 사용
+import org.bson.Document; // BSON Document
 import java.time.LocalDateTime;
 
-@Document(collection = "notifications")
+@org.springframework.data.mongodb.core.mapping.Document(collection = "notifications")
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter

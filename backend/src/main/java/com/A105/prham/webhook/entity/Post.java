@@ -78,6 +78,12 @@ public class Post {
 	@Column(name = "created_at", nullable = false)
 	private String createdAt;
 
+	@Column(name = "team_id", nullable = false)
+	private String teamId;
+
+	@Column(name = "team_name", nullable = false)
+	private String teamName;
+
 	@PrePersist
 	protected void onCreate() {
 		createdAt = LocalDateTime.now().toString();

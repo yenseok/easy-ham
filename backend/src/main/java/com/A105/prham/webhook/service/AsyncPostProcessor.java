@@ -3,6 +3,7 @@ package com.A105.prham.webhook.service;
 // ✨ 필요한 임포트 추가
 import com.A105.prham.classification.dto.LlmClassificationResult;
 import com.A105.prham.classification.service.LlmClassificationService;
+import com.A105.prham.notification.service.NotificationService;
 import com.A105.prham.sse.service.SsePostService;
 import com.A105.prham.search.service.SearchService;
 import com.A105.prham.webhook.entity.File;
@@ -37,6 +38,7 @@ public class AsyncPostProcessor {
 	private final LlmClassificationService llmService;
 	private final SsePostService ssePostService;
 	private final SearchService searchService;
+	private final NotificationService notificationService;
 
 	private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
@@ -103,6 +105,10 @@ public class AsyncPostProcessor {
 			if (savedPost.getStatus() == PostStatus.PROCESSED) {
 								ssePostService.sendNewPost(savedPost);
 				log.info("sse: 새 공지사항 전송 완료", savedPost.getPostId());
+
+				notificationService.sendKeywordMatchingNotification(savedPost);
+				log.info("sse: 키워드 알림 전송 완료,", savedPost.getPostId());
+
 			}
 		} catch (Exception e) {
 			log.error("[비동기] post 처리 실패: {}", postId, e);

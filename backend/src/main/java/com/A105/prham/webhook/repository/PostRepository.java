@@ -15,6 +15,9 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 	// mattermost 메시지 id로 조회 (중복 체크용)
 	Optional<Post> findByPostId(String postId);
 
+	@Query("SELECT p FROM Post p WHERE p.id = :id")
+	Optional<Post> findPostById(@Param("id") Long id);
+
 	// 메시지 존재하는가
 	boolean existsByPostId(String postId);
 
@@ -45,5 +48,6 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 			WHERE p.postId IN :postIds
 			""")
 	List<Long> selectPostIdsByMMPostIds(@Param("postIds") List<String> postIds);
+
 
 }

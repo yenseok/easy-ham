@@ -3,8 +3,10 @@ package com.A105.prham.user_notice_like.controller;
 import com.A105.prham.common.annotation.UserId;
 import com.A105.prham.common.response.ApiResponseDto;
 import com.A105.prham.common.response.SuccessCode;
+import com.A105.prham.user.entity.User;
 import com.A105.prham.user_notice_like.service.UserNoticeLikeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 
@@ -15,18 +17,18 @@ public class UserNoticeLikeController {
 
     private final UserNoticeLikeService userNoticeLikeService;
 
-    @PostMapping("/{userNoticeId}")
-    public ApiResponseDto addBookmark(@UserId(required = true) Long userId, @PathVariable Long userNoticeId) {
-        return ApiResponseDto.success(SuccessCode.BOOKMARK_SAVE_SUCCESS, userNoticeLikeService.saveBookmarks(userId, userNoticeId));
+    @PostMapping("/{postId}")
+    public ApiResponseDto addBookmark(@AuthenticationPrincipal User user, @PathVariable Long postId) {
+        return ApiResponseDto.success(SuccessCode.BOOKMARK_SAVE_SUCCESS, userNoticeLikeService.saveBookmarks(user, postId));
     }
 
-    @DeleteMapping("/{userNoticeId}")
-    public ApiResponseDto deleteBookmark(@UserId(required = true) Long userId, @PathVariable Long userNoticeId) {
-        return ApiResponseDto.success(SuccessCode.BOOKMARK_DELETE_SUCCESS, userNoticeLikeService.deleteBookmarks(userId, userNoticeId));
+    @DeleteMapping("/{postId}")
+    public ApiResponseDto deleteBookmark(@AuthenticationPrincipal User user, @PathVariable Long postId) {
+        return ApiResponseDto.success(SuccessCode.BOOKMARK_DELETE_SUCCESS, userNoticeLikeService.deleteBookmarks(user, postId));
     }
 
     @GetMapping
-    public ApiResponseDto getBookmarks(@UserId(required = true) Long userId) {
-        return ApiResponseDto.success(SuccessCode.BOOKMARK_GET_SUCCESS, userNoticeLikeService.getBookmarks(userId));
+    public ApiResponseDto getBookmarks(@AuthenticationPrincipal User user) {
+        return ApiResponseDto.success(SuccessCode.BOOKMARK_GET_SUCCESS, userNoticeLikeService.getBookmarks(user.getId()));
     }
 }
