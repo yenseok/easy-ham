@@ -150,7 +150,7 @@ public class AsyncPostProcessor {
 
 		Post savedPost = postRepository.save(post);
 
-		searchService.indexPost(post);
+		searchService.indexPost(savedPost);
 
 		//sse 전송
 		if (savedPost.getStatus() == PostStatus.PROCESSED) {
@@ -208,13 +208,6 @@ public class AsyncPostProcessor {
 
 			// 개별 채용 공고로 저장 완료
 			Post savedPost = postRepository.save(individualPost);
-
-			try {
-				//meilsearch 저장
-				searchService.indexPost(savedPost);
-			} catch (Exception e) {
-				log.error("meilsearch 인덱싱 실패: {}", savedPost.getPostId(), e)	;
-			}
 
 			// sse 전송
 			ssePostService.sendNewPost(savedPost);
