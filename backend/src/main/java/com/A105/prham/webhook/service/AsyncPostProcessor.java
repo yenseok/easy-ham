@@ -97,7 +97,8 @@ public class AsyncPostProcessor {
 						null
 					);
 					post.markAsProcessed();
-					postRepository.save(post);
+					Post savedOriginalPost = postRepository.save(post);
+					searchService.indexPost(savedOriginalPost);
 				} else {
 					log.warn("채용 공고 파싱 실패 - 원본 그대로 저장");
 					saveOriginalPost(post, result, fileProcessingFailed);
