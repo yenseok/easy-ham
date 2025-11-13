@@ -59,6 +59,12 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
+        // SSE 연결 정리
+        // sseManager는 순환 참조를 피하기 위해 동적으로 import
+        import('@/services/sse/sseManager').then(({ sseManager }) => {
+          sseManager.closeAll();
+        });
+
         // localStorage에서 제거
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');

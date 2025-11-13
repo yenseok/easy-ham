@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { getMockDashboardData } from "@/services/mock/dashboardData";
 import { searchApi } from "@/services/api/search";
+import { sseManager } from "@/services/sse/sseManager";
+import { useSSEPostStore } from "@/stores/useSSEPostStore";
 import { bookmarksApi } from "@/services/api/bookmarks";
 import { convertBookmarkItemToNotice } from "@/utils/bookmarkMapper";
 import type { Notice } from "@/types/notice";
@@ -17,6 +19,7 @@ export default function DashboardPage() {
   const [allNotices, setAllNotices] = useState<Notice[]>([]);
   const [bookmarkedNotices, setBookmarkedNotices] = useState<Notice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { newPosts } = useSSEPostStore();
 
   // 모달 상태
   const [selectedMessage, setSelectedMessage] = useState<MessageDetail | null>(null);
@@ -64,7 +67,19 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // SSE 구독: Dashboard에서 posts/stream 시작
+  useEffect(() => {
+    console.log('[Dashboard] Mounting, starting posts/stream subscription');
+    sseManager.connectPostStream();
+
+    return () => {
+      console.log('[Dashboard] Unmounting, closing posts/stream subscription');
+      sseManager.closePostStream();
+    };
+  }, []);
+
   // Mock 데이터 (채용공고용)
+
   const { notices: mockNotices } = getMockDashboardData();
 
   // 마감 임박 할일 (D-7 이내, deadline 있는 것만, 마감일 지난 것 제외)
