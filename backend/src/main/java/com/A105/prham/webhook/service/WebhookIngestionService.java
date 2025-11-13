@@ -2,6 +2,7 @@ package com.A105.prham.webhook.service;
 
 import java.util.List;
 
+import com.A105.prham.mattermost.dto.MattermostChannel;
 import com.A105.prham.mattermost.dto.MattermostTeam;
 import com.A105.prham.mattermost.service.MattermostAdminService;
 import com.A105.prham.messages.service.MattermostService;
@@ -41,11 +42,16 @@ public class WebhookIngestionService {
 		//팀 명 추가
 		String teamName = getTeamName(payload.getTeamId(), payload.getUserId());
 
+		String channelDisplayName = getChannelDisplayName(payload.getChannelId());
+
+		log.info("채널 정보 - channelId: {}, displayName: {}, payload.channelName: {}",
+			payload.getChannelId(), channelDisplayName, payload.getChannelName());
+
 		// 2. 최소 정보로 Post Entity 생성 (PENDING 상태)
 		Post post = Post.builder()
 			.postId(payload.getPostId())
 			.channelId(payload.getChannelId())
-			.channelName(payload.getChannelName())
+			.channelName(channelDisplayName != null ? channelDisplayName : payload.getChannelName())
 			.userId(payload.getUserId())
 			.userName(payload.getUserName())
 			.originalText(payload.getText())
@@ -79,6 +85,19 @@ public class WebhookIngestionService {
 				});
 		} catch (Exception e) {
 			return "unknown teamname";
+		}
+	}
+
+	private String getChannelDisplayName(String channelId) {
+		try {
+			MattermostChannel channel = mattermostAdminService.getChannelById(channelId);
+
+			if (channel != null && channel.getDisplayName() != null) {
+				return channel.getDisplayName();
+			}
+			return null;
+		}catch (Exception e) {
+			return null;
 		}
 	}
 }
