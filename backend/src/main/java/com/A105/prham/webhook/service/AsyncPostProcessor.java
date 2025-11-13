@@ -88,8 +88,10 @@ public class AsyncPostProcessor {
 						createIndividualJobPost(post, jobPosting, result);
 					}
 
+					String markdownText = markdownFormatterService.formatForMarkdown(cleanedText);
+
 					post.updateClassificationResult(
-						cleanedText,
+						markdownText,
 						result.getTitle(),
 						result.getMainCategory(),
 						result.getSubCategory(),
