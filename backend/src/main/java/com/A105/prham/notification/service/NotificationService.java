@@ -127,7 +127,7 @@ public class NotificationService {
         sseEmitter.onTimeout(() -> emitters.remove(emitterId));
 
         // 503 오류 방지용 더미 전송
-        sentToClient(sseEmitter, emitterId, "test","Event Stream Created. User Id : " + user.getId());
+        sentToClient(sseEmitter, emitterId, "connected","Event Stream Created. User Id : " + user.getId());
 
         if(!lastEventId.isEmpty()){
             Map<String, Notification> events = findAllEventCacheByUserId(user.getId().toString());
