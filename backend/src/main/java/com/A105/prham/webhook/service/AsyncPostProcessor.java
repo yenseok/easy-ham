@@ -159,7 +159,7 @@ public class AsyncPostProcessor {
 		if (savedPost.getStatus() == PostStatus.PROCESSED) {
 			ssePostService.sendNewPost(savedPost);
 			notificationService.sendKeywordMatchingNotification(savedPost);
-
+			notificationService.scheduleDeadlineNotification(savedPost);
 		}
 	}
 
