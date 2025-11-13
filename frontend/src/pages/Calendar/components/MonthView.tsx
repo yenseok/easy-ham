@@ -62,7 +62,7 @@ export function MonthView({
                       <span
                         className={`inline-flex items-center justify-center w-6 h-6 text-sm rounded-full ${
                           today
-                            ? "bg-[var(--brand-orange)] text-white"
+                            ? "bg-(--brand-orange) text-white"
                             : currentMonth
                             ? "text-gray-700"
                             : "text-gray-400"

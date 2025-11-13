@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { PageLayout } from '@/components/layouts/PageLayout';
@@ -18,8 +18,10 @@ import {
 import { useFilterStore } from '@/stores/useFilterStore';
 import { getMockJobPostings } from '@/services/mock';
 import { bookmarksApi } from '@/services/api/bookmarks';
+import { completionsApi } from '@/services/api/completions';
 import { searchApi } from '@/services/api/search';
 import { getNoticeCategories, mapCategoriesToIds, type NoticeCategory } from '@/services/api/codes';
+import { getUserChannels } from '@/services/api/channels';
 import { getPeriodRange } from '@/utils/dateUtils';
 import type { Notice } from '@/types';
 import type { SearchParams } from '@/types/api';
@@ -30,20 +32,27 @@ export default function SearchPage() {
   // Zustand 필터 스토어
   const filterStore = useFilterStore();
   const {
+    availableChannels,
     selectedChannels,
     selectedAcademicCategories,
     selectedCareerCategories,
     searchQuery,
     periodFilter,
+    customStartDate,
+    customEndDate,
     sortBy,
     showBookmarkedOnly,
+    showCompletedOnly,
+    setAvailableChannels,
     toggleChannel,
     toggleAcademicCategory,
     toggleCareerCategory,
     setSearchQuery,
     setPeriodFilter,
+    setCustomDateRange,
     setSortBy,
     toggleBookmarkFilter,
+    toggleCompletedFilter,
     resetFilters,
   } = filterStore;
 
@@ -64,6 +73,25 @@ export default function SearchPage() {
 
   // 카테고리 데이터 (API에서 받아온 카테고리 목록)
   const [categories, setCategories] = useState<NoticeCategory[]>([]);
+
+  /**
+   * 채널 데이터 로드
+   * 컴포넌트 마운트 시 1회 실행
+   */
+  useEffect(() => {
+    const fetchChannels = async () => {
+      try {
+        const response = await getUserChannels();
+        setAvailableChannels(response.data);
+        // console.log('[채널 API] 로드 성공:', response.data);
+      } catch (error) {
+        // console.error('[채널 API] 로드 실패:', error);
+        toast.error('채널 정보를 불러오지 못했습니다.');
+      }
+    };
+
+    fetchChannels();
+  }, [setAvailableChannels]);
 
   /**
    * 카테고리 데이터 로드
@@ -112,42 +140,63 @@ export default function SearchPage() {
       size,
     };
 
+    // 스토어에서 최신 값을 직접 읽기 (클로저 이슈 방지)
+    const currentState = useFilterStore.getState();
+
     // 1. 키워드 필터
-    if (searchQuery && searchQuery.trim().length > 0) {
-      params.keyword = searchQuery.trim();
+    if (currentState.searchQuery && currentState.searchQuery.trim().length > 0) {
+      params.keyword = currentState.searchQuery.trim();
     }
 
     // 2. 채널 필터
-    // ⚠️ TODO: [백엔드 채널 API 연동 후 수정 필요]
-    // 현재: 하드코딩된 4개 채널 (CHANNEL_OPTIONS에서 "전체" 제외)
-    // 나중에: 백엔드에서 받은 사용자별 availableChannels.length와 비교
-    const TOTAL_CHANNELS = 4;
-    const isAllChannelsSelected = selectedChannels.length === TOTAL_CHANNELS;
-    if (!isAllChannelsSelected && selectedChannels.length > 0) {
-      params.channelIds = selectedChannels;
+    // 모든 채널 선택 = 필터 없음
+    const isAllChannelsSelected = currentState.selectedChannels.length === currentState.availableChannels.length;
+    if (!isAllChannelsSelected && currentState.selectedChannels.length > 0) {
+      params.channelIds = currentState.selectedChannels;
     }
 
     // 3. 카테고리 필터
     // 학사 4개 + 취업 4개 = 총 8개
     const TOTAL_CATEGORIES = 8;
-    const totalSelectedCategories = selectedAcademicCategories.length + selectedCareerCategories.length;
+    const totalSelectedCategories = currentState.selectedAcademicCategories.length + currentState.selectedCareerCategories.length;
     const isAllCategoriesSelected = totalSelectedCategories === TOTAL_CATEGORIES;
 
     // 카테고리 데이터가 로드되었고, 모든 카테고리가 선택되지 않은 경우에만 파라미터 추가
     if (!isAllCategoriesSelected && totalSelectedCategories > 0 && categories.length > 0) {
-      const categoryIds = mapCategoriesToIds(selectedAcademicCategories, selectedCareerCategories, categories);
+      const categoryIds = mapCategoriesToIds(
+        currentState.selectedAcademicCategories,
+        currentState.selectedCareerCategories,
+        categories
+      );
       if (categoryIds.length > 0) {
         params.categoryIds = categoryIds;
       }
     }
 
     // 4. 기간 필터
-    if (periodFilter !== '전체') {
-      const range = getPeriodRange(periodFilter);
+    if (currentState.periodFilter === 'custom') {
+      // 커스텀 날짜 범위 사용
+      if (currentState.customStartDate && currentState.customEndDate) {
+        params.startDate = String(currentState.customStartDate.getTime());
+        params.endDate = String(currentState.customEndDate.getTime());
+      }
+    } else if (currentState.periodFilter !== '전체') {
+      // 프리셋 기간 필터 사용
+      const range = getPeriodRange(currentState.periodFilter);
       if (range) {
         params.startDate = range.startDate;
         params.endDate = range.endDate;
       }
+    }
+
+    // 5. 북마크 필터
+    if (currentState.showBookmarkedOnly) {
+      params.isLiked = true;
+    }
+
+    // 6. 완료 숨기기 필터 (완료되지 않은 것만 표시)
+    if (currentState.showCompletedOnly) {
+      params.isCompleted = false;
     }
 
     return params;
@@ -230,16 +279,6 @@ export default function SearchPage() {
     [isLoading, hasMore] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
-  /**
-   * 북마크 필터는 클라이언트 사이드에서 처리
-   * (백엔드 검색 API에 isLiked 파라미터가 아직 연동 안됨)
-   */
-  const displayedNotices = useMemo(() => {
-    if (showBookmarkedOnly) {
-      return notices.filter((n) => n.bookmarked);
-    }
-    return notices;
-  }, [notices, showBookmarkedOnly]);
 
   /**
    * 북마크 토글 (낙관적 업데이트)
@@ -279,12 +318,42 @@ export default function SearchPage() {
     }
   };
 
-  const toggleComplete = (id: number) => {
+  /**
+   * 완료 토글 (낙관적 업데이트)
+   */
+  const toggleComplete = async (id: number) => {
+    const notice = notices.find((n) => n.id === id);
+    if (!notice) return;
+
+    const wasCompleted = notice.completed;
+
+    // 1. 즉시 UI 업데이트 (낙관적 업데이트)
     setNotices((prev) =>
-      prev.map((notice) =>
-        notice.id === id ? { ...notice, completed: !notice.completed } : notice
+      prev.map((n) =>
+        n.id === id ? { ...n, completed: !n.completed } : n
       )
     );
+
+    // console.log(`[완료 토글] ID: ${id}, ${wasCompleted ? '해제' : '완료'}`);
+
+    try {
+      // 2. API 호출
+      await completionsApi.toggle(id);
+      // console.log(`[완료 API] ${wasCompleted ? '해제' : '완료'} 성공`);
+
+      toast.success(
+        wasCompleted ? '완료가 해제되었습니다.' : '완료 처리되었습니다.'
+      );
+    } catch (error) {
+      // 3. 실패 시 롤백
+      console.error('[완료 API] 호출 실패:', error);
+      setNotices((prev) =>
+        prev.map((n) =>
+          n.id === id ? { ...n, completed: !n.completed } : n
+        )
+      );
+      toast.error('완료 처리에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   /**
@@ -304,6 +373,7 @@ export default function SearchPage() {
       created_at: notice.createdAt,
       updated_at: notice.updatedAt,
       channel: notice.channel,
+      teamName: notice.teamName,
       dday: notice.dday,
       mattermostUrl,
       attachments: notice.attachments, // 검색 API에서 받은 첨부파일 그대로 사용
@@ -324,6 +394,7 @@ export default function SearchPage() {
           <SearchFilterBar
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
+            availableChannels={availableChannels}
             selectedChannels={selectedChannels}
             onChannelToggle={toggleChannel}
             selectedAcademicCategories={selectedAcademicCategories}
@@ -332,8 +403,13 @@ export default function SearchPage() {
             onCareerCategoryToggle={toggleCareerCategory}
             periodFilter={periodFilter}
             onPeriodChange={setPeriodFilter}
+            customStartDate={customStartDate}
+            customEndDate={customEndDate}
+            onCustomDateRangeChange={setCustomDateRange}
             showBookmarkedOnly={showBookmarkedOnly}
             onBookmarkFilterToggle={toggleBookmarkFilter}
+            showCompletedOnly={showCompletedOnly}
+            onCompletedFilterToggle={toggleCompletedFilter}
             onReset={resetFilters}
             onSearch={() => {
               setIsFilteredSearch(true); // 필터 적용 상태로 변경
@@ -362,7 +438,7 @@ export default function SearchPage() {
 
             {/* 리스트 */}
             <NoticeListContainer
-              notices={displayedNotices}
+              notices={notices}
               onBookmarkToggle={toggleBookmark}
               onCompleteToggle={toggleComplete}
               onNoticeClick={handleNoticeClick}

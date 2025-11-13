@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { toast } from "sonner";
 import { Header } from "@/components/layouts/Header";
 import { CalendarHeader } from "./components/CalendarHeader";
 import { Sidebar } from "./components/Sidebar";
@@ -6,7 +7,9 @@ import { WeekView } from "./components/WeekView";
 import { MonthView } from "./components/MonthView";
 import { MessageDetailModal, type MessageDetail } from "@/components/modals/MessageDetailModal";
 import { useCalendarStore } from "@/stores/useCalendarStore";
+import { getUserChannels } from "@/services/api/channels";
 import type { Notice } from "@/types/notice";
+import type { UserChannel } from "@/types/api";
 
 export default function CalendarPage() {
   // Zustand 스토어에서 상태 가져오기
@@ -22,6 +25,7 @@ export default function CalendarPage() {
     toggleAcademicCategory,
     toggleCareerCategory,
     resetFilters,
+    initializeChannels,
   } = useCalendarStore();
 
   // 채널 필터 접기/펴기 상태
@@ -39,6 +43,27 @@ export default function CalendarPage() {
   // 날짜 상태
   const [currentDate, setCurrentDate] = useState(new Date());
 
+  // 채널 데이터 상태
+  const [availableChannels, setAvailableChannels] = useState<UserChannel[]>([]);
+
+  // 채널 데이터 로드 및 Store 초기화
+  useEffect(() => {
+    const fetchChannels = async () => {
+      try {
+        const response = await getUserChannels();
+        setAvailableChannels(response.data);
+
+        // Store의 selectedChannels를 모든 채널 ID로 초기화 (전체 선택 상태)
+        const channelIds = response.data.map(ch => ch.channelId);
+        initializeChannels(channelIds);
+      } catch (error) {
+        toast.error('채널 정보를 불러오지 못했습니다.');
+      }
+    };
+
+    fetchChannels();
+  }, [initializeChannels]);
+
   // 초기 데이터 로딩
   useEffect(() => {
     loadEvents(new Date());
@@ -49,14 +74,6 @@ export default function CalendarPage() {
   useEffect(() => {
     loadEvents(currentDate);
   }, [currentDate, loadEvents]);
-
-  // 채널 옵션
-  const channelOptions = [
-    "13기-공지사항",
-    "13기-취업공고",
-    "13기-취업정보",
-    "서울1반-공지사항",
-  ];
 
   // 날짜 관련 유틸 함수들
   const getWeekStart = (date: Date): Date => {
@@ -129,10 +146,17 @@ export default function CalendarPage() {
   const filteredEvents = useMemo(() => {
     const filtered = events.filter((event) => {
       // 채널 필터 - 모든 채널이 선택된 경우 필터링 안 함
-      const allChannelsSelected = channelOptions.every((ch) =>
-        selectedChannels.includes(ch)
+      const allChannelsSelected = availableChannels.length > 0 && availableChannels.every((ch) =>
+        selectedChannels.includes(ch.channelId)
       );
-      if (!allChannelsSelected && !selectedChannels.includes(event.channel)) {
+
+      // event.channel은 "팀명 - 채널명" 형식의 문자열
+      // availableChannels에서 매칭되는 channelId 찾기
+      const matchingChannel = availableChannels.find(
+        (ch) => `${ch.teamName} - ${ch.channelName}` === event.channel
+      );
+
+      if (!allChannelsSelected && matchingChannel && !selectedChannels.includes(matchingChannel.channelId)) {
         return false;
       }
 
@@ -158,22 +182,13 @@ export default function CalendarPage() {
       return true;
     });
 
-    // console.log('[캘린더 필터링]', {
-    //   전체이벤트: events.length,
-    //   필터링후: filtered.length,
-    //   선택된채널: selectedChannels,
-    //   학사카테고리: selectedAcademicCategories,
-    //   취업카테고리: selectedCareerCategories,
-    //   샘플이벤트: events.slice(0, 1).map(e => ({ 제목: e.title, 채널: e.channel, 카테고리: e.category, 서브카테고리: e.subcategory }))
-    // });
-
     return filtered;
   }, [
     events,
     selectedChannels,
     selectedAcademicCategories,
     selectedCareerCategories,
-    channelOptions,
+    availableChannels,
   ]);
 
   // 날짜별 이벤트 가져오기
@@ -218,11 +233,22 @@ export default function CalendarPage() {
     }
   };
 
+  // 필터 초기화 핸들러 (모든 채널 다시 선택)
+  const handleResetFilters = () => {
+    resetFilters();
+    // 모든 채널을 다시 선택
+    if (availableChannels.length > 0) {
+      const channelIds = availableChannels.map(ch => ch.channelId);
+      initializeChannels(channelIds);
+    }
+  };
+
   const goToPrevious = () => {
     setCurrentDate((prev) => {
       const newDate = new Date(prev);
       if (viewMode === "week") {
         newDate.setDate(prev.getDate() - 7);
+        setSelectedWeek(getWeekDays(newDate));
       } else {
         newDate.setMonth(prev.getMonth() - 1);
       }
@@ -235,6 +261,7 @@ export default function CalendarPage() {
       const newDate = new Date(prev);
       if (viewMode === "week") {
         newDate.setDate(prev.getDate() + 7);
+        setSelectedWeek(getWeekDays(newDate));
       } else {
         newDate.setMonth(prev.getMonth() + 1);
       }
@@ -243,7 +270,11 @@ export default function CalendarPage() {
   };
 
   const goToToday = () => {
-    setCurrentDate(new Date());
+    const today = new Date();
+    setCurrentDate(today);
+    if (viewMode === "week") {
+      setSelectedWeek(getWeekDays(today));
+    }
   };
 
   const [selectedWeek, setSelectedWeek] = useState<Date[]>(
@@ -323,7 +354,7 @@ export default function CalendarPage() {
           selectedCareerCategories={selectedCareerCategories}
           channelExpanded={channelExpanded}
           selectedWeek={selectedWeek}
-          channelOptions={channelOptions}
+          availableChannels={availableChannels}
           getEventsForDate={getEventsForDate}
           formatMonthYear={formatMonthYear}
           isSameDay={isSameDay}
@@ -332,7 +363,7 @@ export default function CalendarPage() {
           onChannelExpandToggle={() => setChannelExpanded(!channelExpanded)}
           onToggleChannel={toggleChannel}
           onToggleCategory={handleToggleCategory}
-          onResetFilters={resetFilters}
+          onResetFilters={handleResetFilters}
           onMiniCalendarWeekClick={handleMiniCalendarWeekClick}
           onMiniCalendarDateClick={handleMiniCalendarDateClick}
           onDateChange={setCurrentDate}

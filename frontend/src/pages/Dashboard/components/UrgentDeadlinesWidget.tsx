@@ -5,10 +5,12 @@ import { Clock } from "lucide-react";
 
 interface UrgentDeadlinesWidgetProps {
   notices: Notice[];
+  onNoticeClick?: (notice: Notice) => void;
 }
 
 export default function UrgentDeadlinesWidget({
   notices,
+  onNoticeClick,
 }: UrgentDeadlinesWidgetProps) {
   const getDdayColor = (daysLeft: number) => {
     if (daysLeft <= 3) return "bg-red-500";
@@ -29,7 +31,7 @@ export default function UrgentDeadlinesWidget({
   return (
     <Card className="shadow-md">
       <div className="h-16 px-6 flex items-center gap-2 border-b">
-        <Clock className="w-5 h-5 text-[var(--brand-orange)]" />
+        <Clock className="w-5 h-5 text-(--brand-orange)" />
         <h2 className="text-lg" style={{ fontWeight: 700 }}>
           마감 임박
         </h2>
@@ -47,6 +49,7 @@ export default function UrgentDeadlinesWidget({
                 <div
                   key={notice.id}
                   className="p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-gray-200"
+                  onClick={() => onNoticeClick?.(notice)}
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <Badge className="text-xs px-2 py-0.5 border bg-red-50 text-red-700 border-red-200">
@@ -54,12 +57,12 @@ export default function UrgentDeadlinesWidget({
                     </Badge>
                     {dday !== null && (
                       <span
-                        className={`text-white text-xs px-2 py-0.5 rounded ${getDdayColor(
+                        className={`text-white text-xs ${dday === 0 ? 'px-1.5' : 'px-2'} py-0.5 rounded ${getDdayColor(
                           dday
                         )}`}
                         style={{ fontWeight: 600 }}
                       >
-                        D-{dday}
+                        {dday === 0 ? 'D-Day' : `D-${dday}`}
                       </span>
                     )}
                   </div>

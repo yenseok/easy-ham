@@ -17,6 +17,7 @@ export const API_ENDPOINTS = {
     getMe: "/users/me",
     updateMe: "/users/me",
     delete: "/users/delete",
+    channels: "/users/me/channels",
   },
 
   // Code lookups (campus, skill, position)

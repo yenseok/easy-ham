@@ -58,7 +58,7 @@ export function LoginPage() {
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Brand */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[var(--brand-orange)] via-[#FF6B2C] via-30% to-[#FF9955] to-90% p-12 flex-col justify-between text-white relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-linear-to-br from-(--brand-orange) via-[#FF6B2C] via-30% to-[#FF9955] to-90% p-12 flex-col justify-between text-white relative overflow-hidden">
         {/* Background Decorations */}
         <div className="absolute top-20 right-20 w-96 h-96 bg-gradient-radial from-white/20 to-transparent rounded-full blur-2xl"></div>
         <div className="absolute bottom-20 left-20 w-[500px] h-[500px] bg-gradient-radial from-yellow-300/15 to-transparent rounded-full blur-3xl"></div>
@@ -93,7 +93,7 @@ export function LoginPage() {
 
         <div className="relative z-10 space-y-4">
           <div className="flex items-start gap-3">
-            <div className="w-6 h-6 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-0.5">
+            <div className="w-6 h-6 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 mt-0.5">
               <span className="text-sm">✓</span>
             </div>
             <div>
@@ -102,7 +102,7 @@ export function LoginPage() {
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="w-6 h-6 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-0.5">
+            <div className="w-6 h-6 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 mt-0.5">
               <span className="text-sm">✓</span>
             </div>
             <div>
@@ -113,7 +113,7 @@ export function LoginPage() {
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="w-6 h-6 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0 mt-0.5">
+            <div className="w-6 h-6 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 mt-0.5">
               <span className="text-sm">✓</span>
             </div>
             <div>
@@ -160,7 +160,7 @@ export function LoginPage() {
             <Button
               onClick={handleSSAFYLogin}
               disabled={isLoading}
-              className="w-full bg-[var(--brand-orange)] hover:bg-[var(--brand-orange-dark)] text-white py-7 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="w-full bg-(--brand-orange) hover:bg-(--brand-orange-dark) text-white py-7 disabled:bg-gray-400 disabled:cursor-not-allowed"
               style={{ fontWeight: 600 }}
             >
               <span className="text-lg">

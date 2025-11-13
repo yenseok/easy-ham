@@ -17,7 +17,7 @@ export interface ApiResponse<T> {
  * 백엔드 공지사항 API 응답 (Notice 목록 조회)
  */
 export interface NoticeApiResponse {
-  noticeId: number;
+  postId: number; // 북마크 API에서는 postId 사용
   title: string;
   contentPreview: string;
   mainCategory: string; // "공지사항" 등
@@ -25,10 +25,11 @@ export interface NoticeApiResponse {
   authorId: string;
   authorName: string;
   channelName: string;
+  teamName?: string;
   createdAt: string;
   deadline: string | null;
   isLiked: boolean; // 프론트엔드의 bookmarked
-  isCompleted: boolean; // 프론트엔드의 completed
+  isCompleted?: boolean; // 프론트엔드의 completed (북마크 API에서는 없을 수 있음)
 }
 
 /**
@@ -94,6 +95,7 @@ export interface SearchResultItem {
   mmMessageId: string;
   mmChannelId: string;
   channelName: string;
+  teamName: string;
   title: string;
   userName: string;
   content: string;
@@ -104,6 +106,7 @@ export interface SearchResultItem {
   subCategory: number | null;
   files: SearchFileItem[] | null;
   isLiked?: boolean;
+  isCompleted?: boolean;
   originalLink?: string;  // Mattermost 원문 링크
 }
 
@@ -143,6 +146,8 @@ export interface SearchParams {
   categoryIds?: number[];  // subCodeId 배열 (1~8)
   startDate?: string;
   endDate?: string;
+  isLiked?: boolean;       // 북마크 필터
+  isCompleted?: boolean;   // 완료 필터
   page?: number;
   size?: number;
 }
@@ -178,4 +183,22 @@ export interface SubscriptionKeyword {
  */
 export interface KeywordListResponse {
   keywordList: SubscriptionKeyword[];
+}
+
+/**
+ * 사용자 채널 정보
+ */
+export interface UserChannel {
+  channelId: string;
+  channelName: string;
+  teamId: string;
+  teamName: string;
+  type: 'GLOBAL' | 'CLASS';
+}
+
+/**
+ * 사용자 채널 목록 조회 응답
+ */
+export interface UserChannelsResponse {
+  channels: UserChannel[];
 }

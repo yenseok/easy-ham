@@ -140,8 +140,9 @@ export function convertSearchItemToNotice(item: SearchResultItem): Notice {
     content: item.content,
     author: item.userName,
 
-    // 채널: channelName 사용 (API에서 제공)
+    // 채널 및 팀: channelName, teamName 사용 (API에서 제공)
     channel: item.channelName,
+    teamName: item.teamName,
 
     // 카테고리 변환
     category: mapMainCategory(item.mainCategory, item.subCategory),
@@ -150,8 +151,8 @@ export function convertSearchItemToNotice(item: SearchResultItem): Notice {
     // 북마크 상태 (nullish coalescing: isLiked가 없으면 false)
     bookmarked: item.isLiked ?? false,
 
-    // 완료 상태 (검색 결과에는 없으므로 기본값 false)
-    completed: false,
+    // 완료 상태 (API에서 제공하는 isCompleted 사용, 없으면 false)
+    completed: item.isCompleted ?? false,
 
     // 첨부파일 변환
     attachments: convertFiles(item.files),

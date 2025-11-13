@@ -29,7 +29,7 @@ export default function PersonalizedJobsWidget({
   return (
     <Card className="shadow-md">
       <div className="h-16 px-6 flex items-center gap-2 border-b">
-        <Briefcase className="w-5 h-5 text-[var(--brand-orange)]" />
+        <Briefcase className="w-5 h-5 text-(--brand-orange)" />
         <h2 className="text-lg" style={{ fontWeight: 700 }}>
           맞춤 채용
         </h2>
@@ -46,7 +46,7 @@ export default function PersonalizedJobsWidget({
               return (
                 <div
                   key={job.id}
-                  className="p-3 border rounded-lg hover:shadow-md transition-shadow cursor-pointer hover:border-[var(--brand-orange)]"
+                  className="p-3 border rounded-lg hover:shadow-md transition-shadow cursor-pointer hover:border-(--brand-orange)"
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <Badge className="text-xs px-2 py-0.5 border bg-blue-50 text-blue-700 border-blue-200">

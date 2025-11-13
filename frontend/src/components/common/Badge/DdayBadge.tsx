@@ -12,7 +12,7 @@ export const DdayBadge = ({ dday }: DdayBadgeProps) => {
 
   return (
     <span
-      className="px-2 py-1 rounded text-xs font-semibold text-white inline-block"
+      className="px-2 py-1 rounded text-xs font-semibold text-white inline-block whitespace-nowrap"
       style={{ backgroundColor: color.hex }}
     >
       {text}

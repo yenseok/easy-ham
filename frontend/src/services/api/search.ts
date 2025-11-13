@@ -64,6 +64,16 @@ export const searchApi = {
       queryParams.append('endDate', params.endDate);
     }
 
+    // 북마크 필터
+    if (params.isLiked !== undefined) {
+      queryParams.append('isLiked', String(params.isLiked));
+    }
+
+    // 완료 필터
+    if (params.isCompleted !== undefined) {
+      queryParams.append('isCompleted', String(params.isCompleted));
+    }
+
     // 페이지네이션
     // page: 기본값 0
     queryParams.append('page', String(params.page ?? 0));

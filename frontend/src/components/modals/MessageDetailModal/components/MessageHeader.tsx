@@ -25,10 +25,10 @@ export const MessageHeader = ({
         {/* D-day 배지 */}
         {ddayColor && (
           <span
-            className="px-2.5 py-1 shrink-0 text-white text-xs font-semibold rounded"
+            className={`${dday === 0 ? 'px-2' : 'px-2.5'} py-1 shrink-0 text-white text-xs font-semibold rounded`}
             style={{ backgroundColor: ddayColor.hex }}
           >
-            {dday === 0 ? 'D-Day' : `D-${dday}`}
+            {dday === 0 ? 'D-Day' : dday! > 0 ? `D-${dday}` : `D+${Math.abs(dday!)}`}
           </span>
         )}
 

@@ -6,7 +6,11 @@ import { Bell } from "lucide-react";
 import { searchApi } from "@/services/api/search";
 import type { Notice } from "@/types/notice";
 
-export default function RecentNoticesWidget() {
+interface RecentNoticesWidgetProps {
+  onNoticeClick?: (notice: Notice) => void;
+}
+
+export default function RecentNoticesWidget({ onNoticeClick }: RecentNoticesWidgetProps) {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -67,7 +71,7 @@ export default function RecentNoticesWidget() {
   return (
     <Card className="shadow-md">
       <div className="h-16 px-6 flex items-center gap-2 border-b">
-        <Bell className="w-5 h-5 text-[var(--brand-orange)]" />
+        <Bell className="w-5 h-5 text-(--brand-orange)" />
         <h2 className="text-lg" style={{ fontWeight: 700 }}>
           최근 공지
         </h2>
@@ -93,6 +97,7 @@ export default function RecentNoticesWidget() {
               <div
                 key={notice.id}
                 className="p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-gray-200"
+                onClick={() => onNoticeClick?.(notice)}
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Badge
@@ -104,12 +109,12 @@ export default function RecentNoticesWidget() {
                   </Badge>
                   {notice.dday !== null && (
                     <span
-                      className={`text-white text-xs px-2 py-0.5 rounded ${getDdayColor(
+                      className={`text-white text-xs ${notice.dday === 0 ? 'px-1.5' : 'px-2'} py-0.5 rounded ${getDdayColor(
                         notice.dday
                       )}`}
                       style={{ fontWeight: 600 }}
                     >
-                      D-{notice.dday}
+                      {notice.dday === 0 ? 'D-Day' : `D-${notice.dday}`}
                     </span>
                   )}
                 </div>

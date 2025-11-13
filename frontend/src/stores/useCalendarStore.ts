@@ -30,17 +30,18 @@ interface CalendarState {
   categories: NoticeCategory[]; // 카테고리 코드 데이터
 
   // 필터 상태
-  selectedChannels: string[];
+  selectedChannels: string[]; // channelId 배열
   selectedAcademicCategories: Subcategory[];
   selectedCareerCategories: Subcategory[];
 
   // 액션
   loadEvents: (centerDate: Date) => Promise<void>;
   addEvent: (event: Notice) => void; // SSE용 단일 이벤트 추가
-  toggleChannel: (channel: string) => void;
+  toggleChannel: (channelId: string) => void;
   toggleAcademicCategory: (category: Subcategory) => void;
   toggleCareerCategory: (category: Subcategory) => void;
   resetFilters: () => void;
+  initializeChannels: (channelIds: string[]) => void; // 채널 초기화
   loadCategories: () => Promise<void>;
 }
 
@@ -80,13 +81,8 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
   isLoading: false,
   categories: [],
 
-  // 초기 필터: 전체 선택
-  selectedChannels: [
-    "13기-공지사항",
-    "13기-취업공고",
-    "13기-취업정보",
-    "서울1반-공지사항",
-  ],
+  // 초기 필터: 빈 배열로 시작 (API로 채널 로드 후 초기화)
+  selectedChannels: [],
   selectedAcademicCategories: ["할일", "특강", "정보", "행사"],
   selectedCareerCategories: ["할일", "특강", "정보", "행사"],
 
@@ -208,17 +204,22 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     })),
 
   /**
+   * 채널 초기화 (API에서 로드한 채널 ID로 초기화)
+   */
+  initializeChannels: (channelIds: string[]) =>
+    set({
+      selectedChannels: channelIds,
+    }),
+
+  /**
    * 필터 초기화
    */
-  resetFilters: () =>
+  resetFilters: () => {
+    const { selectedChannels } = get();
     set({
-      selectedChannels: [
-        "13기-공지사항",
-        "13기-취업공고",
-        "13기-취업정보",
-        "서울1반-공지사항",
-      ],
+      selectedChannels: selectedChannels.length === 0 ? [] : selectedChannels,
       selectedAcademicCategories: ["할일", "특강", "정보", "행사"],
       selectedCareerCategories: ["할일", "특강", "정보", "행사"],
-    }),
+    });
+  },
 }));

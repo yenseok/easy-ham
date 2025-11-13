@@ -14,29 +14,30 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { CHANNEL_OPTIONS, PERIOD_OPTIONS } from "@/constants";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
+import { PERIOD_OPTIONS } from "@/constants";
 import type { Subcategory, PeriodFilter } from "@/types";
+import type { UserChannel } from "@/types/api";
 
 interface SearchFilterBarProps {
   searchQuery: string;
   onSearchChange: (query: string) => void;
-  selectedChannels: string[];
-  onChannelToggle: (channel: string) => void;
+  availableChannels: UserChannel[];
+  selectedChannels: string[];  // channelId 배열
+  onChannelToggle: (channelId: string) => void;
   selectedAcademicCategories: Subcategory[];
   onAcademicCategoryToggle: (category: Subcategory) => void;
   selectedCareerCategories: Subcategory[];
   onCareerCategoryToggle: (category: Subcategory) => void;
   periodFilter: PeriodFilter;
   onPeriodChange: (period: PeriodFilter) => void;
+  customStartDate: Date | null;
+  customEndDate: Date | null;
+  onCustomDateRangeChange: (startDate: Date | null, endDate: Date | null) => void;
   showBookmarkedOnly: boolean;
   onBookmarkFilterToggle: () => void;
+  showCompletedOnly: boolean;
+  onCompletedFilterToggle: () => void;
   onReset: () => void;
   onSearch: () => void; // 검색 버튼 클릭 핸들러
 }
@@ -57,6 +58,7 @@ const getCategoryColor = (subcategory: string): string => {
 export function SearchFilterBar({
   searchQuery,
   onSearchChange,
+  availableChannels,
   selectedChannels,
   onChannelToggle,
   selectedAcademicCategories,
@@ -65,12 +67,41 @@ export function SearchFilterBar({
   onCareerCategoryToggle,
   periodFilter,
   onPeriodChange,
+  customStartDate,
+  customEndDate,
+  onCustomDateRangeChange,
   showBookmarkedOnly,
   onBookmarkFilterToggle,
+  showCompletedOnly,
+  onCompletedFilterToggle,
   onReset,
-  onSearch, // 추가된 prop
+  onSearch,
 }: SearchFilterBarProps) {
   const [filterExpanded, setFilterExpanded] = useState(true);
+
+  // "전체" 버튼 선택 상태: 모든 채널이 선택되었을 때
+  const isAllChannelsSelected = availableChannels.length > 0 && selectedChannels.length === availableChannels.length;
+
+  // 커스텀 날짜 범위 설정 여부
+  const hasCustomDateRange = customStartDate !== null && customEndDate !== null;
+
+  // "전체" 버튼 클릭 핸들러
+  const handleAllChannelsToggle = () => {
+    if (isAllChannelsSelected) {
+      // 모두 선택 해제 (최소 1개는 선택되어야 하므로 첫 번째만 선택)
+      if (availableChannels.length > 0) {
+        onChannelToggle(availableChannels[0].channelId);
+      }
+    } else {
+      // 모두 선택
+      availableChannels.forEach(channel => {
+        if (!selectedChannels.includes(channel.channelId)) {
+          onChannelToggle(channel.channelId);
+        }
+      });
+    }
+    setTimeout(() => onSearch(), 0); // 상태 업데이트 후 검색 실행
+  };
 
   return (
     <Card className="p-5 shadow-md">
@@ -93,7 +124,7 @@ export function SearchFilterBar({
         </div>
         <Button
           onClick={onSearch}
-          className="h-12 px-6 bg-[var(--brand-orange)] hover:bg-[var(--brand-orange-dark)] text-white"
+          className="h-12 px-6 bg-(--brand-orange) hover:bg-(--brand-orange-dark) text-white"
         >
           <Search className="w-4 h-4 mr-2" />
           검색
@@ -126,30 +157,41 @@ export function SearchFilterBar({
               기간
             </span>
             <div className="flex gap-2 items-center">
-              {PERIOD_OPTIONS.map((period) => (
-                <Button
-                  key={period}
-                  variant={periodFilter === period ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => onPeriodChange(period as PeriodFilter)}
-                  className={`h-8 px-4 rounded-md text-sm ${
-                    periodFilter === period
-                      ? "bg-[var(--brand-orange)] text-white hover:bg-[var(--brand-orange-dark)]"
-                      : "bg-white hover:bg-gray-50"
-                  }`}
-                  style={{ fontWeight: 500 }}
-                >
-                  {period}
-                </Button>
-              ))}
-              <Select value={periodFilter} onValueChange={onPeriodChange as any}>
-                <SelectTrigger className="h-8 w-[120px] text-sm">
-                  <SelectValue placeholder="기간 설정" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="custom">기간 설정</SelectItem>
-                </SelectContent>
-              </Select>
+              {PERIOD_OPTIONS.map((period) => {
+                const isActive = periodFilter === period && !hasCustomDateRange;
+                return (
+                  <Button
+                    key={period}
+                    variant={isActive ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      // 커스텀 날짜 초기화 후 프리셋 기간 설정
+                      onCustomDateRangeChange(null, null);
+                      onPeriodChange(period as PeriodFilter);
+                      // 짧은 지연 후 검색 실행 (상태 업데이트 완료 대기)
+                      setTimeout(() => onSearch(), 0);
+                    }}
+                    className={`h-8 px-4 rounded-md text-sm ${
+                      isActive
+                        ? "bg-(--brand-orange) text-white hover:bg-(--brand-orange-dark)"
+                        : "bg-white hover:bg-gray-50"
+                    }`}
+                    style={{ fontWeight: 500 }}
+                  >
+                    {period}
+                  </Button>
+                );
+              })}
+              <DateRangePicker
+                startDate={customStartDate}
+                endDate={customEndDate}
+                onDateRangeChange={(start, end) => {
+                  onCustomDateRangeChange(start, end);
+                  if (start && end) {
+                    onSearch(); // 자동 검색 실행
+                  }
+                }}
+              />
 
               {/* 구분선 */}
               <div className="h-6 w-px bg-gray-300 mx-2" />
@@ -158,7 +200,10 @@ export function SearchFilterBar({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={onBookmarkFilterToggle}
+                onClick={() => {
+                  onBookmarkFilterToggle();
+                  setTimeout(() => onSearch(), 0); // 상태 업데이트 후 검색 실행
+                }}
                 className={`h-8 px-3 rounded-md text-sm ${
                   showBookmarkedOnly
                     ? "bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200"
@@ -168,6 +213,25 @@ export function SearchFilterBar({
               >
                 <Star className={`w-4 h-4 mr-1.5 ${showBookmarkedOnly ? 'fill-current' : ''}`} />
                 북마크만
+              </Button>
+
+              {/* 완료 필터 토글 */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  onCompletedFilterToggle();
+                  setTimeout(() => onSearch(), 0); // 상태 업데이트 후 검색 실행
+                }}
+                className={`h-8 px-3 rounded-md text-sm ${
+                  showCompletedOnly
+                    ? "bg-green-100 text-green-700 border-green-300 hover:bg-green-200"
+                    : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+                style={{ fontWeight: 500 }}
+              >
+                <Check className="w-4 h-4 mr-1.5" />
+                완료 숨기기
               </Button>
             </div>
           </div>
@@ -182,26 +246,45 @@ export function SearchFilterBar({
               채널
             </span>
             <div className="flex gap-2 flex-wrap">
-              {CHANNEL_OPTIONS.map((channel) => {
-                const isSelected =
-                  channel === "전체"
-                    ? selectedChannels.length === CHANNEL_OPTIONS.length - 1
-                    : selectedChannels.includes(channel);
+              {/* 전체 버튼 */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAllChannelsToggle}
+                className={`h-8 px-4 rounded-md text-sm ${
+                  isAllChannelsSelected
+                    ? "bg-(--brand-orange) text-white border-(--brand-orange) hover:bg-(--brand-orange-dark)"
+                    : "bg-white hover:bg-gray-50"
+                }`}
+                style={{ fontWeight: 500 }}
+              >
+                {isAllChannelsSelected && <Check className="w-3 h-3 mr-1" />}
+                전체
+              </Button>
+
+              {/* 개별 채널 버튼들 */}
+              {availableChannels.map((channel) => {
+                const isSelected = selectedChannels.includes(channel.channelId);
+                const displayName = `${channel.teamName} - ${channel.channelName}`;
+
                 return (
                   <Button
-                    key={channel}
+                    key={channel.channelId}
                     variant="outline"
                     size="sm"
-                    onClick={() => onChannelToggle(channel)}
+                    onClick={() => {
+                      onChannelToggle(channel.channelId);
+                      setTimeout(() => onSearch(), 0); // 상태 업데이트 후 검색 실행
+                    }}
                     className={`h-8 px-4 rounded-md text-sm ${
                       isSelected
-                        ? "bg-[var(--brand-orange)] text-white border-[var(--brand-orange)] hover:bg-[var(--brand-orange-dark)]"
+                        ? "bg-(--brand-orange) text-white border-(--brand-orange) hover:bg-(--brand-orange-dark)"
                         : "bg-white hover:bg-gray-50"
                     }`}
                     style={{ fontWeight: 500 }}
                   >
                     {isSelected && <Check className="w-3 h-3 mr-1" />}
-                    {channel}
+                    {displayName}
                   </Button>
                 );
               })}
@@ -234,7 +317,10 @@ export function SearchFilterBar({
                       key={`academic-${cat}`}
                       variant="outline"
                       size="sm"
-                      onClick={() => onAcademicCategoryToggle(cat)}
+                      onClick={() => {
+                        onAcademicCategoryToggle(cat);
+                        setTimeout(() => onSearch(), 0); // 상태 업데이트 후 검색 실행
+                      }}
                       className={`h-8 px-3 rounded-md border text-sm ${
                         isSelected
                           ? getCategoryColor(cat)
@@ -268,7 +354,10 @@ export function SearchFilterBar({
                       key={`career-${cat}`}
                       variant="outline"
                       size="sm"
-                      onClick={() => onCareerCategoryToggle(cat)}
+                      onClick={() => {
+                        onCareerCategoryToggle(cat);
+                        setTimeout(() => onSearch(), 0); // 상태 업데이트 후 검색 실행
+                      }}
                       className={`h-8 px-3 rounded-md border text-sm ${
                         isSelected
                           ? getCategoryColor(cat)
@@ -288,7 +377,10 @@ export function SearchFilterBar({
             <Button
               variant="outline"
               size="sm"
-              onClick={onReset}
+              onClick={() => {
+                onReset();
+                setTimeout(() => onSearch(), 0); // 상태 초기화 후 검색 실행
+              }}
               className="h-8 px-4 rounded-md ml-auto whitespace-nowrap text-sm"
               style={{ fontWeight: 500 }}
             >
