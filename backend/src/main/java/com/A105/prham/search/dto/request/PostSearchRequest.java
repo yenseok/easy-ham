@@ -1,5 +1,6 @@
 package com.A105.prham.search.dto.request;
 
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -7,6 +8,7 @@ import java.util.List;
 
 @Getter
 @Setter
+@Builder
 public class PostSearchRequest {
     // 검색어 (title, cleanedText, userId, channelName, campusList에서 검색)
     private String keyword;
@@ -27,11 +29,14 @@ public class PostSearchRequest {
     private Boolean isCompleted;
 
     // 정렬 (timestamp:desc, timestamp:asc)
+    @Builder.Default
     private String sort = "timestamp:desc"; // 기본값: 최신순
 
     // 페이징
-    private int page = 0;
-    private int size = 20;
+    @Builder.Default
+    private Integer page = 0;
+    @Builder.Default
+    private Integer size = 20;
 
     public int getOffset() {
         return page * size;

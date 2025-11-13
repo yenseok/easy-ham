@@ -6,6 +6,7 @@ import com.A105.prham.classification.service.JobPostingParseService;
 import com.A105.prham.classification.service.LlmClassificationService;
 import com.A105.prham.position.entity.Position;
 import com.A105.prham.position.repository.PositionRepository;
+import com.A105.prham.notification.service.NotificationService;
 import com.A105.prham.sse.service.SsePostService;
 import com.A105.prham.search.service.SearchService;
 import com.A105.prham.webhook.entity.Post;
@@ -42,6 +43,7 @@ public class AsyncPostProcessor {
 	private final JobPostingParseService jobPostingParseService;
 	private final PositionRepository positionRepository;
 	private final Client meilisearchClient;
+	private final NotificationService notificationService;
 
 	private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
@@ -153,6 +155,8 @@ public class AsyncPostProcessor {
 		//sse 전송
 		if (savedPost.getStatus() == PostStatus.PROCESSED) {
 			ssePostService.sendNewPost(savedPost);
+			notificationService.sendKeywordMatchingNotification(savedPost);
+
 		}
 	}
 
@@ -209,6 +213,7 @@ public class AsyncPostProcessor {
 
 			// sse 전송
 			ssePostService.sendNewPost(savedPost);
+
 
 		} catch (Exception e) {
 			log.error("개별 채용 공고 생성 실패: {}", jobPosting.getCompany(), e);

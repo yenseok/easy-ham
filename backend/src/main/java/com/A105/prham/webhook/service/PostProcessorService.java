@@ -56,6 +56,7 @@ public class PostProcessorService {
 				.postId(post.getPostId())
 				.channelId(post.getChannelId())
 				.channelName(post.getChannelName())
+				.teamName(post.getTeamName())
 				.userId(post.getUserId())
 				.cleanedText(post.getCleanedText())
 				.timestamp(timestamp)

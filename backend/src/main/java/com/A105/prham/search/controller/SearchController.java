@@ -6,8 +6,10 @@ import com.A105.prham.common.response.SuccessCode;
 import com.A105.prham.search.dto.request.PostSearchRequest;
 import com.A105.prham.search.dto.response.PostSearchResponse;
 import com.A105.prham.search.service.SearchService;
+import com.A105.prham.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -41,34 +43,30 @@ public class SearchController {
             @RequestParam(required = false) Long startDate,
             @RequestParam(required = false) Long endDate,
             @RequestParam(required = false) Boolean isLiked,
+            @RequestParam(required = false) Boolean isCompleted,
             @RequestParam(defaultValue = "timestamp:desc") String sort,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal User user) {
         try {
             // 요청 객체 생성
-            PostSearchRequest request = new PostSearchRequest();
-            request.setKeyword(keyword);
-            request.setChannelIds(channelIds);
-            request.setCategoryIds(categoryIds);
-            request.setStartDate(startDate);
-            request.setEndDate(endDate);
-            request.setIsLiked(isLiked);
-            request.setSort(sort);
-            request.setPage(page);
-            request.setSize(size);
+            PostSearchRequest request = PostSearchRequest
+                    .builder()
+                    .keyword(keyword)
+                    .categoryIds(categoryIds)
+                    .channelIds(channelIds)
+                    .startDate(startDate)
+                    .endDate(endDate)
+                    .isLiked(isLiked)
+                    .isCompleted(isCompleted)
+                    .sort(sort)
+                    .page(page)
+                    .size(size)
+                    .build();
 
-            // 요청 파라미터 로깅
-            log.info("📥 Search request received:");
-            log.info("   - keyword: {}", keyword);
-            log.info("   - channelIds: {}", channelIds);
-            log.info("   - categoryIds (subCategory): {}", categoryIds);
-            log.info("   - dateRange: {} ~ {}", startDate, endDate);
-            log.info("   - isLiked: {}", isLiked);
-            log.info("   - sort: {}", sort);
-            log.info("   - page: {}, size: {}", page, size);
 
             // 검색 실행
-            PostSearchResponse result = searchService.searchPosts(request);
+            PostSearchResponse result = searchService.searchPosts(request, user.getId());
 
             return ApiResponseDto.success(SuccessCode.SUCCESS, result);
 

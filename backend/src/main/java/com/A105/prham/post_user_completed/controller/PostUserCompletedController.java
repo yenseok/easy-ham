@@ -47,7 +47,7 @@ public class PostUserCompletedController {
     /**
      * 내가 완료한 게시물 목록 조회
      */
-    @GetMapping("/users/{userId}/completed")
+    @GetMapping("/me")
     public ApiResponseDto getCompletedPosts(
             @AuthenticationPrincipal User user) {
         List<CompletionResponse> responses = postUserCompletedService.getCompletedPostsByUser(user);

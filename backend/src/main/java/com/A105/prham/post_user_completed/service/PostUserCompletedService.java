@@ -93,13 +93,11 @@ public class PostUserCompletedService {
         }
 
         return CompletionResponse.builder()
-                .completedId(completed.getId())
                 .userId(completed.getUser().getId())
                 .userName(completed.getUser().getName())
                 .postId(completed.getPost().getId())
                 .postTitle(completed.getPost().getTitle())
                 .isCompleted(completed.getIsCompleted())
-                .completedAt(completedAt)
                 .build();
     }
 }
