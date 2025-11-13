@@ -46,6 +46,7 @@ public class AsyncPostProcessor {
 	private final NotificationService notificationService;
 
 	private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+	private final MarkdownFormatterService markdownFormatterService;
 
 	@Async
 	@TransactionalEventListener
@@ -96,7 +97,8 @@ public class AsyncPostProcessor {
 						null
 					);
 					post.markAsProcessed();
-					postRepository.save(post);
+					Post savedOriginalPost = postRepository.save(post);
+					searchService.indexPost(savedOriginalPost);
 				} else {
 					log.warn("채용 공고 파싱 실패 - 원본 그대로 저장");
 					saveOriginalPost(post, result, fileProcessingFailed);
@@ -131,9 +133,11 @@ public class AsyncPostProcessor {
 			campusList = String.join(",", result.getCampusList());
 		}
 
+		String markdownText = markdownFormatterService.formatForMarkdown(post.getCleanedText());
+
 		//분류 결과 업데이트
 		post.updateClassificationResult(
-			post.getCleanedText(),
+			markdownText,
 			result.getTitle(),
 			result.getMainCategory(),
 			result.getSubCategory(),
@@ -156,7 +160,7 @@ public class AsyncPostProcessor {
 		if (savedPost.getStatus() == PostStatus.PROCESSED) {
 			ssePostService.sendNewPost(savedPost);
 			notificationService.sendKeywordMatchingNotification(savedPost);
-
+			notificationService.scheduleDeadlineNotification(savedPost);
 		}
 	}
 

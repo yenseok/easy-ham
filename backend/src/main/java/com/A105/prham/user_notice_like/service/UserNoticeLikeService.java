@@ -102,6 +102,7 @@ public class UserNoticeLikeService {
                         .createdAt(userNoticeLike.getPost().getCreatedAt().toString())
                         .deadline(userNoticeLike.getPost().getDeadline())
                         .isLiked(userNoticeLike.getIsLiked())
+                        .teamName(userNoticeLike.getPost().getTeamName())
                         .build()).toList();
 
         return UserNoticeLikeGetResponse.builder()

@@ -50,6 +50,19 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 		"ORDER BY p.createdAt DESC")
 	List<Post> findJobPostingsByPositions(@Param("positionIds") Set<Long> positionIds);
 
+	// 사용자가 속한 채널의 Post 조회 (채널 ID 리스트로 필터링)
+	@Query("SELECT p FROM Post p " +
+		"WHERE p.status = 'PROCESSED' " +
+		"AND p.channelId IN :channelIds " +
+		"AND (:mainCategory IS NULL OR p.mainCategory = :mainCategory) " +
+		"AND (:subCategory IS NULL OR p.subCategory = :subCategory) " +
+		"ORDER BY p.createdAt DESC")
+	List<Post> findPostsByChannelIds(
+		@Param("channelIds") List<String> channelIds,
+		@Param("mainCategory") String mainCategory,
+		@Param("subCategory") String subCategory
+	);
+
 	//이거 쿼리 효율 나쁘니까 나중에 뭉탱이 쿼리로 바꿔야함
 	@Query("""
 			SELECT p.id FROM Post p

@@ -14,6 +14,7 @@ public class PostNotificationDto {
 	private String postId;
 	private String channelId;
 	private String channelName;
+	private String teamName;
 	private String userId;
 	private String userName;
 	private String title;
@@ -26,8 +27,8 @@ public class PostNotificationDto {
 	private String fileIds;
 	private Long webhookTimestamp;
 
-	// 채용 공고 필드 추가
-	private Long postiionId;
+	// 채용 공고 전용 필드
+	private Long positionId;
 	private String positionName;
 	private String url;
 	private String position;
@@ -35,23 +36,26 @@ public class PostNotificationDto {
 	private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
 
 	public static PostNotificationDto from(Post post) {
-
-		//url
+		String content = post.getCleanedText();
 		String url = null;
-		String positionText = post.getCleanedText();
+		String position = null;
 
-		if (post.getCleanedText() != null && post.getCleanedText().contains("|||URL|||")) {
+		// 채용 공고인 경우에만 URL과 position 분리
+		boolean isJobPosting = "취업".equals(post.getMainCategory())
+			&& "채용".equals(post.getSubCategory());
+
+		if (isJobPosting && content != null && content.contains("|||URL|||")) {
 			String delimiter = "|||URL|||";
-			int delimiterIndex = positionText.indexOf(delimiter);
+			int delimiterIndex = content.indexOf(delimiter);
 
 			if (delimiterIndex != -1) {
-				positionText = post.getCleanedText().substring(0, delimiterIndex).trim();
-				url = post.getCleanedText().substring(delimiterIndex + delimiter.length()).trim();
-
+				position = content.substring(0, delimiterIndex).trim();
+				url = content.substring(delimiterIndex + delimiter.length()).trim();
+				content = position; // content에도 position(직무명)만 넣기
 			}
 		}
 
-		//position
+		// position 정보
 		String positionName = null;
 		Long positionId = null;
 
@@ -60,12 +64,13 @@ public class PostNotificationDto {
 			positionName = post.getPosition().getPositionName();
 		}
 
+		// webhookTimestamp 파싱
 		Long webhookTimestamp = null;
 		if (post.getWebhookTimestamp() != null) {
 			try {
 				webhookTimestamp = Long.parseLong(post.getWebhookTimestamp());
 			} catch (NumberFormatException e) {
-
+				// 무시
 			}
 		}
 
@@ -74,10 +79,11 @@ public class PostNotificationDto {
 			.postId(post.getPostId())
 			.channelId(post.getChannelId())
 			.channelName(post.getChannelName())
+			.teamName(post.getTeamName())
 			.userId(post.getUserId())
 			.userName(post.getUserName())
 			.title(post.getTitle())
-			.content(post.getCleanedText())
+			.content(content)
 			.mainCategory(post.getMainCategory())
 			.subCategory(post.getSubCategory())
 			.deadline(post.getDeadline())
@@ -85,6 +91,10 @@ public class PostNotificationDto {
 			.createdAt(post.getCreatedAt() != null ? post.getCreatedAt().format(FORMATTER) : null)
 			.webhookTimestamp(webhookTimestamp)
 			.fileIds(post.getFileIds())
+			.positionId(isJobPosting ? positionId : null)
+			.positionName(isJobPosting ? positionName : null)
+			.url(isJobPosting ? url : null)
+			.position(isJobPosting ? position : null)
 			.build();
 	}
 }
