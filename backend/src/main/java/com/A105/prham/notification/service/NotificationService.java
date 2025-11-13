@@ -42,7 +42,7 @@ public class NotificationService {
     private final NotificationSettingRepository notificationSettingRepository;
     private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
     private final Map<String, Notification> eventCache = new ConcurrentHashMap<>();
-    private final Long TIME_OUT = 60L * 1000;
+    private final Long TIME_OUT = 60L * 60L * 1000L;
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
 
