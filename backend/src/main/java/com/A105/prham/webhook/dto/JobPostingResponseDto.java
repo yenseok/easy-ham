@@ -28,14 +28,21 @@ public class JobPostingResponseDto {
 		String url = null;
 		String position = post.getCleanedText();
 
-		if (post.getCleanedText() != null && post.getCleanedText().contains("\\n|||URL|||")) {
-			String[] parts = post.getCleanedText().split("\n\\|\\|\\|URL\\|\\|\\|", 2);
-			if (parts.length == 2) {
-				position = parts[0].trim();
-				url = parts[1].trim();
+		if (post.getCleanedText() != null) {
+			String cleanedText = post.getCleanedText();
+			String delimiter = "|||URL|||";
+
+			// indexOf로 구분자 위치 찾기
+			int delimiterIndex = cleanedText.indexOf(delimiter);
+
+			if (delimiterIndex != -1) {
+				// 구분자 이전 부분 = position
+				position = cleanedText.substring(0, delimiterIndex).trim();
+
+				// 구분자 이후 부분 = url (delimiter.length() = 9)
+				url = cleanedText.substring(delimiterIndex + delimiter.length()).trim();
 			}
 		}
-
 		// 우리 position 정보 가져오기
 		String positionName = null;
 		Long positionId = null;

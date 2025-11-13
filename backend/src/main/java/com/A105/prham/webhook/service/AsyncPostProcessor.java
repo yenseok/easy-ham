@@ -197,7 +197,7 @@ public class AsyncPostProcessor {
 				.cleanedText(content)
 				.title(title)
 				.mainCategory(classificationResult.getMainCategory())
-				.subCategory(classificationResult.getSubCategory())
+				.subCategory("채용")
 				.position(position)
 				.deadline(parseDeadline(jobPosting.getDeadline()))
 				.campusList(classificationResult.getCampusList() != null ?

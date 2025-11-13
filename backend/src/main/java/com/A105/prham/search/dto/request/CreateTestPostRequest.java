@@ -1,5 +1,6 @@
 package com.A105.prham.search.dto.request;
 
+import com.A105.prham.position.entity.Position;
 import com.A105.prham.webhook.entity.Post;
 import com.A105.prham.webhook.entity.PostStatus;
 
@@ -30,6 +31,13 @@ public class CreateTestPostRequest {
     private Long positionId;
 
     public Post convertPost() {
+
+        Position position = null;
+        if (this.positionId != null) {
+            position = Position.builder()
+                .positionName("테스트 포지션")
+                .build();
+        }
         return Post.builder()
             .postId(this.postId != null ? this.postId : "test_" + System.currentTimeMillis())
             .channelId(this.channelId != null ? this.channelId : "test_channel")
@@ -47,7 +55,7 @@ public class CreateTestPostRequest {
             .teamId(this.teamId != null ? this.teamId : "test_team")
             .teamName(this.teamName != null ? this.teamName : "테스트 팀")
             .webhookTimestamp(String.valueOf(System.currentTimeMillis()))
-            .positionId(this.positionId)
+            .position(position)
             .status(PostStatus.PENDING)
             .build();
     }
