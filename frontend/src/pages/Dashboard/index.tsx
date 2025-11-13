@@ -10,12 +10,17 @@ import UrgentDeadlinesWidget from "./components/UrgentDeadlinesWidget";
 import PersonalizedJobsWidget from "./components/PersonalizedJobsWidget";
 import WeeklyCalendarWidget from "./components/WeeklyCalendarWidget";
 import RecentNoticesWidget from "./components/RecentNoticesWidget";
+import { MessageDetailModal, type MessageDetail } from "@/components/modals/MessageDetailModal";
 import { LayoutDashboard } from "lucide-react";
 
 export default function DashboardPage() {
   const [allNotices, setAllNotices] = useState<Notice[]>([]);
   const [bookmarkedNotices, setBookmarkedNotices] = useState<Notice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // 모달 상태
+  const [selectedMessage, setSelectedMessage] = useState<MessageDetail | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // 북마크 데이터 갱신 함수
   // 북마크 전용 API 사용: 북마크된 것만 정확하게 가져옴 (검색 API의 size 제한 문제 해결)
@@ -105,6 +110,32 @@ export default function DashboardPage() {
   // 채용공고 (Mock 데이터 사용 - 기능 미구현)
   const jobs = mockNotices.filter((n) => n.category === "취업").slice(0, 4);
 
+  /**
+   * 공지사항 클릭 핸들러 (모달 열기)
+   */
+  const handleNoticeClick = (notice: Notice) => {
+    const mattermostUrl = notice.mattermostUrl || `https://mattermost.ssafy.com/ssafy/pl/message${notice.id}`;
+
+    const messageDetail: MessageDetail = {
+      id: notice.id,
+      title: notice.title,
+      content: notice.content,
+      author: notice.author,
+      category: notice.category,
+      subcategory: notice.subcategory,
+      created_at: notice.createdAt,
+      updated_at: notice.updatedAt,
+      channel: notice.channel,
+      teamName: notice.teamName,
+      dday: notice.dday,
+      mattermostUrl,
+      attachments: notice.attachments,
+    };
+
+    setSelectedMessage(messageDetail);
+    setIsModalOpen(true);
+  };
+
   return (
     <PageLayout>
       <div className="px-8 py-6 bg-gray-50 min-h-screen">
@@ -119,8 +150,12 @@ export default function DashboardPage() {
           <BookmarkedNoticesWidget
             notices={bookmarkedNotices.slice(0, 5)} // 위젯에서는 상위 5개만 표시
             onRefresh={refreshBookmarks}
+            onNoticeClick={handleNoticeClick}
           />
-          <UrgentDeadlinesWidget notices={urgentDeadlines} />
+          <UrgentDeadlinesWidget
+            notices={urgentDeadlines}
+            onNoticeClick={handleNoticeClick}
+          />
           <PersonalizedJobsWidget jobs={jobs} />
         </div>
 
@@ -131,9 +166,18 @@ export default function DashboardPage() {
 
         {/* 최근 공지 (실제 API 연결) */}
         <div>
-          <RecentNoticesWidget />
+          <RecentNoticesWidget onNoticeClick={handleNoticeClick} />
         </div>
       </div>
+
+      {/* 메시지 상세 모달 */}
+      {selectedMessage && (
+        <MessageDetailModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          message={selectedMessage}
+        />
+      )}
     </PageLayout>
   );
 }

@@ -140,8 +140,9 @@ export function convertSearchItemToNotice(item: SearchResultItem): Notice {
     content: item.content,
     author: item.userName,
 
-    // 채널: channelName 사용 (API에서 제공)
+    // 채널 및 팀: channelName, teamName 사용 (API에서 제공)
     channel: item.channelName,
+    teamName: item.teamName,
 
     // 카테고리 변환
     category: mapMainCategory(item.mainCategory, item.subCategory),

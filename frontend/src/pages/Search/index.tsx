@@ -373,6 +373,7 @@ export default function SearchPage() {
       created_at: notice.createdAt,
       updated_at: notice.updatedAt,
       channel: notice.channel,
+      teamName: notice.teamName,
       dday: notice.dday,
       mattermostUrl,
       attachments: notice.attachments, // 검색 API에서 받은 첨부파일 그대로 사용

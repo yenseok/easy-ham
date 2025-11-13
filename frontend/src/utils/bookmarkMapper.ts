@@ -61,6 +61,7 @@ export function convertBookmarkItemToNotice(item: NoticeApiResponse): Notice {
     content: item.contentPreview,
     author: item.authorName,
     channel: item.channelName,
+    teamName: item.teamName,
     category: mapMainCategory(item.mainCategory),
     subcategory: mapSubCategory(item.subCategory),
     bookmarked: item.isLiked,
