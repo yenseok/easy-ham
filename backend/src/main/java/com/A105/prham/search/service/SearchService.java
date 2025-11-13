@@ -370,6 +370,11 @@ public class SearchService {
      */
     public void indexPost(Post post) {
         try {
+            //개별 채용 공고는 인덱싱 하지 않음
+            if (post.getPostId().contains("_")) {
+                return;
+            }
+
             Index index = meilisearchClient.index(INDEX_NAME);
             PostIndexDocument doc = postProcessorService.preprocess(post);
 
@@ -389,11 +394,18 @@ public class SearchService {
      */
     public void indexPosts(List<Post> posts) {
         try {
+
             Index index = meilisearchClient.index(INDEX_NAME);
 
+            //개별 채용 공고 제외
             List<PostIndexDocument> documents = posts.stream()
-                    .map(postProcessorService::preprocess)
-                    .collect(Collectors.toList());
+                .filter(post -> !post.getPostId().contains("_"))
+                .map(postProcessorService::preprocess)
+                .collect(Collectors.toUnmodifiableList());
+
+            // List<PostIndexDocument> documents = posts.stream()
+            //         .map(postProcessorService::preprocess)
+            //         .collect(Collectors.toList());
 
             String json = objectMapper.writeValueAsString(documents);
             index.addDocuments(json);
