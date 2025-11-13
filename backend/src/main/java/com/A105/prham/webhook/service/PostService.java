@@ -91,5 +91,9 @@ public class PostService {
 
 	}
 
+	public int DeletePostByPostId(String postId){
+		return postRepository.deleteByPostId(postId);
+	}
+
 
 }

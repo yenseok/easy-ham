@@ -7,11 +7,13 @@ import java.util.Set;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 // ⚠️ com.A105.prham.messages.entity.Message 임포트는 이제 필요 없으므로 삭제합니다.
 import com.A105.prham.webhook.entity.Post;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface PostRepository extends JpaRepository<Post, Long> {
 
@@ -61,5 +63,10 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 			""")
 	List<Long> selectPostIdsByMMPostIds(@Param("postIds") List<String> postIds);
 
+
+	@Modifying
+	@Transactional
+	@Query("DELETE FROM Post p WHERE p.postId = :postId")
+	int deleteByPostId(@Param("postId") String postId);
 
 }

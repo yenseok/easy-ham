@@ -2,11 +2,14 @@ package com.A105.prham.webhook.controller;
 
 import java.util.List;
 
+import com.A105.prham.common.response.ErrorCode;
+import com.A105.prham.search.service.SearchService;
+import com.A105.prham.webhook.dto.UpdatePostRequest;
+import com.fasterxml.jackson.databind.JsonNode;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.A105.prham.common.response.ApiResponseDto;
 import com.A105.prham.common.response.SuccessCode;
@@ -19,9 +22,11 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/v1/posts")
 @RequiredArgsConstructor
+@Slf4j
 public class PostController {
 
 	private final PostService postService;
+	private final SearchService searchService;
 
 	//전체 채용 공고 목록 조회
 	@GetMapping("/jobs")
@@ -40,5 +45,30 @@ public class PostController {
 		List<JobPostingResponseDto> response = postService.getJobPostingByUserPosition(user.getId());
 
 		return ResponseEntity.ok(ApiResponseDto.success(SuccessCode.SUCCESS, response));
+	}
+
+
+	@PostMapping("/post-event")
+	public ApiResponseDto updatePost(@RequestBody UpdatePostRequest request){
+		try{
+			if ("post_updated".equals(request.getEventType())) {
+				// 수정 이벤트: DB업데이트 meilisearch에서 업데이트
+				log.info("{} changed",request.getPostId());
+				//TODO 엔티티수정
+			} else {
+				// 삭제 이벤트: DB삭제, meilisearch에서 삭제
+				searchService.deletePost(request.getPostId());
+				int result = postService.DeletePostByPostId(request.getPostId());
+				if(result ==0){
+					log.error("존재하지 않는 Post를 삭제 시도 하였습니다.");
+					return ApiResponseDto.fail(ErrorCode.BAD_REQUEST);
+				}
+				log.info("{} deleted",request.getPostId());
+			}
+
+			return ApiResponseDto.success(SuccessCode.SUCCESS,"업데이트 성공");
+		}catch (Exception e){
+			return ApiResponseDto.success(SuccessCode.SUCCESS,e.getMessage());
+		}
 	}
 }
