@@ -57,25 +57,22 @@ class SSEClient {
       });
 
       // 연결 에러 처리
+      // EventSource는 기본적으로 자동 재연결을 제공하므로,
+      // CLOSED 상태(영구 종료)만 에러로 처리
       this.eventSource.onerror = (event: Event) => {
-        console.error('[SSE] Connection error:', event);
         const status = this.eventSource?.readyState;
 
         if (status === EventSource.CLOSED) {
-          console.log('[SSE] Connection closed by server');
+          console.error('[SSE] Connection closed by server:', event);
           this.errorCallback?.({
             code: 'CONNECTION_CLOSED',
             message: 'SSE connection closed by server',
             timestamp: Date.now(),
           });
-        } else if (status === EventSource.CONNECTING) {
-          console.log('[SSE] Attempting to reconnect...');
         } else {
-          this.errorCallback?.({
-            code: 'CONNECTION_ERROR',
-            message: 'SSE connection error',
-            timestamp: Date.now(),
-          });
+          // CONNECTING(0) 또는 OPEN(1) 상태에서의 일시적 에러
+          // EventSource API가 자동으로 재연결을 시도하므로 무시
+          console.warn('[SSE] Temporary connection issue, EventSource will auto-reconnect');
         }
       };
 
