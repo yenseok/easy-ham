@@ -27,7 +27,9 @@ const RECONNECT_CONFIG = {
  */
 class SSEManager {
   private postStreamReconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private notificationStreamReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private notificationStreamReconnectTimer: ReturnType<
+    typeof setTimeout
+  > | null = null;
   private postStreamRetries = 0;
   private notificationStreamRetries = 0;
   private previousAccessToken: string | null = null;
@@ -46,20 +48,16 @@ class SSEManager {
     // 초기 토큰 저장
     this.previousAccessToken = useAuthStore.getState().accessToken;
 
-    // 토큰 변경 감시 (Zustand v5 호환 패턴)
-    this.authUnsubscribe = useAuthStore.subscribe(
-      (state) => state.accessToken,
-      (currentToken) => {
-        if (this.previousAccessToken !== currentToken && currentToken) {
-          console.log(
-            "[SSE Manager] Access token changed, reconnecting SSE..."
-          );
-          this.reconnectPostStream();
-          this.reconnectNotificationStream();
-        }
-        this.previousAccessToken = currentToken;
+    // 토큰 변경 감시 - 전체 상태를 받아서 토큰만 확인
+    this.authUnsubscribe = useAuthStore.subscribe((state) => {
+      const currentToken = state.accessToken;
+      if (this.previousAccessToken !== currentToken && currentToken) {
+        console.log("[SSE Manager] Access token changed, reconnecting SSE...");
+        this.reconnectPostStream();
+        this.reconnectNotificationStream();
       }
-    );
+      this.previousAccessToken = currentToken;
+    });
   }
 
   /**

@@ -61,6 +61,6 @@ export interface SSEError {
 /**
  * SSE 매니저의 콜백 함수 타입
  */
-export type SSEMessageCallback = (data: Record<string, unknown>) => void;
+export type SSEMessageCallback = (data: unknown) => void;
 export type SSEErrorCallback = (error: SSEError) => void;
 export type SSEStatusCallback = (status: SSEConnectionStatus) => void;
