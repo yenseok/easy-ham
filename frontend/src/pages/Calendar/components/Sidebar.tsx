@@ -9,6 +9,7 @@ import {
   GraduationCap,
   Briefcase,
 } from "lucide-react";
+import type { UserChannel } from "@/types/api";
 
 interface SidebarProps {
   currentDate: Date;
@@ -18,14 +19,14 @@ interface SidebarProps {
   selectedCareerCategories: string[];
   channelExpanded: boolean;
   selectedWeek: Date[];
-  channelOptions: string[];
+  availableChannels: UserChannel[];
   getEventsForDate: (date: Date) => any[];
   formatMonthYear: (date: Date) => string;
   isSameDay: (date1: Date, date2: Date) => boolean;
   isToday: (date: Date) => boolean;
   isCurrentMonth: (date: Date, currentDate: Date) => boolean;
   onChannelExpandToggle: () => void;
-  onToggleChannel: (channel: string) => void;
+  onToggleChannel: (channelId: string) => void;
   onToggleCategory: (category: string, isAcademic: boolean) => void;
   onResetFilters: () => void;
   onMiniCalendarWeekClick: (week: Date[]) => void;
@@ -44,7 +45,7 @@ export function Sidebar({
   selectedCareerCategories,
   channelExpanded,
   selectedWeek,
-  channelOptions,
+  availableChannels,
   getEventsForDate,
   formatMonthYear,
   isSameDay,
@@ -278,37 +279,42 @@ export function Sidebar({
           </button>
           {channelExpanded && (
             <div className="space-y-1.5">
-              {channelOptions.map((channel) => (
-                <button
-                  key={channel}
-                  onClick={() => onToggleChannel(channel)}
-                  className="w-full h-8 px-3 rounded-md text-sm text-left flex items-center gap-2 transition-colors hover:bg-gray-100"
-                  style={{
-                    fontWeight: selectedChannels.includes(channel) ? 700 : 500,
-                  }}
-                >
-                  <div
-                    className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${
-                      selectedChannels.includes(channel)
-                        ? "border-(--brand-orange)"
-                        : "border-gray-300"
-                    }`}
+              {availableChannels.map((channel) => {
+                const isSelected = selectedChannels.includes(channel.channelId);
+                const displayName = `${channel.teamName} - ${channel.channelName}`;
+
+                return (
+                  <button
+                    key={channel.channelId}
+                    onClick={() => onToggleChannel(channel.channelId)}
+                    className="w-full h-8 px-3 rounded-md text-sm text-left flex items-center gap-2 transition-colors hover:bg-gray-100"
+                    style={{
+                      fontWeight: isSelected ? 700 : 500,
+                    }}
                   >
-                    {selectedChannels.includes(channel) && (
-                      <div className="w-1.5 h-1.5 rounded-full bg-(--brand-orange)" />
-                    )}
-                  </div>
-                  <span
-                    className={
-                      selectedChannels.includes(channel)
-                        ? "text-gray-800"
-                        : "text-gray-600"
-                    }
-                  >
-                    {channel}
-                  </span>
-                </button>
-              ))}
+                    <div
+                      className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${
+                        isSelected
+                          ? "border-(--brand-orange)"
+                          : "border-gray-300"
+                      }`}
+                    >
+                      {isSelected && (
+                        <div className="w-1.5 h-1.5 rounded-full bg-(--brand-orange)" />
+                      )}
+                    </div>
+                    <span
+                      className={
+                        isSelected
+                          ? "text-gray-800"
+                          : "text-gray-600"
+                      }
+                    >
+                      {displayName}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
