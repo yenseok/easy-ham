@@ -5,7 +5,11 @@
 /**
  * SSE 연결 상태
  */
-export type SSEConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+export type SSEConnectionStatus =
+  | "disconnected"
+  | "connecting"
+  | "connected"
+  | "error";
 
 /**
  * SSE 이벤트 기본 인터페이스
@@ -39,13 +43,13 @@ export interface NewPostEvent {
 }
 
 /**
- * keyword_match 이벤트 스키마
+ * keyword_matching 이벤트 스키마
  * /api/v1/notifications/stream에서 수신
  */
 export interface NotificationEvent {
   notice_id: string;
   title: string;
-  matched_keywords: string[];
+  match_keyword: string[];
   [key: string]: unknown;
 }
 

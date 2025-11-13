@@ -169,12 +169,15 @@ class SSEManager {
       console.log("[SSE Manager] Received notification:", data);
       const notificationData = data as NotificationEvent;
       // notification store에 추가 (이미 unreadCount 증가 로직 포함)
+      const keywords = Array.isArray(notificationData.match_keyword)
+        ? notificationData.match_keyword.join(", ")
+        : "Unknown keywords";
+
       useNotificationStore.getState().addSSENotification?.({
+        id: notificationData.notice_id,
         type: "info",
         title: notificationData.title,
-        content: `Matched keywords: ${notificationData.matched_keywords.join(
-          ", "
-        )}`,
+        content: `Matched keywords: ${keywords}`,
         read: false,
       });
     });
@@ -187,8 +190,8 @@ class SSEManager {
     });
 
     try {
-      // notifications/stream: handshake 이벤트는 "test", 데이터 이벤트는 "keyword_match"
-      notificationStreamClient.connect(url, "keyword_match", "test");
+      // notifications/stream: handshake 이벤트는 "connected", 데이터 이벤트는 "keyword_matching"
+      notificationStreamClient.connect(url, "keyword_matching", "connected");
       sseStore.setNotificationStreamStatus("connected");
       this.notificationStreamRetries = 0;
     } catch (error) {

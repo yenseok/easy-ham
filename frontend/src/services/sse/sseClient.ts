@@ -3,7 +3,7 @@
  * EventSource 생성/관리 (낮은 수준)
  */
 
-import type { SSEMessageCallback, SSEErrorCallback } from './types';
+import type { SSEMessageCallback, SSEErrorCallback } from "./types";
 
 /**
  * SSE 클라이언트 클래스
@@ -11,17 +11,21 @@ import type { SSEMessageCallback, SSEErrorCallback } from './types';
  */
 class SSEClient {
   private eventSource: EventSource | null = null;
-  private url: string = '';
+  private url: string = "";
   private messageCallback: SSEMessageCallback | null = null;
   private errorCallback: SSEErrorCallback | null = null;
 
   /**
    * EventSource 생성 및 연결
    * @param url SSE 엔드포인트 URL
-   * @param eventType 구독할 이벤트 타입 (예: 'newPost', 'keyword_match')
+   * @param eventType 구독할 이벤트 타입 (예: 'newPost', 'keyword_matching')
    * @param handshakeEvent 초기 핸드셰이크 이벤트 타입 (예: 'connected', 'test')
    */
-  connect(url: string, eventType: string, handshakeEvent: string = 'connected'): void {
+  connect(
+    url: string,
+    eventType: string,
+    handshakeEvent: string = "connected"
+  ): void {
     try {
       this.url = url;
       console.log(`[SSE] Connecting to ${url}`);
@@ -29,7 +33,7 @@ class SSEClient {
       // EventSource 생성 + 쿠키 포함
       // withCredentials: true를 통해 Cookie 헤더에 accessToken 자동 포함
       this.eventSource = new EventSource(url, {
-        withCredentials: true
+        withCredentials: true,
       });
 
       // 초기 핸드셰이크 이벤트 리스닝 (연결 확인용)
@@ -49,7 +53,7 @@ class SSEClient {
           } catch (error) {
             console.error(`[SSE] Failed to parse message data:`, error);
             this.errorCallback?.({
-              message: 'Failed to parse SSE message',
+              message: "Failed to parse SSE message",
               timestamp: Date.now(),
             });
           }
@@ -63,24 +67,26 @@ class SSEClient {
         const status = this.eventSource?.readyState;
 
         if (status === EventSource.CLOSED) {
-          console.error('[SSE] Connection closed by server:', event);
+          console.error("[SSE] Connection closed by server:", event);
           this.errorCallback?.({
-            code: 'CONNECTION_CLOSED',
-            message: 'SSE connection closed by server',
+            code: "CONNECTION_CLOSED",
+            message: "SSE connection closed by server",
             timestamp: Date.now(),
           });
         } else {
           // CONNECTING(0) 또는 OPEN(1) 상태에서의 일시적 에러
           // EventSource API가 자동으로 재연결을 시도하므로 무시
-          console.warn('[SSE] Temporary connection issue, EventSource will auto-reconnect');
+          console.warn(
+            "[SSE] Temporary connection issue, EventSource will auto-reconnect"
+          );
         }
       };
 
       console.log(`[SSE] Connected to ${url}`);
     } catch (error) {
-      console.error('[SSE] Failed to create EventSource:', error);
+      console.error("[SSE] Failed to create EventSource:", error);
       this.errorCallback?.({
-        message: 'Failed to create EventSource',
+        message: "Failed to create EventSource",
         timestamp: Date.now(),
       });
     }
@@ -115,7 +121,10 @@ class SSEClient {
    * 연결 상태 확인
    */
   isConnected(): boolean {
-    return this.eventSource !== null && this.eventSource.readyState === EventSource.OPEN;
+    return (
+      this.eventSource !== null &&
+      this.eventSource.readyState === EventSource.OPEN
+    );
   }
 
   /**
