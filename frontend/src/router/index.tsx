@@ -61,6 +61,10 @@ export const router = createBrowserRouter([
   },
   {
     path: "/overview",
-    element: <OverviewPage />,
+    element: (
+      <ProtectedRoute>
+        <OverviewPage />
+      </ProtectedRoute>
+    ),
   },
 ]);

@@ -2,6 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { getMockDashboardData } from "@/services/mock/dashboardData";
 import { searchApi } from "@/services/api/search";
+import { sseManager } from "@/services/sse/sseManager";
+import { useSSEPostStore } from "@/stores/useSSEPostStore";
 import type { Notice } from "@/types/notice";
 import BookmarkedNoticesWidget from "./components/BookmarkedNoticesWidget";
 import UrgentDeadlinesWidget from "./components/UrgentDeadlinesWidget";
@@ -13,6 +15,7 @@ import { LayoutDashboard } from "lucide-react";
 export default function DashboardPage() {
   const [allNotices, setAllNotices] = useState<Notice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { newPosts } = useSSEPostStore();
 
   // Search API 한 번만 호출
   useEffect(() => {
@@ -32,6 +35,17 @@ export default function DashboardPage() {
     };
 
     fetchData();
+  }, []);
+
+  // SSE 구독: Dashboard에서 posts/stream 시작
+  useEffect(() => {
+    console.log('[Dashboard] Mounting, starting posts/stream subscription');
+    sseManager.connectPostStream();
+
+    return () => {
+      console.log('[Dashboard] Unmounting, closing posts/stream subscription');
+      sseManager.closePostStream();
+    };
   }, []);
 
   // Mock 데이터 (북마크용)

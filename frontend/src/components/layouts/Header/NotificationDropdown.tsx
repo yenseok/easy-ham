@@ -7,12 +7,14 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useNotificationStore } from '@/stores/useNotificationStore';
+import { useSSEStore } from '@/stores/useSSEStore';
 import { SubscriptionKeywordModal } from '@/components/modals/SubscriptionKeywordModal';
 
 export const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isKeywordModalOpen, setIsKeywordModalOpen] = useState(false);
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationStore();
+  const { notificationStreamStatus } = useSSEStore();
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -60,7 +62,26 @@ export const NotificationDropdown = () => {
         {/* 헤더 */}
         <div className="p-4 border-b bg-white sticky top-0 z-10">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold">알림</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold">알림</h3>
+              <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
+                notificationStreamStatus === 'connected' ? 'bg-green-100 text-green-700' :
+                notificationStreamStatus === 'connecting' ? 'bg-yellow-100 text-yellow-700' :
+                notificationStreamStatus === 'error' ? 'bg-red-100 text-red-700' :
+                'bg-gray-100 text-gray-700'
+              }`}>
+                <span className={`w-2 h-2 rounded-full ${
+                  notificationStreamStatus === 'connected' ? 'bg-green-600' :
+                  notificationStreamStatus === 'connecting' ? 'bg-yellow-600' :
+                  notificationStreamStatus === 'error' ? 'bg-red-600' :
+                  'bg-gray-600'
+                }`} />
+                {notificationStreamStatus === 'connected' ? '연결됨' :
+                 notificationStreamStatus === 'connecting' ? '연결 중' :
+                 notificationStreamStatus === 'error' ? '에러' :
+                 '끊김'}
+              </span>
+            </div>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button

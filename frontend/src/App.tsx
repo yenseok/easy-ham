@@ -40,6 +40,7 @@ export default function App() {
   const [currentFeature, setCurrentFeature] = useState(0);
   const featuresRef = useRef<HTMLElement>(null);
 
+  // 자동 회전 효과
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentFeature((prev) => (prev + 1) % features.length);
