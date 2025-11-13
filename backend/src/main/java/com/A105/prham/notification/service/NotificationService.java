@@ -207,7 +207,8 @@ public class NotificationService {
                 Document data = new Document()
                         .append("notice_id", post.getId())
                         .append("title", post.getTitle())
-                        .append("match_keyword",matchedKeywordList);
+                        .append("match_keyword",matchedKeywordList)
+                        .append("created_at", LocalDateTime.now());
                 send(user, data, NotificationType.KEYWORD_MATCHING.name().toLowerCase());
             }
         }
