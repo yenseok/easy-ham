@@ -50,6 +50,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     """)
     int setUserUnable(@Param("ssoSubId") String ssoSubId);
 
+    @Query("SELECT u FROM User u " +
+        "LEFT JOIN FETCH u.userPositions up " +
+        "LEFT JOIN FETCH up.position " +
+        "WHERE u.id = :userId")
+    Optional<User> findByIdWithPositions(@Param("userId") Long userId);
+
     @Query("SELECT DISTINCT u FROM User u JOIN u.keywords k WHERE k IS NOT NULL")
     List<User> findUsersWithKeywords();
 }

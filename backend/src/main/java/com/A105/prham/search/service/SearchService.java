@@ -383,6 +383,7 @@ public class SearchService {
         }
     }
 
+
     /**
      * 여러 Post 일괄 인덱싱
      */
@@ -403,6 +404,7 @@ public class SearchService {
             throw new RuntimeException("Failed to index posts", e);
         }
     }
+
 
     /**
      * Post 삭제

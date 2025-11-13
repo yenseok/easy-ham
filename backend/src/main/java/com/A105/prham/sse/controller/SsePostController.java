@@ -44,26 +44,31 @@ public class SsePostController {
 		String springUserId = String.valueOf(user.getId());
 		log.info("sse 구독 요청: userId={}, email={}", springUserId, userEmail);
 
+		// 사용자 positionId 추출
+		List<Long> userPositionIds = user.getUserPositions().stream()
+			.map(up -> up.getPosition().getId())
+			.collect(Collectors.toList());
+
 		if (user.getGeneration() == null){
 			log.warn("user {}의 generation이 null입니다. 빈 SSE를 반환합니다.", springUserId);
-			return ssePostService.subscribe(springUserId, List.of());
+			return ssePostService.subscribe(springUserId, List.of(), userPositionIds);
 		}
 
 		if (user.getCampus() == null) {
 			log.warn("user {}의 campus가 null입니다.", springUserId);
-			return ssePostService.subscribe(springUserId, List.of());
+			return ssePostService.subscribe(springUserId, List.of(), userPositionIds);
 		}
 
 		if (user.getClassroom() == null) {
 			log.warn("user {}의 classroom이 null입니다. 빈 sse를 반환합니다.", springUserId);
-			return ssePostService.subscribe(springUserId, List.of());
+			return ssePostService.subscribe(springUserId, List.of(), userPositionIds);
 		}
 
 		String mmUserId = mattermostService.getUserIdByEmail(userEmail);
 
 		if (mmUserId == null) {
 			log.warn("mm 유저 찾을 수 없음. email: {}", userEmail);
-			return ssePostService.subscribe(springUserId, List.of());
+			return ssePostService.subscribe(springUserId, List.of(), userPositionIds);
 		}
 
 		List<String> allowedChannelIds = new ArrayList<>();
@@ -75,7 +80,6 @@ public class SsePostController {
 
 		// 사용자가 속한 팀 목록 (캐시)
 		List<MattermostTeam> allTeams = mattermostService.getTeamsByUserId(mmUserId);
-		log.info("Step 7: 검색 조건 - {}, {}, {}반", generationPrefix, campusInfix, user.getClassroom());
 		log.info("Step 9: 조회된 팀 개수: {}", allTeams != null ? allTeams.size() : "null");
 
 		// 모든 팀 탐색
@@ -107,7 +111,7 @@ public class SsePostController {
 		}
 
 		log.info("유저 구독 채널 목록({}개): {}", allowedChannelIds.size(), allowedChannelIds);
-		return ssePostService.subscribe(springUserId, allowedChannelIds);
+		return ssePostService.subscribe(springUserId, allowedChannelIds,userPositionIds);
 
 	}
 }

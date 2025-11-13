@@ -31,7 +31,7 @@ public class TestDataController {
 
             // 1. Post Entity 생성
             Post post = request.convertPost();
-            post.setProcessedAt(java.time.LocalDateTime.now().toString());
+            post.markAsProcessed();
 
             // 2. DB에 저장
             Post savedPost = postRepository.save(post);
@@ -70,7 +70,7 @@ public class TestDataController {
             for (CreateTestPostRequest request : requests) {
                 try {
                     Post post = request.convertPost();
-                    post.setProcessedAt(java.time.LocalDateTime.now().toString());
+                    post.markAsProcessed();
 
                     Post savedPost = postRepository.save(post);
                     searchService.indexPost(savedPost);

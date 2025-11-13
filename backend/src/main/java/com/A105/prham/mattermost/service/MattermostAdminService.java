@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -24,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class MattermostAdminService {
 	private final RestTemplate restTemplate;
+	private final CacheManager cacheManager10Min;  // 주입 필요
 
 	@Value("${mattermost.api.base-url}")
 	private String mattermostApiBaseUrl;
@@ -86,6 +88,24 @@ public class MattermostAdminService {
 		} catch (Exception e) {
 			log.error("mm 채널 목록 조회 실패, user: {}, team{}", mmUserId, teamId, e.getMessage());
 			return List.of();
+		}
+	}
+
+	//채널 id로 디스플레이 채널 명 가져오기
+	public MattermostChannel getChannelById(String channelId) {
+		log.info("mm api 호출: getChannelById - {}", channelId);
+		try {
+			String url = mattermostApiBaseUrl + "/api/v4/channels/" + channelId;
+			MattermostChannel channel = restTemplate.exchange(
+				url,
+				HttpMethod.GET,
+				createAuthHeader(),
+				MattermostChannel.class
+			).getBody();
+
+			return channel;
+		} catch (Exception e) {
+			return null;
 		}
 	}
 

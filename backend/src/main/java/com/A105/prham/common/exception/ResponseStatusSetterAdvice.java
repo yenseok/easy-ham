@@ -27,8 +27,15 @@ public class ResponseStatusSetterAdvice implements ResponseBodyAdvice<ApiRespons
             ServerHttpRequest request,
             ServerHttpResponse response
     ) {
-        HttpStatus status = body.httpStatus();
-        response.setStatusCode(status);
+        // sse 요청은 처리 안함
+        if (selectedContentType != null && selectedContentType.toString().contains("text/event-stream"))  {
+            return body;
+        }
+
+        if (body != null) {
+            HttpStatus status = body.httpStatus();
+            response.setStatusCode(status);
+        }
 
         return body;
     }
