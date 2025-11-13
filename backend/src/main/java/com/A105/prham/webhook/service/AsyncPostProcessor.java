@@ -1,6 +1,5 @@
 package com.A105.prham.webhook.service;
 
-// ✨ 필요한 임포트 추가
 import com.A105.prham.classification.dto.JobPostingParseResponseDto;
 import com.A105.prham.classification.dto.LlmClassificationResult;
 import com.A105.prham.classification.service.JobPostingParseService;
@@ -86,10 +85,9 @@ public class AsyncPostProcessor {
 						createIndividualJobPost(post, jobPosting, result);
 					}
 
-					// 원본 post는 저장 안함
 					post.updateClassificationResult(
 						cleanedText,
-						"채용 공고 모음 파싱 완료",
+						result.getTitle(),
 						result.getMainCategory(),
 						result.getSubCategory(),
 						null,
