@@ -46,6 +46,7 @@ public class AsyncPostProcessor {
 	private final NotificationService notificationService;
 
 	private static final DateTimeFormatter ISO_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+	private final MarkdownFormatterService markdownFormatterService;
 
 	@Async
 	@TransactionalEventListener
@@ -131,9 +132,11 @@ public class AsyncPostProcessor {
 			campusList = String.join(",", result.getCampusList());
 		}
 
+		String markdownText = markdownFormatterService.formatForMarkdown(post.getCleanedText());
+
 		//분류 결과 업데이트
 		post.updateClassificationResult(
-			post.getCleanedText(),
+			markdownText,
 			result.getTitle(),
 			result.getMainCategory(),
 			result.getSubCategory(),
