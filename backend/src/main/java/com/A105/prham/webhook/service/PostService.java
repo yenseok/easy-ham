@@ -134,6 +134,10 @@ public class PostService {
 			.collect(Collectors.toList());
 	}
 
+	public int DeletePostByPostId(String postId){
+		return postRepository.deleteByPostId(postId);
+	}
+
 
 	// 사용자가 속한 채널 ID 목록 추출
 	private List<String> getUserAllowedChannels(User user, String mmUserId) {
