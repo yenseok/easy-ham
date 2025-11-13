@@ -64,4 +64,10 @@ export const API_ENDPOINTS = {
       remove: (keywordId: number) => `/notifications/keywords/${keywordId}`,
     },
   },
+
+  // SSE 스트림 엔드포인트
+  sse: {
+    posts: "/posts/stream",
+    notifications: "/notifications/stream",
+  },
 } as const;

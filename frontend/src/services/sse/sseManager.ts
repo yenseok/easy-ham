@@ -8,6 +8,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { useSSEStore } from "@/stores/useSSEStore";
 import { useSSEPostStore } from "@/stores/useSSEPostStore";
 import { useNotificationStore } from "@/stores/useNotificationStore";
+import { API_ENDPOINTS } from "@/constants/api";
 import type { SSEError, NewPostEvent, NotificationEvent } from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
@@ -91,7 +92,7 @@ class SSEManager {
       return;
     }
 
-    const url = `${API_BASE_URL}/posts/stream`;
+    const url = `${API_BASE_URL}${API_ENDPOINTS.sse.posts}`;
     const sseStore = useSSEStore.getState();
 
     // 이미 연결 중이거나 연결되어 있으면 무시
@@ -148,7 +149,7 @@ class SSEManager {
       return;
     }
 
-    const url = `${API_BASE_URL}/notifications/stream`;
+    const url = `${API_BASE_URL}${API_ENDPOINTS.sse.notifications}`;
     const sseStore = useSSEStore.getState();
 
     // 이미 연결 중이거나 연결되어 있으면 무시
