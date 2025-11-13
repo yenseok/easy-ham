@@ -20,11 +20,16 @@ import com.A105.prham.webhook.entity.Post;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +50,7 @@ public class NotificationService {
     private final Long TIME_OUT = 60L * 60L * 1000L;
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final TaskScheduler taskScheduler;
 
     @Transactional
     public void addKeyword(User user, KeywordCreateRequest keywordCreateRequest) {
@@ -205,6 +211,47 @@ public class NotificationService {
                 send(user, data, NotificationType.KEYWORD_MATCHING.name().toLowerCase());
             }
         }
+    }
 
+    public void scheduleDeadlineNotification(Post post){
+
+        // 데드라인 존재 여부 검사
+        if(post.getDeadline() == null) {
+            log.debug("Deadline이 없는 공지. Post Id : {}", post.getId());
+            return; //early return
+        }
+
+        // 유저 전체 조회
+        List<User> users = userRepository.findAll();
+
+        for(User user : users){
+            scheduledNotification(user, post);
+        }
+    }
+
+    private void scheduledNotification(User user, Post post){
+        Integer hoursBefore = notificationSettingRepository.findByUser(user).getDeadlineAlertHours();
+
+        String deadline = post.getDeadline();
+        LocalDateTime parsedDeadline = LocalDateTime.parse(deadline);
+        LocalDateTime notificationTime = parsedDeadline.minusHours(hoursBefore);
+
+        if(notificationTime.isBefore(LocalDateTime.now())) {
+            return;
+        }
+
+        Instant instant = notificationTime.atZone(ZoneId.systemDefault()).toInstant();
+        taskScheduler.schedule(() -> sendDeadlineNotification(user, post), instant);
+        log.info("알림 예약 완료. Post Id : {}, User Id: {}, 예약 시간: {}", post.getId(), user.getId(), instant);
+    }
+
+    private void sendDeadlineNotification(User user, Post post){
+        Document data = new Document()
+                .append("notice_id", post.getId())
+                .append("title", post.getTitle())
+                .append("deadline", post.getDeadline())
+                .append("hours_left", notificationSettingRepository.findByUser(user).getDeadlineAlertHours())
+                .append("created_at", LocalDateTime.now());
+        send(user, data, NotificationType.DEADLINE_APPROACHING.name().toLowerCase());
     }
 }
