@@ -42,8 +42,6 @@ public class AuthController {
     @Value("${ssafy.sso.redirect-uri}")
     private String redirectUri;
 
-    @Value("${ssafy.sso.frontend-login-url}")
-    private String frontendLoginUrl;
 
     private final SsoAuthService ssoAuthService;
     private final UserService userService;
