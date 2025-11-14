@@ -43,13 +43,8 @@ public class PostProcessorService {
 		List<FileInfo> files = fetchFiles(post.getFileIds(), post.getPostId());
 		int fileCount = (files != null) ? files.size() : 0;
 
-		// 4️⃣ 원문 링크 생성
-		String link = null;
-		try {
-			link = mattermostService.getPostLink(post.getPostId());
-		} catch (Exception e) {
-			log.warn("⚠️ Failed to get post link for {}: {}", post.getPostId(), e.getMessage());
-		}
+
+
 
 		// 5️⃣ DTO 생성
 		PostIndexDocument doc = PostIndexDocument.builder()
@@ -67,7 +62,7 @@ public class PostProcessorService {
 				.campusList(post.getCampusList())
 				.files(files)
 				.fileCount(fileCount)
-				.originalLink(link)
+				.originalLink(post.getLink())
 				.build();
 
 		log.info("✅ Post processed for indexing: postId={}, fileCount={}, timestamp={}",
