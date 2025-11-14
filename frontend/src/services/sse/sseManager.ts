@@ -43,19 +43,36 @@ class SSEManager {
 
   /**
    * useAuthStore의 토큰 변경 감시 설정
-   * 토큰 변경 시 SSE 재연결
+   * 토큰 변경 시 보호된 라우트에서만 SSE 재연결
    */
   private setupAuthListener(): void {
     // 초기 토큰 저장
     this.previousAccessToken = useAuthStore.getState().accessToken;
 
+    // 보호된 라우트 목록
+    const protectedRoutes = [
+      '/dashboard',
+      '/calendar',
+      '/search',
+      '/mypage',
+      '/overview',
+    ];
+
     // 토큰 변경 감시 - 전체 상태를 받아서 토큰만 확인
     this.authUnsubscribe = useAuthStore.subscribe((state) => {
       const currentToken = state.accessToken;
       if (this.previousAccessToken !== currentToken && currentToken) {
-        console.log("[SSE Manager] Access token changed, reconnecting SSE...");
-        this.reconnectPostStream();
-        this.reconnectNotificationStream();
+        // 현재 경로 확인
+        const currentPath = window.location.pathname;
+
+        // 보호된 라우트에서만 SSE 재연결
+        if (protectedRoutes.includes(currentPath)) {
+          console.log(`[SSE Manager] Access token changed on ${currentPath}, reconnecting SSE...`);
+          this.reconnectPostStream();
+          this.reconnectNotificationStream();
+        } else {
+          console.log(`[SSE Manager] Token changed on ${currentPath}, skipping SSE reconnect`);
+        }
       }
       this.previousAccessToken = currentToken;
     });
