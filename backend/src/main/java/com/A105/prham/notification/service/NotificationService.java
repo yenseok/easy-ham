@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -119,57 +120,161 @@ public class NotificationService {
     }
 
     // SSE 구독 - 트랜잭션 필요 없음!
-    public SseEmitter subscribe(User user, String lastEventId) {
-        // 고유 생성 아이디 + emitter 저장
-        SseEmitter sseEmitter = new SseEmitter(TIME_OUT);
-        String emitterId = user.getId() + "_" + UUID.randomUUID().toString();
-        emitters.put(emitterId, sseEmitter);
+    // public SseEmitter subscribe(User user, String lastEventId) {
+    //     // 고유 생성 아이디 + emitter 저장
+    //     SseEmitter sseEmitter = new SseEmitter(TIME_OUT);
+    //     String emitterId = user.getId() + "_" + UUID.randomUUID().toString();
+    //     emitters.put(emitterId, sseEmitter);
+    //
+    //     // 시간 초과 or 비동기 요청 불가 시 해당 아이디의 emitter 삭제
+    //     sseEmitter.onCompletion(() -> emitters.remove(emitterId));
+    //     sseEmitter.onTimeout(() -> emitters.remove(emitterId));
+    //     sseEmitter.onError((e) -> emitters.remove(emitterId));
+    //
+    //     // 503 오류 방지용 더미 전송
+    //     try {
+    //         sseEmitter.send(SseEmitter.event()
+    //             .name("connected")
+    //             .data("Event sTream created. userId: " + user.getId()));
+    //     } catch (Exception e) {
+    //         emitters.remove(emitterId);
+    //         //예외 안던지고 제거
+    //         throw new RuntimeException("SSE connection failed", e);
+    //     }
+    //     // sentToClient(sseEmitter, emitterId, "connected","Event Stream Created. User Id : " + user.getId());
+    //
+    //     if(!lastEventId.isEmpty()){
+    //         Map<String, Notification> events = findAllEventCacheByUserId(user.getId().toString());
+    //         // events.entrySet().stream()
+    //         //         .filter(entry -> lastEventId.compareTo(entry.getKey()) < 0)
+    //         //         .forEach(entry -> {
+    //         //             Notification notification = entry.getValue();
+    //         //             sentToClient(sseEmitter, entry.getKey(), notification.getEventType() ,entry.getValue());
+    //         //         });
+    //         events.entrySet().stream()
+    //             .filter(entry -> lastEventId.compareTo(entry.getKey()) < 0)
+    //             .forEach(entry -> {
+    //                 Notification notification = entry.getValue();
+    //                 try {
+    //                     sseEmitter.send(SseEmitter.event()
+    //                         .id(entry.getKey())
+    //                         .name(notification.getEventType())
+    //                         .data(notification.getEventData()));
+    //                 } catch (Exception e) {
+    //                     log.error("notification sse 캐시 이벤트 전송 실패: {}", e.getMessage());
+    //                 }
+    //             });
+    //     }
+    //
+    //     return sseEmitter;
+    // }
 
-        // 시간 초과 or 비동기 요청 불가 시 해당 아이디의 emitter 삭제
-        sseEmitter.onCompletion(() -> emitters.remove(emitterId));
-        sseEmitter.onTimeout(() -> emitters.remove(emitterId));
-        sseEmitter.onError((e) -> emitters.remove(emitterId));
+    // SSE 구독 - 트랜잭션 필요 없음!
+    public SseEmitter subscribe(User user, String lastEventId) {
+        String userId = user.getId().toString();
+
+        // 기존 연결이 있으면 제거 (중복 연결 방지)
+        SseEmitter oldEmitter = emitters.remove(userId);
+        if (oldEmitter != null) {
+            try {
+                oldEmitter.complete();
+            } catch (Exception e) {
+                log.warn("기존 emitter 종료 중 오류 (무시 가능): {}", e.getMessage());
+            }
+        }
+
+        // 새 emitter 생성 및 저장
+        SseEmitter sseEmitter = new SseEmitter(TIME_OUT);
+        emitters.put(userId, sseEmitter);
+
+        // 콜백 핸들러 등록
+        sseEmitter.onCompletion(() -> {
+            log.info("🔌 SSE connection completed for userId: {}", userId);
+            emitters.remove(userId);
+        });
+
+        sseEmitter.onTimeout(() -> {
+            log.info(" SSE connection timeout for userId: {}", userId);
+            emitters.remove(userId);
+            try {
+                sseEmitter.complete();
+            } catch (Exception e) {
+                log.warn("Emitter 완료 처리 중 오류: {}", e.getMessage());
+            }
+        });
+
+        sseEmitter.onError((e) -> {
+            log.warn(" SSE connection error for userId: {}", userId, e);
+            emitters.remove(userId);
+        });
 
         // 503 오류 방지용 더미 전송
         try {
             sseEmitter.send(SseEmitter.event()
                 .name("connected")
-                .data("Event sTream created. userId: " + user.getId()));
-        } catch (Exception e) {
-            emitters.remove(emitterId);
-            //예외 안던지고 제거
-            throw new RuntimeException("SSE connection failed", e);
+                .data("Event Stream created. userId: " + userId));
+        } catch (IOException e) {
+            log.error(" Initial SSE event send failed for userId: {}", userId, e);
+            emitters.remove(userId);
+            throw new CustomException(ErrorCode.SSE_DATA_SEND_ERROR);
         }
-        // sentToClient(sseEmitter, emitterId, "connected","Event Stream Created. User Id : " + user.getId());
 
-        if(!lastEventId.isEmpty()){
-            Map<String, Notification> events = findAllEventCacheByUserId(user.getId().toString());
-            // events.entrySet().stream()
-            //         .filter(entry -> lastEventId.compareTo(entry.getKey()) < 0)
-            //         .forEach(entry -> {
-            //             Notification notification = entry.getValue();
-            //             sentToClient(sseEmitter, entry.getKey(), notification.getEventType() ,entry.getValue());
-            //         });
-            events.entrySet().stream()
-                .filter(entry -> lastEventId.compareTo(entry.getKey()) < 0)
-                .forEach(entry -> {
-                    Notification notification = entry.getValue();
-                    try {
-                        sseEmitter.send(SseEmitter.event()
-                            .id(entry.getKey())
-                            .name(notification.getEventType())
-                            .data(notification.getEventData()));
-                    } catch (Exception e) {
-                        log.error("notification sse 캐시 이벤트 전송 실패: {}", e.getMessage());
-                    }
-                });
+        // lastEventId가 있으면 미수신 이벤트 재전송
+        if (lastEventId != null && !lastEventId.isEmpty()) {
+            sendMissedEvents(sseEmitter, userId, lastEventId);
         }
 
         return sseEmitter;
     }
 
+    // 미수신 이벤트 재전송
+    private void sendMissedEvents(SseEmitter emitter, String userId, String lastEventId) {
+        try {
+            // MongoDB에서 직접 조회
+            List<Notification> missedNotifications = notificationRepository
+                .findByUserIdAndCreatedAtAfter(
+                    Long.parseLong(userId),
+                    parseEventIdToDateTime(lastEventId)
+                )
+                .stream()
+                .sorted((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()))
+                .toList();
+
+            for (Notification notification : missedNotifications) {
+                try {
+                    emitter.send(SseEmitter.event()
+                        .id(notification.getId())
+                        .name(notification.getEventType())
+                        .data(notification.getEventData()));
+                } catch (IOException e) {
+                    log.error(" 미수신 이벤트 전송 실패 - userId: {}, notificationId: {}",
+                        userId, notification.getId(), e);
+                    throw new RuntimeException(e);
+                }
+            }
+
+        } catch (Exception e) {
+            log.error(" 미수신 이벤트 재전송 중 오류 발생 for userId: {}", userId, e);
+        }
+    }
+
+    private LocalDateTime parseEventIdToDateTime(String eventId) {
+        try {
+            // MongoDB ObjectId에서 timestamp 추출
+            return LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(Long.parseLong(eventId.substring(0, 8), 16) * 1000),
+                ZoneId.systemDefault()
+            );
+        } catch (Exception e) {
+            log.warn("EventId 파싱 실패, 1시간 전으로 대체: {}", eventId);
+            return LocalDateTime.now().minusHours(1);
+        }
+    }
+
     // SSE 전송 - MongoDB만 저장,
     public void send(User receiver, Document eventData, String type){
+        String userId = receiver.getId().toString();
+
         try {
             Notification notification = new Notification(
                 null, // MongoDB에서 자동 생성
@@ -181,8 +286,10 @@ public class NotificationService {
             );
             notificationRepository.save(notification);
 
-            Map<String,SseEmitter> sseEmitters = findAllEmitterByUserId(receiver.getId().toString());
-            if(sseEmitters.isEmpty()) {
+            // Map<String,SseEmitter> sseEmitters = findAllEmitterByUserId(receiver.getId().toString());
+            //userId로 emitter 직접 조회
+            SseEmitter emitter = emitters.get(userId);
+            if (emitter == null) {
                 return;
             }
             // sseEmitters.forEach((key, emitter) -> {
@@ -190,19 +297,16 @@ public class NotificationService {
             //     sentToClient(emitter, key, notification.getEventType(), notification.getEventData());
             // });
             //sendToClient 대신 직접 send
-            sseEmitters.forEach((key, emitter) -> {
-                eventCache.put(key, notification);
+            try {
+                emitter.send(SseEmitter.event()
+                    .id(notification.getId()) // MongoDB의 알림 ID 사용
+                    .name(notification.getEventType())
+                    .data(notification.getEventData()));
 
-                try {
-                    emitter.send(SseEmitter.event()
-                        .id(key)
-                        .name(notification.getEventType())
-                        .data(notification.getEventData()));
-                }catch (Exception e) {
-                    emitters.remove(key);
-                    log.error("❌ SSE 알림 전송 실패 - Emitter ID: {}, Error: {}", key, e.getMessage());
-                }
-            });
+            } catch (IOException e) {
+                emitters.remove(userId);
+                // Broken pipe는 정상적인 클라이언트 종료일 수 있으므로 예외 던지지 않음
+            }
         } catch (Exception e) {
             log.error("알림 전송 중 예외 발생 userId: {}, type:{}", receiver.getId(), type);
         }
