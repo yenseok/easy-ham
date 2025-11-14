@@ -8,9 +8,7 @@ import com.A105.prham.notification.NotificationRepository;
 import com.A105.prham.notification.NotificationType;
 import com.A105.prham.notification.dto.request.KeywordCreateRequest;
 import com.A105.prham.notification.dto.request.NotificationSettingUpdateRequest;
-import com.A105.prham.notification.dto.response.KeywordDto;
-import com.A105.prham.notification.dto.response.KeywordListGetResponse;
-import com.A105.prham.notification.dto.response.NotificationSettingGetResponse;
+import com.A105.prham.notification.dto.response.*;
 import com.A105.prham.notification.entity.Notification;
 import com.A105.prham.notification_setting.entity.NotificationSetting;
 import com.A105.prham.notification_setting.repository.NotificationSettingRepository;
@@ -21,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -37,9 +36,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-//여기 Transactional 땜
 public class NotificationService {
-
     private final KeywordRepository keywordRepository;
     private final NotificationSettingRepository notificationSettingRepository;
     private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
@@ -85,7 +82,6 @@ public class NotificationService {
 
     @Transactional
     public void createNotificationSetting(User user){
-
         // 유효성 검사
         if(notificationSettingRepository.findByUser(user) != null){
             throw new CustomException(ErrorCode.DUPLICATED_NOTIFICATION_SETTING);
@@ -124,7 +120,6 @@ public class NotificationService {
 
     // SSE 구독 - 트랜잭션 필요 없음!
     public SseEmitter subscribe(User user, String lastEventId) {
-
         // 고유 생성 아이디 + emitter 저장
         SseEmitter sseEmitter = new SseEmitter(TIME_OUT);
         String emitterId = user.getId() + "_" + UUID.randomUUID().toString();
@@ -246,6 +241,7 @@ public class NotificationService {
 
     // 🎯 키워드 매칭 알림 - N+1 완전 해결!
     // 한 번의 트랜잭션에서 필요한 데이터를 모두 조회하고, 비즈니스 로직은 밖에서 처리
+    @Async
     public void sendKeywordMatchingNotification(Post post){
         // 1️⃣ 짧은 트랜잭션으로 유저와 키워드를 한 번에 조회 (Fetch Join)
         List<User> usersWithKeywords = fetchUsersWithKeywords();
@@ -288,7 +284,6 @@ public class NotificationService {
         return userRepository.findUsersWithKeywordsFetch();
     }
 
-
     // 🎯 데드라인 알림 스케줄링 - N+1 완전 해결 + Null 체크
     public void scheduleDeadlineNotification(Post post){
         // 데드라인 존재 여부 검사
@@ -296,18 +291,17 @@ public class NotificationService {
             log.debug("Deadline이 없는 공지. Post Id : {}", post.getId());
             return;
         }
+    // 1️⃣ 짧은 트랜잭션으로 유저와 알림 설정을 한 번에 조회 (Fetch Join)
+    List<User> usersWithSettings = fetchUsersWithNotificationSettings();
 
-        // 1️⃣ 짧은 트랜잭션으로 유저와 알림 설정을 한 번에 조회 (Fetch Join)
-        List<User> usersWithSettings = fetchUsersWithNotificationSettings();
+    // 2️⃣ 트랜잭션 밖에서 스케줄링
+    String deadline = post.getDeadline();
+    LocalDateTime parsedDeadline = LocalDateTime.parse(deadline);
 
-        // 2️⃣ 트랜잭션 밖에서 스케줄링
-        String deadline = post.getDeadline();
-        LocalDateTime parsedDeadline = LocalDateTime.parse(deadline);
-
-        for(User user : usersWithSettings){
-            try {
+    for(User user : usersWithSettings){
+        try {
                 // Fetch Join으로 이미 로드된 설정 사용 (추가 쿼리 발생 안 함!)
-                NotificationSetting setting = user.getNotificationSetting();
+            NotificationSetting setting = user.getNotificationSetting();
 
                 // Null 체크 추가 (부하 테스트 안정화)
                 Integer hoursBefore;
@@ -330,11 +324,27 @@ public class NotificationService {
                     post.getId(), user.getId(), instant);
 
             } catch (Exception e) {
-                // 한 사용자 실패해도 다른 사용자는 계속 처리
-            }
+            // 한 사용자 실패해도 다른 사용자는 계속 처리
+        }
         }
     }
 
+    public NotificationListGetResponse getNotificationList(User user){
+            List<Notification> notificationList = notificationRepository.findByUserId(user.getId());
+            List<NotificationDto> notificationDtoList = notificationList.stream()
+                    .map(notification -> NotificationDto.builder()
+                            .id(notification.getId())
+                            .eventType(notification.getEventType())
+                            .eventData(notification.getEventData())
+                            .createdAt(notification.getCreatedAt())
+                            .isRead(notification.getIsRead())
+                            .build())
+                    .toList();
+            return NotificationListGetResponse.builder()
+                    .notificationList(notificationDtoList)
+                    .build();
+
+    }
     // 🎯 한 번의 쿼리로 유저와 알림 설정을 함께 조회 (N+1 해결)
     @Transactional(readOnly = true)
     protected List<User> fetchUsersWithNotificationSettings() {
@@ -358,6 +368,5 @@ public class NotificationService {
         } catch (Exception e) {
             //예외 안던짐
         }
-
     }
 }
