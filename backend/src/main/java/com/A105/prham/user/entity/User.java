@@ -4,6 +4,7 @@ import com.A105.prham.auth.entity.RefreshToken;
 import com.A105.prham.campus.entity.Campus;
 import com.A105.prham.common.domain.BaseTimeEntity;
 import com.A105.prham.keyword.Keyword;
+import com.A105.prham.notification_setting.entity.NotificationSetting;
 import com.A105.prham.user_notice.entity.UserNotice;
 import com.A105.prham.user_notice_like.entity.UserNoticeLike;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -71,9 +72,13 @@ public class User extends BaseTimeEntity {
     @OneToMany(mappedBy = "user", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<UserNoticeLike> userNoticeLikes = new ArrayList<>();
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Keyword> keywords = new ArrayList<>();
+
+    // 알림 설정과의 관계 (Fetch Join을 위해 필요)
+    @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
+    private NotificationSetting notificationSetting;
 
     @Builder
     public User(String ssoSubId, String name, Integer generation, Boolean exited ,Integer classroom, String email, Campus campus) {

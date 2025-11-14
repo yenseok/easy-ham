@@ -1,5 +1,7 @@
 package com.A105.prham.auth.controller;
 
+import java.net.URI;
+import java.util.Arrays;
 import java.util.Map;
 
 import com.A105.prham.auth.dto.request.RefreshTokenRequest;
@@ -19,8 +21,13 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
+import org.springframework.core.env.Environment;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,6 +49,7 @@ public class AuthController {
     private final SsoAuthService ssoAuthService;
     private final UserService userService;
     private final JwtUtils jwtUtils;
+
 
     @GetMapping("/sso/login-url")
     public ApiResponseDto<String> getURL() {
@@ -77,6 +85,7 @@ public class AuthController {
 
                 User user = userService.findBySsoSubId(ssoSubId);
                 loginResponse.setUserId(user.getId());
+
                 return ApiResponseDto.success(SuccessCode.LOGIN_SUCCESS, loginResponse);
             } catch (Exception e) {
                 // 신규 가입 필요
@@ -155,10 +164,11 @@ public class AuthController {
     private Cookie createCookie(String name, String value, String path, int maxAge) {
         Cookie cookie = new Cookie(name, value);
         cookie.setHttpOnly(true);
-        cookie.setSecure(true);
+        cookie.setSecure(true); //배포용
+        // cookie.setSecure(false); //로컬용
         cookie.setPath(path);
         cookie.setMaxAge(maxAge);
-        cookie.setAttribute("SameSite", "Lax");
+        cookie.setAttribute("SameSite", "None");
         return cookie;
     }
 
@@ -174,4 +184,6 @@ public class AuthController {
         refreshTokenCookie.setPath("/api/v1/auth/refresh");
         response.addCookie(refreshTokenCookie);
     }
+
+
 }

@@ -5,6 +5,7 @@ import com.A105.prham.common.response.SuccessCode;
 import com.A105.prham.notification.dto.request.KeywordCreateRequest;
 import com.A105.prham.notification.dto.request.NotificationSettingUpdateRequest;
 import com.A105.prham.notification.dto.response.KeywordListGetResponse;
+import com.A105.prham.notification.dto.response.NotificationListGetResponse;
 import com.A105.prham.notification.dto.response.NotificationSettingGetResponse;
 import com.A105.prham.notification.service.NotificationService;
 import com.A105.prham.user.entity.User;
@@ -60,5 +61,10 @@ public class NotificationController {
                                               @RequestHeader(value = "Last-Event-ID", required = false, defaultValue = "")
                                               String lastEventId) {
         return notificationService.subscribe(user, lastEventId);
+    }
+
+    @GetMapping
+    public ApiResponseDto<NotificationListGetResponse> getNotificationList(@AuthenticationPrincipal User user) {
+        return ApiResponseDto.success(SuccessCode.NOTIFICATION_LIST_GET_SUCCESS, notificationService.getNotificationList(user));
     }
 }

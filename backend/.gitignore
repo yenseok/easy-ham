@@ -9,11 +9,12 @@ build/
 .properties
 backend/src/main/resources/application-local.properties
 backend/src/main/resources/application.properties
-
+backend/docker-compose.yml
 /src/main/resources/application-local.properties
 /src/main/resources/application.properties
 /src/main/resources/application-prod.properties
-
+plugin/prham-spring-notifier-plugin/
+plugin/prham-spring-notifier-plugin.tar.gz
 ### STS ###
 .apt_generated
 .classpath
