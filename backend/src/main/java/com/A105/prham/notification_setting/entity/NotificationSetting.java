@@ -9,7 +9,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "notification_settings")
+@Table(name = "notification_settings",
+        indexes = @Index(name = "idx_notification_settings_enabled",
+                columnList = "job_alert_enabled, user_id"))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class NotificationSetting extends BaseTimeEntity {
