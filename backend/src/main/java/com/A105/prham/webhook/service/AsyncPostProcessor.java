@@ -218,7 +218,8 @@ public class AsyncPostProcessor {
 
 			// sse 전송
 			ssePostService.sendNewPost(savedPost);
-
+			notificationService.sendKeywordMatchingNotification(savedPost);
+			notificationService.scheduleDeadlineNotification(savedPost);
 
 		} catch (Exception e) {
 			log.error("개별 채용 공고 생성 실패: {}", jobPosting.getCompany(), e);
