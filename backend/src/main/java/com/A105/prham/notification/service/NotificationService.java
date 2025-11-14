@@ -133,18 +133,41 @@ public class NotificationService {
         // 시간 초과 or 비동기 요청 불가 시 해당 아이디의 emitter 삭제
         sseEmitter.onCompletion(() -> emitters.remove(emitterId));
         sseEmitter.onTimeout(() -> emitters.remove(emitterId));
+        sseEmitter.onError((e) -> emitters.remove(emitterId));
 
         // 503 오류 방지용 더미 전송
-        sentToClient(sseEmitter, emitterId, "connected","Event Stream Created. User Id : " + user.getId());
+        try {
+            sseEmitter.send(SseEmitter.event()
+                .name("connected")
+                .data("Event sTream created. userId: " + user.getId()));
+        } catch (Exception e) {
+            emitters.remove(emitterId);
+            //예외 안던지고 제거
+            throw new RuntimeException("SSE connection failed", e);
+        }
+        // sentToClient(sseEmitter, emitterId, "connected","Event Stream Created. User Id : " + user.getId());
 
         if(!lastEventId.isEmpty()){
             Map<String, Notification> events = findAllEventCacheByUserId(user.getId().toString());
+            // events.entrySet().stream()
+            //         .filter(entry -> lastEventId.compareTo(entry.getKey()) < 0)
+            //         .forEach(entry -> {
+            //             Notification notification = entry.getValue();
+            //             sentToClient(sseEmitter, entry.getKey(), notification.getEventType() ,entry.getValue());
+            //         });
             events.entrySet().stream()
-                    .filter(entry -> lastEventId.compareTo(entry.getKey()) < 0)
-                    .forEach(entry -> {
-                        Notification notification = entry.getValue();
-                        sentToClient(sseEmitter, entry.getKey(), notification.getEventType() ,entry.getValue());
-                    });
+                .filter(entry -> lastEventId.compareTo(entry.getKey()) < 0)
+                .forEach(entry -> {
+                    Notification notification = entry.getValue();
+                    try {
+                        sseEmitter.send(SseEmitter.event()
+                            .id(entry.getKey())
+                            .name(notification.getEventType())
+                            .data(notification.getEventData()));
+                    } catch (Exception e) {
+                        log.error("notification sse 캐시 이벤트 전송 실패: {}", e.getMessage());
+                    }
+                });
         }
 
         return sseEmitter;
@@ -163,24 +186,37 @@ public class NotificationService {
         notificationRepository.save(notification);
 
         Map<String,SseEmitter> sseEmitters = findAllEmitterByUserId(receiver.getId().toString());
+        // sseEmitters.forEach((key, emitter) -> {
+        //     eventCache.put(key, notification); // 캐시 저장 (복구용)
+        //     sentToClient(emitter, key, notification.getEventType(), notification.getEventData());
+        // });
+        //sendToClient 대신 직접 send
         sseEmitters.forEach((key, emitter) -> {
-            eventCache.put(key, notification); // 캐시 저장 (복구용)
-            sentToClient(emitter, key, notification.getEventType(), notification.getEventData());
+            eventCache.put(key, notification);
+
+            try {
+                emitter.send(SseEmitter.event()
+                    .id(key)
+                    .name(notification.getEventType())
+                    .data(notification.getEventData()));
+            }catch (Exception e) {
+                emitters.remove(key);
+            }
         });
     }
 
-    private void sentToClient(SseEmitter sseEmitter, String emitterId, String eventType, Object data){
-        try {
-            sseEmitter.send(SseEmitter.event()
-                    .id(emitterId)
-                    .name(eventType)
-                    .data(data));
-        } catch (Exception e) {
-            emitters.remove(emitterId);
-            log.error(e.getMessage(), e);
-            throw new CustomException(ErrorCode.SSE_DATA_SEND_ERROR);
-        }
-    }
+    // private void sentToClient(SseEmitter sseEmitter, String emitterId, String eventType, Object data){
+    //     try {
+    //         sseEmitter.send(SseEmitter.event()
+    //                 .id(emitterId)
+    //                 .name(eventType)
+    //                 .data(data));
+    //     } catch (Exception e) {
+    //         emitters.remove(emitterId);
+    //         log.error(e.getMessage(), e);
+    //         throw new CustomException(ErrorCode.SSE_DATA_SEND_ERROR);
+    //     }
+    // }
 
     private Map<String, Notification> findAllEventCacheByUserId(String userId){
         return eventCache.entrySet().stream()
