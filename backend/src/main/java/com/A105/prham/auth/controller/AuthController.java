@@ -1,5 +1,6 @@
 package com.A105.prham.auth.controller;
 
+import java.net.URI;
 import java.util.Map;
 
 import com.A105.prham.auth.dto.request.RefreshTokenRequest;
@@ -21,6 +22,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
@@ -38,6 +41,13 @@ public class AuthController {
 
     @Value("${ssafy.sso.redirect-uri}")
     private String redirectUri;
+
+    // ⭐ 프론트엔드 URL 주입
+    @Value("${ssafy.sso.frontend-callback-url}")
+    private String frontendCallbackUrl;
+
+    @Value("${ssafy.sso.frontend-login-url}")
+    private String frontendLoginUrl;
 
     private final SsoAuthService ssoAuthService;
     private final UserService userService;
@@ -173,5 +183,84 @@ public class AuthController {
         refreshTokenCookie.setMaxAge(0);
         refreshTokenCookie.setPath("/api/v1/auth/refresh");
         response.addCookie(refreshTokenCookie);
+    }
+
+    /**
+     * 로컬 개발 전용: SSO 콜백을 리다이렉트로 처리
+     * URL: http://localhost:8080/api/v1/auth/sso/callback-local?code=xxx
+     */
+    @Profile("local")
+    @GetMapping("/sso/callback-local")
+    public ResponseEntity<Void> callbackLocal(@RequestParam("code") String code, HttpServletResponse response) {
+        try {
+            log.info("🔵 [로컬] SSO 콜백 처리 시작 - code: {}", code.substring(0, 10) + "...");
+
+            // 1. 액세스 토큰 획득
+            AccessTokenResponse tokenResponse = ssoAuthService.getAccessToken(code);
+            log.info("✅ [로컬] 액세스 토큰 획득 성공");
+
+            // 2. 사용자 정보 조회
+            DetailUserInfoResponse userInfo = ssoAuthService.getFullUserInfo(tokenResponse.getAccessToken());
+            log.info("✅ [로컬] 사용자 정보 조회 성공 - email: {}", userInfo.getEmail());
+
+            // 3. 쿠키 저장 (로컬용 - Secure=false)
+            addLocalTokenCookies(response, tokenResponse);
+            log.info("✅ [로컬] 쿠키 저장 완료");
+
+            // 4. 사용자 확인
+            String ssoSubId = jwtUtils.getUserIdFromToken(tokenResponse.getAccessToken());
+
+            try {
+                User user = userService.findBySsoSubId(ssoSubId);
+                log.info("✅ [로컬] 기존 사용자 로그인 - userId: {}", user.getId());
+
+                // 로컬 프론트엔드로 리다이렉트
+                return ResponseEntity
+                    .status(HttpStatus.FOUND)
+                    .location(URI.create("http://localhost:3000/callback"))
+                    .build();
+
+            } catch (Exception e) {
+                log.warn("⚠️ [로컬] 미등록 사용자");
+
+                // 회원가입 페이지로
+                return ResponseEntity
+                    .status(HttpStatus.FOUND)
+                    .location(URI.create("http://localhost:3000/callback?signup=true"))
+                    .build();
+            }
+
+        } catch (Exception e) {
+            log.error("❌ [로컬] SSO 콜백 처리 실패: {}", e.getMessage(), e);
+
+            return ResponseEntity
+                .status(HttpStatus.FOUND)
+                .location(URI.create("http://localhost:3000/login?error=true"))
+                .build();
+        }
+    }
+
+    /**
+     * 로컬 개발 전용: Secure=false 쿠키 생성
+     */
+    @Profile("local")
+    private void addLocalTokenCookies(HttpServletResponse response, AccessTokenResponse tokenResponse) {
+        // access token cookie (Secure=false)
+        Cookie accessTokenCookie = new Cookie("accessToken", tokenResponse.getAccessToken());
+        accessTokenCookie.setHttpOnly(true);
+        accessTokenCookie.setSecure(false);  // 로컬용: false
+        accessTokenCookie.setPath("/");
+        accessTokenCookie.setMaxAge(60*60);
+        response.addCookie(accessTokenCookie);
+
+        // refresh token cookie (Secure=false)
+        Cookie refreshTokenCookie = new Cookie("refreshToken", tokenResponse.getRefreshToken());
+        refreshTokenCookie.setHttpOnly(true);
+        refreshTokenCookie.setSecure(false);  // 로컬용: false
+        refreshTokenCookie.setPath("/api/v1/auth/refresh");
+        refreshTokenCookie.setMaxAge(60*60*24*7);
+        response.addCookie(refreshTokenCookie);
+
+        log.debug("[로컬] 쿠키 생성 완료 - Secure=false");
     }
 }
