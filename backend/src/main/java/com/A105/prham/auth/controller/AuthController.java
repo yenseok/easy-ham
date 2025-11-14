@@ -50,111 +50,6 @@ public class AuthController {
     private final UserService userService;
     private final JwtUtils jwtUtils;
 
-    // ⭐ 환경별 프론트엔드 URL
-    @Value("${frontend.callback-url:http://localhost:3000/callback}")
-    private String frontendCallbackUrl;
-
-    // ⭐ 로컬 프로필 확인
-    @Autowired
-    private Environment environment;
-
-    private boolean isLocalProfile() {
-        String[] profiles = environment.getActiveProfiles();
-        return Arrays.asList(profiles).contains("local");
-    }
-
-    // ⭐ 반환 타입 변경: ResponseEntity<Object>
-    @GetMapping("/sso/callback")
-    public ResponseEntity<Object> callback(@RequestParam("code") String code, HttpServletResponse response) {
-        try {
-            log.info("🔵 SSO 콜백 처리 시작 - code: {}", code.substring(0, Math.min(10, code.length())) + "...");
-
-            // 1. 액세스 토큰 획득
-            AccessTokenResponse tokenResponse = ssoAuthService.getAccessToken(code);
-            log.info("✅ 액세스 토큰 획득 성공");
-
-            // 2. 사용자 기본 + 상세 정보 조회
-            DetailUserInfoResponse userInfo = ssoAuthService.getFullUserInfo(tokenResponse.getAccessToken());
-            log.info("✅ 사용자 정보 조회 성공 - email: {}", userInfo.getEmail());
-
-            // token cookie에 저장
-            addTokenCookies(response, tokenResponse);
-            log.info("✅ 쿠키 저장 완료");
-
-            // 3. 로그인 응답 DTO 구성
-            LoginResponse loginResponse = LoginResponse.builder()
-                .token(tokenResponse)
-                .email(userInfo.getEmail())
-                .name(userInfo.getName())
-                .edu(userInfo.getEdu())
-                .entRegn(userInfo.getEntRegn())
-                .build();
-
-            // 토큰에서 SSAFY SSO UUID 추출
-            String ssoSubId = jwtUtils.getUserIdFromToken(tokenResponse.getAccessToken());
-
-            // 4. 이미 가입된 사용자 여부 확인
-            try {
-                User user = userService.findBySsoSubId(ssoSubId);
-                loginResponse.setUserId(user.getId());
-                log.info("✅ 기존 사용자 로그인 - userId: {}", user.getId());
-
-                // ⭐ 프로필에 따라 다르게 응답
-                if (isLocalProfile()) {
-                    // 로컬: 리다이렉트
-                    log.info("🔵 로컬 환경 - 프론트엔드로 리다이렉트: {}", frontendCallbackUrl);
-                    return ResponseEntity
-                        .status(HttpStatus.FOUND)
-                        .location(URI.create(frontendCallbackUrl))
-                        .build();
-                } else {
-                    // 배포: JSON 응답
-                    log.info("🔵 배포 환경 - JSON 응답 반환");
-                    return ResponseEntity.ok(
-                        ApiResponseDto.success(SuccessCode.LOGIN_SUCCESS, loginResponse)
-                    );
-                }
-
-            } catch (Exception e) {
-                // 신규 가입 필요
-                log.warn("⚠️ 미등록 사용자: {}", e.getMessage());
-
-                if (isLocalProfile()) {
-                    // 로컬: 회원가입 페이지로
-                    String signupUrl = frontendCallbackUrl + "?signup=true";
-                    log.info("🔵 로컬 환경 - 회원가입 페이지로 리다이렉트: {}", signupUrl);
-                    return ResponseEntity
-                        .status(HttpStatus.FOUND)
-                        .location(URI.create(signupUrl))
-                        .build();
-                } else {
-                    // 배포: JSON 응답
-                    return ResponseEntity.ok(
-                        ApiResponseDto.success(SuccessCode.NOT_REGISTERED, loginResponse)
-                    );
-                }
-            }
-
-        } catch (Exception e) {
-            log.error("❌ SSO 콜백 처리 실패: {}", e.getMessage(), e);
-
-            if (isLocalProfile()) {
-                // 로컬: 로그인 페이지로
-                String errorUrl = "http://localhost:3000/login?error=true";
-                log.info("🔵 로컬 환경 - 에러 페이지로 리다이렉트: {}", errorUrl);
-                return ResponseEntity
-                    .status(HttpStatus.FOUND)
-                    .location(URI.create(errorUrl))
-                    .build();
-            } else {
-                // 배포: JSON 에러 응답
-                return ResponseEntity
-                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(ApiResponseDto.fail(ErrorCode.INTERNAL_SERVER_ERROR));
-            }
-        }
-    }
-
 
     @GetMapping("/sso/login-url")
     public ApiResponseDto<String> getURL() {
@@ -162,47 +57,47 @@ public class AuthController {
                 "https://project.ssafy.com/oauth/sso-check");
     }
 
-    // @GetMapping("/sso/callback")
-    // public ApiResponseDto<LoginResponse> callback(@RequestParam("code") String code, HttpServletResponse response) {
-    //     try {
-    //         // 1.액세스 토큰 획득
-    //         AccessTokenResponse tokenResponse = ssoAuthService.getAccessToken(code);
-    //
-    //         // 2.사용자 기본 + 상세 정보 조회 (합쳐진 메서드)
-    //         DetailUserInfoResponse userInfo = ssoAuthService.getFullUserInfo(tokenResponse.getAccessToken());
-    //
-    //         // token cookie에 저장
-    //         addTokenCookies(response, tokenResponse);
-    //
-    //         // 3.로그인 응답 DTO 구성
-    //         LoginResponse loginResponse = LoginResponse.builder()
-    //                 .token(tokenResponse)
-    //                 .email(userInfo.getEmail())
-    //                 .name(userInfo.getName())
-    //                 .edu(userInfo.getEdu())
-    //                 .entRegn(userInfo.getEntRegn())
-    //                 .build();
-    //
-    //         // 토큰에서 SSAFY SSO UUID 추출
-    //         String ssoSubId = jwtUtils.getUserIdFromToken(tokenResponse.getAccessToken());
-    //         // 4. 이미 가입된 사용자 여부 확인
-    //         try {
-    //
-    //             User user = userService.findBySsoSubId(ssoSubId);
-    //             loginResponse.setUserId(user.getId());
-    //
-    //             return ApiResponseDto.success(SuccessCode.LOGIN_SUCCESS, loginResponse);
-    //         } catch (Exception e) {
-    //             // 신규 가입 필요
-    //             log.warn("미등록 사용자: {}", e.getMessage());
-    //             return ApiResponseDto.success(SuccessCode.NOT_REGISTERED, loginResponse);
-    //         }
-    //
-    //     } catch (Exception e) {
-    //         log.error("SSO 콜백 처리 실패: {}", e.getMessage(), e);
-    //         return ApiResponseDto.fail(ErrorCode.INTERNAL_SERVER_ERROR);
-    //     }
-    // }
+    @GetMapping("/sso/callback")
+    public ApiResponseDto<LoginResponse> callback(@RequestParam("code") String code, HttpServletResponse response) {
+        try {
+            // 1.액세스 토큰 획득
+            AccessTokenResponse tokenResponse = ssoAuthService.getAccessToken(code);
+
+            // 2.사용자 기본 + 상세 정보 조회 (합쳐진 메서드)
+            DetailUserInfoResponse userInfo = ssoAuthService.getFullUserInfo(tokenResponse.getAccessToken());
+
+            // token cookie에 저장
+            addTokenCookies(response, tokenResponse);
+
+            // 3.로그인 응답 DTO 구성
+            LoginResponse loginResponse = LoginResponse.builder()
+                    .token(tokenResponse)
+                    .email(userInfo.getEmail())
+                    .name(userInfo.getName())
+                    .edu(userInfo.getEdu())
+                    .entRegn(userInfo.getEntRegn())
+                    .build();
+
+            // 토큰에서 SSAFY SSO UUID 추출
+            String ssoSubId = jwtUtils.getUserIdFromToken(tokenResponse.getAccessToken());
+            // 4. 이미 가입된 사용자 여부 확인
+            try {
+
+                User user = userService.findBySsoSubId(ssoSubId);
+                loginResponse.setUserId(user.getId());
+
+                return ApiResponseDto.success(SuccessCode.LOGIN_SUCCESS, loginResponse);
+            } catch (Exception e) {
+                // 신규 가입 필요
+                log.warn("미등록 사용자: {}", e.getMessage());
+                return ApiResponseDto.success(SuccessCode.NOT_REGISTERED, loginResponse);
+            }
+
+        } catch (Exception e) {
+            log.error("SSO 콜백 처리 실패: {}", e.getMessage(), e);
+            return ApiResponseDto.fail(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
 
     // 테스트용 토큰 갱신 API
     @PostMapping("/refresh")
@@ -269,11 +164,11 @@ public class AuthController {
     private Cookie createCookie(String name, String value, String path, int maxAge) {
         Cookie cookie = new Cookie(name, value);
         cookie.setHttpOnly(true);
-        // cookie.setSecure(true);
-        cookie.setSecure(false);
+        cookie.setSecure(true); //배포용
+        // cookie.setSecure(false); //로컬용
         cookie.setPath(path);
         cookie.setMaxAge(maxAge);
-        // cookie.setAttribute("SameSite", "None");
+        cookie.setAttribute("SameSite", "None");
         return cookie;
     }
 
