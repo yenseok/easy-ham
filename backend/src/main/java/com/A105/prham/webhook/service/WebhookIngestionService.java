@@ -7,6 +7,7 @@ import com.A105.prham.mattermost.dto.MattermostTeam;
 import com.A105.prham.mattermost.service.MattermostAdminService;
 import com.A105.prham.messages.service.MattermostService;
 import com.A105.prham.webhook.dto.MattermostWebhookDto;
+import com.A105.prham.webhook.dto.UpdatePostRequest;
 import com.A105.prham.webhook.entity.Post;
 import com.A105.prham.webhook.entity.PostStatus;
 import com.A105.prham.webhook.event.PostReceivedEvent;
@@ -99,5 +100,27 @@ public class WebhookIngestionService {
 		}catch (Exception e) {
 			return null;
 		}
+	}
+
+
+	/**
+	 * Mattermost 웹훅 페이로드를 받아 DB에 PENDING 상태로 저장하고
+	 * 비동기 처리를 위한 이벤트를 발행합니다.
+	 */
+	@Transactional
+	public void updateAndPublish(UpdatePostRequest request) {
+
+		//post 찾기
+		Post post = postRepository.findByPostId(request.getPostId()).orElseThrow(()-> new RuntimeException("존재하지 않는 post 수정 시도"));
+
+		post.setOriginalText(request.getMessage());
+
+		//DB에 저장
+		Post savedPost = postRepository.save(post);
+		log.info("Post changed. DB ID: {}", savedPost.getId());
+
+		// 5. 비동기 처리를 위해 이벤트 발행
+		eventPublisher.publishEvent(new PostReceivedEvent(this, savedPost.getId()));
+		log.info("Published PostReceivedEvent for DB ID: {}", savedPost.getId());
 	}
 }

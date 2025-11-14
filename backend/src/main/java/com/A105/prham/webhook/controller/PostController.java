@@ -5,6 +5,7 @@ import java.util.List;
 import com.A105.prham.common.response.ErrorCode;
 import com.A105.prham.search.service.SearchService;
 import com.A105.prham.webhook.dto.UpdatePostRequest;
+<<<<<<< backend/src/main/java/com/A105/prham/webhook/controller/PostController.java
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -12,7 +13,11 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
+import com.A105.prham.webhook.service.WebhookIngestionService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 import com.A105.prham.common.response.ApiResponseDto;
 import com.A105.prham.common.response.SuccessCode;
 import com.A105.prham.sse.dto.PostNotificationDto;
@@ -29,6 +34,8 @@ import lombok.RequiredArgsConstructor;
 public class PostController {
 
 	private final PostService postService;
+	private final SearchService searchService;
+	private final WebhookIngestionService webhookIngestionService;
 
 	//전체 채용 공고 목록 조회
 	@GetMapping("/jobs")
@@ -73,7 +80,8 @@ public class PostController {
 			if ("post_updated".equals(request.getEventType())) {
 				// 수정 이벤트: DB업데이트 meilisearch에서 업데이트
 				log.info("{} changed",request.getPostId());
-				//TODO 엔티티수정
+				//엔티티수정
+				webhookIngestionService.updateAndPublish(request);
 			} else {
 				log.info("{} deleted",request.getPostId());
 				// 삭제 이벤트: DB삭제, meilisearch에서 삭제
