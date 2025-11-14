@@ -231,28 +231,47 @@ public class NotificationService {
     }
 
     private void scheduledNotification(User user, Post post){
-        Integer hoursBefore = notificationSettingRepository.findByUser(user).getDeadlineAlertHours();
+       try {
+           // Integer hoursBefore = notificationSettingRepository.findByUser(user).getDeadlineAlertHours();
+           NotificationSetting setting = notificationSettingRepository.findByUser(user);
 
-        String deadline = post.getDeadline();
-        LocalDateTime parsedDeadline = LocalDateTime.parse(deadline);
-        LocalDateTime notificationTime = parsedDeadline.minusHours(hoursBefore);
+           Integer hoursBefore;
+           if (setting == null) {
+               hoursBefore = 24;
+           } else {
+               hoursBefore = setting.getDeadlineAlertHours();
+           }
 
-        if(notificationTime.isBefore(LocalDateTime.now())) {
-            return;
-        }
+           String deadline = post.getDeadline();
+           LocalDateTime parsedDeadline = LocalDateTime.parse(deadline);
+           LocalDateTime notificationTime = parsedDeadline.minusHours(hoursBefore);
 
-        Instant instant = notificationTime.atZone(ZoneId.systemDefault()).toInstant();
-        taskScheduler.schedule(() -> sendDeadlineNotification(user, post), instant);
-        log.info("알림 예약 완료. Post Id : {}, User Id: {}, 예약 시간: {}", post.getId(), user.getId(), instant);
+           if(notificationTime.isBefore(LocalDateTime.now())) {
+               return;
+           }
+
+           Instant instant = notificationTime.atZone(ZoneId.systemDefault()).toInstant();
+           taskScheduler.schedule(() -> sendDeadlineNotification(user, post, hoursBefore), instant);
+           log.info("알림 예약 완료. Post Id : {}, User Id: {}, 예약 시간: {}", post.getId(), user.getId(), instant);
+       } catch (Exception e) {
+           // 예외 안던짐
+       }
+
     }
 
-    private void sendDeadlineNotification(User user, Post post){
-        Document data = new Document()
+    private void sendDeadlineNotification(User user, Post post, Integer hoursLeft){
+        try {
+            Document data = new Document()
                 .append("notice_id", post.getId())
                 .append("title", post.getTitle())
                 .append("deadline", post.getDeadline())
-                .append("hours_left", notificationSettingRepository.findByUser(user).getDeadlineAlertHours())
+                // .append("hours_left", notificationSettingRepository.findByUser(user).getDeadlineAlertHours())
+                .append("hours_left", hoursLeft)
                 .append("created_at", LocalDateTime.now());
-        send(user, data, NotificationType.DEADLINE_APPROACHING.name().toLowerCase());
+            send(user, data, NotificationType.DEADLINE_APPROACHING.name().toLowerCase());
+        } catch (Exception e) {
+            //예외 안던짐
+        }
+
     }
 }
