@@ -167,7 +167,9 @@ export default function DashboardPage() {
   }, [allNotices]);
 
   // 채용공고 (실제 API 데이터 사용, 최대 4개)
-  const displayedJobs = jobPosts.slice(0, 4);
+  const displayedJobs = useMemo(() => {
+    return jobPosts?.slice(0, 4) ?? [];
+  }, [jobPosts]);
 
   /**
    * 공지사항 클릭 핸들러 (모달 열기)
