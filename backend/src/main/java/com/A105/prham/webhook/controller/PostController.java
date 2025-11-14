@@ -5,12 +5,14 @@ import java.util.List;
 import com.A105.prham.common.response.ErrorCode;
 import com.A105.prham.search.service.SearchService;
 import com.A105.prham.webhook.dto.UpdatePostRequest;
-import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import com.A105.prham.webhook.service.WebhookIngestionService;
 import org.springframework.web.bind.annotation.*;
-
 import com.A105.prham.common.response.ApiResponseDto;
 import com.A105.prham.common.response.SuccessCode;
 import com.A105.prham.sse.dto.PostNotificationDto;
@@ -28,6 +30,7 @@ public class PostController {
 
 	private final PostService postService;
 	private final SearchService searchService;
+	private final WebhookIngestionService webhookIngestionService;
 
 	//전체 채용 공고 목록 조회
 	@GetMapping("/jobs")
@@ -72,8 +75,10 @@ public class PostController {
 			if ("post_updated".equals(request.getEventType())) {
 				// 수정 이벤트: DB업데이트 meilisearch에서 업데이트
 				log.info("{} changed",request.getPostId());
-				//TODO 엔티티수정
+				//엔티티수정
+				webhookIngestionService.updateAndPublish(request);
 			} else {
+				log.info("{} deleted",request.getPostId());
 				// 삭제 이벤트: DB삭제, meilisearch에서 삭제
 				searchService.deletePost(request.getPostId());
 				int result = postService.DeletePostByPostId(request.getPostId());
@@ -81,7 +86,7 @@ public class PostController {
 					log.error("존재하지 않는 Post를 삭제 시도 하였습니다.");
 					return ApiResponseDto.fail(ErrorCode.BAD_REQUEST);
 				}
-				log.info("{} deleted",request.getPostId());
+
 			}
 
 			return ApiResponseDto.success(SuccessCode.SUCCESS,"업데이트 성공");
