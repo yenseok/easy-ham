@@ -9,12 +9,14 @@ import { useSSEStore } from "@/stores/useSSEStore";
 import { useSSEPostStore } from "@/stores/useSSEPostStore";
 import { useNotificationStore } from "@/stores/useNotificationStore";
 import { API_ENDPOINTS } from "@/constants/api";
+import { formatRelativeTime } from "@/utils/timeUtils";
 import type {
   SSEError,
   NewPostEvent,
   NotificationEvent,
   KeywordMatchingEvent,
   DeadlineApproachingEvent,
+  JobRecommendationEvent,
 } from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
@@ -205,12 +207,16 @@ class SSEManager {
         const keywords = Array.isArray(keywordEvent.match_keyword)
           ? keywordEvent.match_keyword.join(", ")
           : "Unknown keywords";
+        const now = new Date();
 
         useNotificationStore.getState().addSSENotification?.({
           id: keywordEvent.notice_id,
           type: "info",
-          title: keywordEvent.title,
-          content: `Matched keywords: ${keywords}`,
+          title: `구독 키워드: ${keywordEvent.title}`,
+          content: undefined,
+          badge: keywords,
+          time: now.toISOString(),
+          relativeTime: formatRelativeTime(now.toISOString()),
           read: false,
         });
       }
@@ -228,12 +234,35 @@ class SSEManager {
           deadlineEvent.hours_left < 1
             ? "1시간 이내"
             : `${Math.round(deadlineEvent.hours_left)}시간`;
+        const now = new Date();
 
         useNotificationStore.getState().addSSENotification?.({
           id: String(deadlineEvent.notice_id),
           type: notificationType,
-          title: deadlineEvent.title,
-          content: `마감 ${hoursText} 남음 (${deadlineEvent.deadline})`,
+          title: `마감 임박: ${deadlineEvent.title}`,
+          content: undefined,
+          badge: hoursText,
+          time: now.toISOString(),
+          relativeTime: formatRelativeTime(now.toISOString()),
+          read: false,
+        });
+      }
+      // job_recommendation 이벤트 처리
+      else if ("matched_jobs" in notificationData) {
+        const jobEvent = notificationData as JobRecommendationEvent;
+        const jobs = Array.isArray(jobEvent.matched_jobs)
+          ? jobEvent.matched_jobs.join(", ")
+          : "Unknown jobs";
+        const now = new Date();
+
+        useNotificationStore.getState().addSSENotification?.({
+          id: jobEvent.notice_id,
+          type: "success",
+          title: `관심 직무: ${jobEvent.title}`,
+          content: undefined,
+          badge: jobs,
+          time: now.toISOString(),
+          relativeTime: formatRelativeTime(now.toISOString()),
           read: false,
         });
       }
@@ -247,11 +276,13 @@ class SSEManager {
     });
 
     try {
-      // notifications/stream: handshake 이벤트는 "connected", 데이터 이벤트는 "keyword_matching"과 "deadline_approaching"
+      // notifications/stream: handshake 이벤트는 "connected"
+      // 데이터 이벤트: "keyword_matching", "deadline_approaching", "job_recommendation"
       notificationStreamClient.connect(url, "keyword_matching", "connected");
 
       // 추가 이벤트 타입 리스닝 (같은 연결에서)
       notificationStreamClient.addEventListenerForType("deadline_approaching");
+      notificationStreamClient.addEventListenerForType("job_recommendation");
 
       sseStore.setNotificationStreamStatus("connected");
       this.notificationStreamRetries = 0;

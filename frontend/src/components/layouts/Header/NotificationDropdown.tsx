@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Bell, AlertCircle, CheckCircle, Info, Settings } from "lucide-react";
+import { formatRelativeTime } from "@/utils/timeUtils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -176,13 +177,21 @@ export const NotificationDropdown = () => {
                   {getNotificationIcon(notif.type)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">
-                    {notif.title}
+                  {/* 제목 + 배지 */}
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-medium text-gray-900">
+                      {notif.title}
+                    </p>
+                    {notif.badge && (
+                      <span className="flex-shrink-0 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded whitespace-nowrap">
+                        {notif.badge}
+                      </span>
+                    )}
+                  </div>
+                  {/* 상대 시간 */}
+                  <p className="text-xs text-gray-500 mt-1">
+                    {notif.relativeTime || formatRelativeTime(notif.time)}
                   </p>
-                  {notif.content && (
-                    <p className="text-xs text-gray-600 mt-1">{notif.content}</p>
-                  )}
-                  <p className="text-xs text-gray-500 mt-1">{notif.time}</p>
                 </div>
                 {!notif.read && (
                   <div className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0 mt-1" />

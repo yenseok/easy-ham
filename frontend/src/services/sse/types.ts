@@ -72,10 +72,27 @@ export interface DeadlineApproachingEvent {
 }
 
 /**
- * SSE Notification 이벤트 Union 타입
- * keyword_matching과 deadline_approaching을 모두 지원
+ * job_recommendation 이벤트 스키마
+ * /api/v1/notifications/stream에서 수신
+ * 사용자의 희망직무와 매칭되는 채용공고 알림
  */
-export type NotificationEvent = KeywordMatchingEvent | DeadlineApproachingEvent;
+export interface JobRecommendationEvent {
+  notice_id: string;
+  title: string;
+  company: string;
+  matched_jobs: string[];
+  deadline?: string; // ISO 8601 형식 (선택사항)
+  [key: string]: unknown;
+}
+
+/**
+ * SSE Notification 이벤트 Union 타입
+ * keyword_matching, deadline_approaching, job_recommendation을 지원
+ */
+export type NotificationEvent =
+  | KeywordMatchingEvent
+  | DeadlineApproachingEvent
+  | JobRecommendationEvent;
 
 /**
  * SSE 에러 상태
