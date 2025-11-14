@@ -465,10 +465,10 @@ public class NotificationService {
                 .append("created_at", LocalDateTime.now());
             send(user, data, NotificationType.DEADLINE_APPROACHING.name().toLowerCase());
 
-            String link = null;
+
 
             String message = String.format("이 공지사항이 곧 마감입니다 확인하세요! [%s]\n\n [%s]", post.getTitle()
-            ,link);
+            ,post.getLink());
             AlarmEvent alarmEvent = new AlarmEvent(user.getEmail(), message);
             eventPublisher.publishEvent(alarmEvent);
 
