@@ -65,11 +65,17 @@ class SSEManager {
         // 현재 경로 확인
         const currentPath = window.location.pathname;
 
-        // 보호된 라우트에서만 SSE 재연결
+        // 보호된 라우트에서만 notifications/stream 재연결
         if (protectedRoutes.includes(currentPath)) {
-          console.log(`[SSE Manager] Access token changed on ${currentPath}, reconnecting SSE...`);
-          this.reconnectPostStream();
+          console.log(`[SSE Manager] Access token changed on ${currentPath}, reconnecting notifications/stream...`);
           this.reconnectNotificationStream();
+
+          // Dashboard에서는 posts/stream도 재연결
+          // (DashboardPage의 useEffect는 의존성 배열이 비어 1번만 실행되므로)
+          if (currentPath === '/dashboard') {
+            console.log('[SSE Manager] On dashboard, also reconnecting posts/stream...');
+            this.reconnectPostStream();
+          }
         } else {
           console.log(`[SSE Manager] Token changed on ${currentPath}, skipping SSE reconnect`);
         }
