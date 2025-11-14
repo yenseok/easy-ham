@@ -12,8 +12,11 @@ import type { JobPostsResponse, JobPostItem } from "@/types/api";
  * @returns 사용자의 관심 포지션에 맞춘 채용공고 목록
  */
 export const getPersonalizedJobs = async (): Promise<JobPostItem[]> => {
-  const response = await apiClient.get<JobPostsResponse>("/v1/posts/jobs/me");
-  return response.data;
+  console.log('[Jobs API] Calling GET /posts/jobs/me');
+  const response = await apiClient.get<JobPostsResponse>("/posts/jobs/me");
+  console.log('[Jobs API] Response:', response);
+  console.log('[Jobs API] Jobs data:', response.data.data);
+  return response.data.data;
 };
 
 export const jobsApi = {
