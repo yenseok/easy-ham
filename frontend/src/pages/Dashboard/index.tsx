@@ -90,30 +90,48 @@ export default function DashboardPage() {
     };
   }, []);
 
-  // SSE 데이터 통합: newPosts를 allNotices에 실시간 병합
+  // SSE 데이터 통합: newPosts를 allNotices 및 jobPosts에 실시간 병합
   useEffect(() => {
     if (newPosts.length > 0) {
       console.log(`[Dashboard] Received ${newPosts.length} new posts via SSE, integrating...`);
 
-      // 1. SSE 이벤트를 Notice 타입으로 변환
-      const convertedPosts = newPosts.map(event => {
+      // 1. SSE 이벤트를 Notice 타입 또는 JobPostItem 타입으로 분류
+      const convertedNotices: Notice[] = [];
+      const newJobPosts: JobPostItem[] = [];
+
+      newPosts.forEach(event => {
         try {
-          return convertSSEEventToNotice(event);
+          // subCategory가 "채용"이면 채용공고로 분류
+          if (event.subCategory === '채용') {
+            newJobPosts.push({
+              id: event.id,
+              postId: event.postId,
+              company: event.title,
+              position: event.position || '채용 공고',
+              url: event.url || '',
+              positionId: event.positionId || 0,
+              positionName: event.positionName || '기타',
+              deadline: event.deadline,
+              channelName: event.channelName,
+              createdAt: event.createdAt,
+            });
+          } else {
+            // 일반 공지사항
+            convertedNotices.push(convertSSEEventToNotice(event));
+          }
         } catch (error) {
           console.error('[Dashboard] Failed to convert SSE event:', error, event);
-          return null;
         }
-      }).filter((post): post is Notice => post !== null);
+      });
 
-      if (convertedPosts.length > 0) {
-        // 2. allNotices 상태 업데이트 (중복 제거)
+      // 2. 일반 공지사항 업데이트
+      if (convertedNotices.length > 0) {
         setAllNotices(prev => {
           const existingIds = new Set(prev.map(n => n.id));
-          const newUniquePosts = convertedPosts.filter(p => !existingIds.has(p.id));
+          const newUniquePosts = convertedNotices.filter(p => !existingIds.has(p.id));
 
           if (newUniquePosts.length > 0) {
-            console.log(`[Dashboard] Adding ${newUniquePosts.length} unique posts to allNotices`);
-            // 새 게시글을 맨 앞에 추가 (최신순)
+            console.log(`[Dashboard] Adding ${newUniquePosts.length} unique notices to allNotices`);
             return [...newUniquePosts, ...prev];
           }
 
@@ -121,7 +139,22 @@ export default function DashboardPage() {
         });
       }
 
-      // 3. 소비한 SSE 데이터 정리
+      // 3. 채용공고 업데이트
+      if (newJobPosts.length > 0) {
+        setJobPosts(prev => {
+          const existingIds = new Set(prev.map(j => j.id));
+          const newUniqueJobs = newJobPosts.filter(j => !existingIds.has(j.id));
+
+          if (newUniqueJobs.length > 0) {
+            console.log(`[Dashboard] Adding ${newUniqueJobs.length} unique job postings to jobPosts`);
+            return [...newUniqueJobs, ...prev];
+          }
+
+          return prev;
+        });
+      }
+
+      // 4. 소비한 SSE 데이터 정리
       useSSEPostStore.getState().clearPosts();
     }
   }, [newPosts]);
