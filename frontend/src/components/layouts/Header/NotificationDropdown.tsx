@@ -1,26 +1,33 @@
-import { useState } from 'react';
-import { Bell, AlertCircle, CheckCircle, Info, Settings } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useState } from "react";
+import { Bell, AlertCircle, CheckCircle, Info, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { useNotificationStore } from '@/stores/useNotificationStore';
-import { SubscriptionKeywordModal } from '@/components/modals/SubscriptionKeywordModal';
+} from "@/components/ui/dropdown-menu";
+import { useNotificationStore } from "@/stores/useNotificationStore";
+import { useSSEStore } from "@/stores/useSSEStore";
+import { SubscriptionKeywordModal } from "@/components/modals/SubscriptionKeywordModal";
+import { MessageDetailModal, type MessageDetail } from "@/components/modals/MessageDetailModal";
+import { noticesApi } from "@/services/api/notices";
 
 export const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isKeywordModalOpen, setIsKeywordModalOpen] = useState(false);
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationStore();
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<MessageDetail | null>(null);
+  const { notifications, unreadCount, markAsRead, markAllAsRead } =
+    useNotificationStore();
+  const { notificationStreamStatus } = useSSEStore();
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'danger':
+      case "danger":
         return <AlertCircle className="w-5 h-5 text-red-500" />;
-      case 'success':
+      case "success":
         return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'info':
+      case "info":
         return <Info className="w-5 h-5 text-blue-500" />;
       default:
         return <Bell className="w-5 h-5 text-gray-500" />;
@@ -29,19 +36,49 @@ export const NotificationDropdown = () => {
 
   const getBorderColor = (type: string) => {
     switch (type) {
-      case 'danger':
-        return 'border-l-red-500';
-      case 'success':
-        return 'border-l-green-500';
-      case 'info':
-        return 'border-l-blue-500';
+      case "danger":
+        return "border-l-red-500";
+      case "success":
+        return "border-l-green-500";
+      case "info":
+        return "border-l-blue-500";
       default:
-        return 'border-l-gray-500';
+        return "border-l-gray-500";
     }
   };
 
-  const handleNotificationClick = (notificationId: number) => {
+  const handleNotificationClick = async (notificationId: string) => {
     markAsRead(notificationId);
+
+    // 상세 공지 정보를 가져와서 모달 열기
+    try {
+      const noticeIdNum = parseInt(notificationId, 10);
+      const notice = await noticesApi.getById(noticeIdNum);
+
+      if (notice) {
+        const mattermostUrl = notice.mattermostUrl || `https://mattermost.ssafy.com/ssafy/pl/message${notice.id}`;
+
+        const messageDetail: MessageDetail = {
+          id: notice.id,
+          title: notice.title,
+          content: notice.content,
+          author: notice.author,
+          category: notice.category,
+          subcategory: notice.subcategory,
+          created_at: notice.createdAt,
+          updated_at: notice.updatedAt,
+          channel: notice.channel,
+          dday: notice.dday,
+          mattermostUrl,
+          attachments: notice.attachments,
+        };
+
+        setSelectedMessage(messageDetail);
+        setIsDetailModalOpen(true);
+      }
+    } catch (error) {
+      console.error('[NotificationDropdown] Failed to fetch notice detail:', error);
+    }
   };
 
   return (
@@ -56,11 +93,46 @@ export const NotificationDropdown = () => {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[360px] max-h-[400px] overflow-y-auto p-0">
+      <DropdownMenuContent
+        align="end"
+        className="w-[360px] max-h-[400px] overflow-y-auto p-0"
+      >
         {/* 헤더 */}
         <div className="p-4 border-b bg-white sticky top-0 z-10">
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold">알림</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-bold">알림</h3>
+              <span
+                className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
+                  notificationStreamStatus === "connected"
+                    ? "bg-green-100 text-green-700"
+                    : notificationStreamStatus === "connecting"
+                    ? "bg-yellow-100 text-yellow-700"
+                    : notificationStreamStatus === "error"
+                    ? "bg-red-100 text-red-700"
+                    : "bg-gray-100 text-gray-700"
+                }`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    notificationStreamStatus === "connected"
+                      ? "bg-green-600"
+                      : notificationStreamStatus === "connecting"
+                      ? "bg-yellow-600"
+                      : notificationStreamStatus === "error"
+                      ? "bg-red-600"
+                      : "bg-gray-600"
+                  }`}
+                />
+                {notificationStreamStatus === "connected"
+                  ? "연결됨"
+                  : notificationStreamStatus === "connecting"
+                  ? "연결 중"
+                  : notificationStreamStatus === "error"
+                  ? "에러"
+                  : "끊김"}
+              </span>
+            </div>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
@@ -96,15 +168,17 @@ export const NotificationDropdown = () => {
               <div
                 key={notif.id}
                 onClick={() => handleNotificationClick(notif.id)}
-                className={`flex items-start gap-3 p-4 hover:bg-gray-50 transition-colors border-l-4 cursor-pointer ${getBorderColor(notif.type)} ${
-                  !notif.read ? 'bg-blue-50' : ''
-                }`}
+                className={`flex items-start gap-3 p-4 hover:bg-gray-50 transition-colors border-l-4 cursor-pointer ${getBorderColor(
+                  notif.type
+                )} ${!notif.read ? "bg-blue-50" : ""}`}
               >
                 <div className="flex-shrink-0 mt-1">
                   {getNotificationIcon(notif.type)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900">{notif.title}</p>
+                  <p className="text-sm font-medium text-gray-900">
+                    {notif.title}
+                  </p>
                   <p className="text-xs text-gray-500 mt-1">{notif.time}</p>
                 </div>
                 {!notif.read && (
@@ -120,6 +194,13 @@ export const NotificationDropdown = () => {
       <SubscriptionKeywordModal
         isOpen={isKeywordModalOpen}
         onOpenChange={setIsKeywordModalOpen}
+      />
+
+      {/* 공지사항 상세 모달 */}
+      <MessageDetailModal
+        message={selectedMessage}
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
       />
     </DropdownMenu>
   );

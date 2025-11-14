@@ -25,6 +25,7 @@ export interface NoticeApiResponse {
   authorId: string;
   authorName: string;
   channelName: string;
+  teamName?: string;
   createdAt: string;
   deadline: string | null;
   isLiked: boolean; // 프론트엔드의 bookmarked
@@ -94,6 +95,7 @@ export interface SearchResultItem {
   mmMessageId: string;
   mmChannelId: string;
   channelName: string;
+  teamName: string;
   title: string;
   userName: string;
   content: string;

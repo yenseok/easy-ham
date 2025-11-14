@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { X, Star, ArrowLeft, ExternalLink, FileText } from 'lucide-react';
+import { X, Star, ArrowLeft, ExternalLink, FileText, Users, Hash, User, Calendar, Edit3 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -256,13 +256,46 @@ export function BookmarksModal({ open, onOpenChange }: BookmarksModalProps) {
             </div>
 
             {/* 메타 정보 */}
-            <div className="text-sm text-gray-600 mb-4 space-y-1">
-              <div>채널: {selectedNotice.channel}</div>
-              <div>작성자: {selectedNotice.author}</div>
-              <div>작성일: {formatDate(selectedNotice.createdAt)}</div>
-              {selectedNotice.updatedAt && (
-                <div>수정일: {formatDate(selectedNotice.updatedAt)}</div>
+            <div className="py-4 space-y-3">
+              {/* 팀 정보 */}
+              {selectedNotice.teamName && (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Users className="w-4 h-4 text-gray-500" />
+                  <span className="font-medium">팀:</span>
+                  <span>{selectedNotice.teamName}</span>
+                </div>
               )}
+
+              {/* 채널 정보 */}
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Hash className="w-4 h-4 text-gray-500" />
+                <span className="font-medium">채널:</span>
+                <span>{selectedNotice.channel}</span>
+              </div>
+
+              {/* 작성자 */}
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <User className="w-4 h-4 text-gray-500" />
+                <span className="font-medium">작성자:</span>
+                <span>{selectedNotice.author}</span>
+              </div>
+
+              {/* 날짜 정보 */}
+              <div className="flex flex-wrap gap-4 text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-gray-500" />
+                  <span className="font-medium">작성일:</span>
+                  <span>{formatDate(selectedNotice.createdAt)}</span>
+                </div>
+
+                {selectedNotice.updatedAt && selectedNotice.createdAt !== selectedNotice.updatedAt && (
+                  <div className="flex items-center gap-2">
+                    <Edit3 className="w-4 h-4 text-gray-500" />
+                    <span className="font-medium">수정일:</span>
+                    <span>{formatDate(selectedNotice.updatedAt)}</span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <Separator className="my-4" />

@@ -5,10 +5,12 @@ import { Clock } from "lucide-react";
 
 interface UrgentDeadlinesWidgetProps {
   notices: Notice[];
+  onNoticeClick?: (notice: Notice) => void;
 }
 
 export default function UrgentDeadlinesWidget({
   notices,
+  onNoticeClick,
 }: UrgentDeadlinesWidgetProps) {
   const getDdayColor = (daysLeft: number) => {
     if (daysLeft <= 3) return "bg-red-500";
@@ -47,6 +49,7 @@ export default function UrgentDeadlinesWidget({
                 <div
                   key={notice.id}
                   className="p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-gray-200"
+                  onClick={() => onNoticeClick?.(notice)}
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <Badge className="text-xs px-2 py-0.5 border bg-red-50 text-red-700 border-red-200">

@@ -21,6 +21,7 @@ export interface Notice {
   content: string;
   author: string;
   channel: string;
+  teamName?: string;
   category: Category;
   subcategory: Subcategory;
   dday: number | null;

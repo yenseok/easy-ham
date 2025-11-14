@@ -61,7 +61,7 @@ export function WeekView({
               </div>
               <div
                 className={`text-base ${
-                  today ? "text-[var(--brand-orange)]" : ""
+                  today ? "text-(--brand-orange)" : ""
                 }`}
                 style={{ fontWeight: 700 }}
               >

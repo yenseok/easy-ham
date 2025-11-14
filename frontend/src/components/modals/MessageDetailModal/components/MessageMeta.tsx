@@ -1,7 +1,8 @@
-import { User, CalendarIcon, Edit3 } from 'lucide-react';
+import { User, CalendarIcon, Edit3, Users, Hash } from 'lucide-react';
 import { formatExactDateTime } from '@/utils/dateFormatter';
 
 interface MessageMetaProps {
+  teamName?: string;
   channel: string;
   author: string;
   createdAt: string;
@@ -9,6 +10,7 @@ interface MessageMetaProps {
 }
 
 export const MessageMeta = ({
+  teamName,
   channel,
   author,
   createdAt,
@@ -16,12 +18,20 @@ export const MessageMeta = ({
 }: MessageMetaProps) => {
   return (
     <div className="py-4 space-y-3">
+      {/* 팀 정보 */}
+      {teamName && (
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Users className="w-4 h-4 text-gray-500" />
+          <span className="font-medium">팀:</span>
+          <span>{teamName}</span>
+        </div>
+      )}
+
       {/* 채널 정보 */}
       <div className="flex items-center gap-2 text-sm text-gray-600">
-        <div className="w-6 h-6 rounded-full bg-[var(--brand-orange-light)] flex items-center justify-center">
-          <span className="text-xs">📢</span>
-        </div>
-        <span className="font-medium">{channel}</span>
+        <Hash className="w-4 h-4 text-gray-500" />
+        <span className="font-medium">채널:</span>
+        <span>{channel}</span>
       </div>
 
       {/* 작성자 */}

@@ -58,7 +58,9 @@ export const apiClient = {
    */
   getPublic: async <T>(endpoint: string): Promise<ApiResponse<T>> => {
     try {
-      const response = await fetch(`${API_BASE_URL}${endpoint}`);
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        credentials: "include",
+      });
       const data = await response.json();
 
       // 상태 코드를 명시적으로 추가
@@ -75,6 +77,7 @@ export const apiClient = {
   get: async <T>(endpoint: string): Promise<ApiResponse<T>> => {
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        credentials: "include",
         headers: {
           ...getAuthHeaders(),
         },
@@ -85,6 +88,7 @@ export const apiClient = {
         handle401Response(response.headers);
         // 새 토큰으로 재시도
         const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
+          credentials: "include",
           headers: {
             ...getAuthHeaders(),
           },
@@ -110,6 +114,7 @@ export const apiClient = {
       // console.log(`[API POST] ${API_BASE_URL}${endpoint}`, data);
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           ...getAuthHeaders(),
@@ -123,6 +128,7 @@ export const apiClient = {
         // 새 토큰으로 재시도
         const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
             ...getAuthHeaders(),
@@ -149,6 +155,7 @@ export const apiClient = {
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: "PUT",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           ...getAuthHeaders(),
@@ -162,6 +169,7 @@ export const apiClient = {
         // 새 토큰으로 재시도
         const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
           method: "PUT",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
             ...getAuthHeaders(),
@@ -192,6 +200,7 @@ export const apiClient = {
       // console.log(`[API PATCH] ${API_BASE_URL}${endpoint}`, data);
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: "PATCH",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
           ...getAuthHeaders(),
@@ -205,6 +214,7 @@ export const apiClient = {
         // 새 토큰으로 재시도
         const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
           method: "PATCH",
+          // credentials: "include",
           headers: {
             "Content-Type": "application/json",
             ...getAuthHeaders(),
@@ -235,6 +245,7 @@ export const apiClient = {
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: "DELETE",
+        credentials: "include",
         headers: {
           ...getAuthHeaders(),
         },
@@ -246,6 +257,7 @@ export const apiClient = {
         // 새 토큰으로 재시도
         const retryResponse = await fetch(`${API_BASE_URL}${endpoint}`, {
           method: "DELETE",
+          credentials: "include",
           headers: {
             ...getAuthHeaders(),
           },

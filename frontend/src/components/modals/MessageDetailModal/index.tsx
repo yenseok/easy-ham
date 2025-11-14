@@ -26,6 +26,7 @@ export interface MessageDetail {
   created_at: string;
   updated_at: string;
   channel: string;
+  teamName?: string;
   dday?: number | null;
   mattermostUrl?: string;
   attachments?: Attachment[];
@@ -70,8 +71,9 @@ export const MessageDetailModal = ({
           dday={message.dday}
         />
 
-        {/* 메시지 메타정보 (채널, 작성자, 날짜) */}
+        {/* 메시지 메타정보 (팀, 채널, 작성자, 날짜) */}
         <MessageMeta
+          teamName={message.teamName}
           channel={message.channel}
           author={message.author}
           createdAt={message.created_at}

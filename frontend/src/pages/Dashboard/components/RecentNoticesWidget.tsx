@@ -6,7 +6,11 @@ import { Bell } from "lucide-react";
 import { searchApi } from "@/services/api/search";
 import type { Notice } from "@/types/notice";
 
-export default function RecentNoticesWidget() {
+interface RecentNoticesWidgetProps {
+  onNoticeClick?: (notice: Notice) => void;
+}
+
+export default function RecentNoticesWidget({ onNoticeClick }: RecentNoticesWidgetProps) {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -93,6 +97,7 @@ export default function RecentNoticesWidget() {
               <div
                 key={notice.id}
                 className="p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-gray-200"
+                onClick={() => onNoticeClick?.(notice)}
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Badge

@@ -119,14 +119,14 @@ function convertFiles(files: SearchFileItem[] | null): Attachment[] | undefined 
 export function convertSearchItemToNotice(item: SearchResultItem): Notice {
   // 디버깅: 첫 3개 아이템만 로그
   if (item.id <= 3) {
-    console.log('[searchMapper] API 데이터:', {
-      id: item.id,
-      title: item.title,
-      mainCategory: item.mainCategory,
-      subCategory: item.subCategory,
-      변환된_category: mapMainCategory(item.mainCategory, item.subCategory),
-      변환된_subcategory: mapSubCategory(item.subCategory)
-    });
+    // console.log('[searchMapper] API 데이터:', {
+    //   id: item.id,
+    //   title: item.title,
+    //   mainCategory: item.mainCategory,
+    //   subCategory: item.subCategory,
+    //   변환된_category: mapMainCategory(item.mainCategory, item.subCategory),
+    //   변환된_subcategory: mapSubCategory(item.subCategory)
+    // });
   }
 
   return {
@@ -140,8 +140,9 @@ export function convertSearchItemToNotice(item: SearchResultItem): Notice {
     content: item.content,
     author: item.userName,
 
-    // 채널: channelName 사용 (API에서 제공)
+    // 채널 및 팀: channelName, teamName 사용 (API에서 제공)
     channel: item.channelName,
+    teamName: item.teamName,
 
     // 카테고리 변환
     category: mapMainCategory(item.mainCategory, item.subCategory),

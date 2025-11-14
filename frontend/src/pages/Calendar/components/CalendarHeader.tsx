@@ -72,7 +72,7 @@ export function CalendarHeader({
               onClick={() => onToggleView("week")}
               className={`px-4 py-2 text-sm transition-colors ${
                 viewMode === "week"
-                  ? "bg-[var(--brand-orange)] text-white"
+                  ? "bg-(--brand-orange) text-white"
                   : "bg-white text-gray-600 hover:bg-gray-50"
               }`}
               style={{ fontWeight: 500 }}
@@ -83,7 +83,7 @@ export function CalendarHeader({
               onClick={() => onToggleView("month")}
               className={`px-4 py-2 text-sm transition-colors border-l ${
                 viewMode === "month"
-                  ? "bg-[var(--brand-orange)] text-white"
+                  ? "bg-(--brand-orange) text-white"
                   : "bg-white text-gray-600 hover:bg-gray-50"
               }`}
               style={{ fontWeight: 500 }}
