@@ -1,10 +1,10 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import type { Notice } from "@/types/notice";
-import { Briefcase } from "lucide-react";
+import type { JobPostItem } from "@/types/api";
+import { Briefcase, ExternalLink } from "lucide-react";
 
 interface PersonalizedJobsWidgetProps {
-  jobs: Notice[];
+  jobs: JobPostItem[];
 }
 
 export default function PersonalizedJobsWidget({
@@ -16,14 +16,18 @@ export default function PersonalizedJobsWidget({
     return "bg-green-500";
   };
 
-  const calculateDday = (deadline: string | Date | undefined): number | null => {
+  const calculateDday = (deadline: string | null): number | null => {
     if (!deadline) return null;
-    const deadlineDate = typeof deadline === 'string' ? new Date(deadline) : deadline;
+    const deadlineDate = new Date(deadline);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     deadlineDate.setHours(0, 0, 0, 0);
     const daysLeft = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
     return daysLeft;
+  };
+
+  const handleJobClick = (url: string) => {
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -46,28 +50,36 @@ export default function PersonalizedJobsWidget({
               return (
                 <div
                   key={job.id}
+                  onClick={() => handleJobClick(job.url)}
                   className="p-3 border rounded-lg hover:shadow-md transition-shadow cursor-pointer hover:border-(--brand-orange)"
                 >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge className="text-xs px-2 py-0.5 border bg-blue-50 text-blue-700 border-blue-200">
-                      {job.subcategory}
-                    </Badge>
-                    {dday !== null && dday >= 0 && (
-                      <span
-                        className={`text-white text-xs px-2 py-0.5 rounded ${getDdayColor(
-                          dday
-                        )}`}
-                        style={{ fontWeight: 600 }}
-                      >
-                        D-{dday}
-                      </span>
-                    )}
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <Badge className="text-xs px-2 py-0.5 border bg-blue-50 text-blue-700 border-blue-200">
+                        {job.positionName}
+                      </Badge>
+                      {dday !== null && dday >= 0 && (
+                        <span
+                          className={`text-white text-xs ${dday === 0 ? 'px-1.5' : 'px-2'} py-0.5 rounded ${getDdayColor(
+                            dday
+                          )}`}
+                          style={{ fontWeight: 600 }}
+                        >
+                          {dday === 0 ? 'D-Day' : `D-${dday}`}
+                        </span>
+                      )}
+                    </div>
+                    <ExternalLink className="w-4 h-4 text-gray-400" />
                   </div>
                   <div
-                    className="text-sm line-clamp-2 text-gray-800"
-                    style={{ fontWeight: 500 }}
+                    className="text-sm font-semibold text-gray-900 mb-1"
                   >
-                    {job.title}
+                    {job.company}
+                  </div>
+                  <div
+                    className="text-xs text-gray-600 line-clamp-1"
+                  >
+                    {job.position}
                   </div>
                 </div>
               );

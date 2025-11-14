@@ -202,3 +202,28 @@ export interface UserChannel {
 export interface UserChannelsResponse {
   channels: UserChannel[];
 }
+
+/**
+ * 채용공고 아이템
+ */
+export interface JobPostItem {
+  id: number;
+  postId: string;
+  company: string;
+  position: string;
+  url: string;
+  positionId: number;
+  positionName: string;
+  deadline: string | null;
+  channelName: string;
+  createdAt: string;
+}
+
+/**
+ * 채용공고 목록 조회 응답
+ */
+export interface JobPostsResponse {
+  status: number;
+  message: string;
+  data: JobPostItem[];
+}

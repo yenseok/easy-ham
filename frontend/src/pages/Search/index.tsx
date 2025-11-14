@@ -16,15 +16,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useFilterStore } from '@/stores/useFilterStore';
-import { getMockJobPostings } from '@/services/mock';
 import { bookmarksApi } from '@/services/api/bookmarks';
 import { completionsApi } from '@/services/api/completions';
 import { searchApi } from '@/services/api/search';
+import { jobsApi } from '@/services/api/jobs';
 import { getNoticeCategories, mapCategoriesToIds, type NoticeCategory } from '@/services/api/codes';
 import { getUserChannels } from '@/services/api/channels';
 import { getPeriodRange } from '@/utils/dateUtils';
 import type { Notice } from '@/types';
-import type { SearchParams } from '@/types/api';
+import type { SearchParams, JobPostItem } from '@/types/api';
 
 export default function SearchPage() {
   const navigate = useNavigate();
@@ -74,6 +74,9 @@ export default function SearchPage() {
   // 카테고리 데이터 (API에서 받아온 카테고리 목록)
   const [categories, setCategories] = useState<NoticeCategory[]>([]);
 
+  // 채용공고 상태
+  const [jobPostings, setJobPostings] = useState<JobPostItem[]>([]);
+
   /**
    * 채널 데이터 로드
    * 컴포넌트 마운트 시 1회 실행
@@ -110,6 +113,24 @@ export default function SearchPage() {
     };
 
     fetchCategories();
+  }, []);
+
+  /**
+   * 채용공고 데이터 로드
+   * 컴포넌트 마운트 시 1회 실행
+   */
+  useEffect(() => {
+    const fetchJobPostings = async () => {
+      try {
+        const jobs = await jobsApi.getPersonalizedJobs();
+        setJobPostings(jobs);
+      } catch (error) {
+        console.error('[채용공고 API] 로드 실패:', error);
+        setJobPostings([]);
+      }
+    };
+
+    fetchJobPostings();
   }, []);
 
   /**
@@ -382,8 +403,6 @@ export default function SearchPage() {
     setSelectedMessage(messageDetail);
     setIsModalOpen(true);
   };
-
-  const jobPostings = getMockJobPostings();
 
   return (
     <PageLayout>

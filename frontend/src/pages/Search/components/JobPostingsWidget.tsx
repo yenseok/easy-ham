@@ -1,17 +1,10 @@
 import { Briefcase, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-
-interface JobPosting {
-  id: number;
-  company: string;
-  position: string;
-  dday: number;
-  logo?: string;
-}
+import type { JobPostItem } from '@/types/api';
 
 interface JobPostingsWidgetProps {
-  postings: JobPosting[];
+  postings: JobPostItem[];
   onViewAll?: () => void;
 }
 
@@ -19,6 +12,16 @@ const getDdayColor = (dday: number): string => {
   if (dday <= 3) return 'text-red-500 bg-red-50';
   if (dday <= 7) return 'text-yellow-500 bg-yellow-50';
   return 'text-green-500 bg-green-50';
+};
+
+const calculateDday = (deadline: string | null): number | null => {
+  if (!deadline) return null;
+  const deadlineDate = new Date(deadline);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  deadlineDate.setHours(0, 0, 0, 0);
+  const daysLeft = Math.ceil((deadlineDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  return daysLeft;
 };
 
 export function JobPostingsWidget({
@@ -51,29 +54,35 @@ export function JobPostingsWidget({
       {/* 채용공고 목록 */}
       {recentPostings.length > 0 ? (
         <div className="space-y-3">
-          {recentPostings.map((posting) => (
-            <div
-              key={posting.id}
-              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-sm text-gray-900 truncate">
-                  {posting.company}
-                </p>
-                <p className="text-xs text-gray-500 truncate">
-                  {posting.position}
-                </p>
-              </div>
-
+          {recentPostings.map((posting) => {
+            const dday = calculateDday(posting.deadline);
+            return (
               <div
-                className={`ml-2 px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${getDdayColor(
-                  posting.dday
-                )}`}
+                key={posting.id}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                onClick={() => window.open(posting.url, '_blank', 'noopener,noreferrer')}
               >
-                D-{posting.dday}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-sm text-gray-900 truncate">
+                    {posting.company}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {posting.position}
+                  </p>
+                </div>
+
+                {dday !== null && dday >= 0 && (
+                  <div
+                    className={`ml-2 px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${getDdayColor(
+                      dday
+                    )}`}
+                  >
+                    {dday === 0 ? 'D-Day' : `D-${dday}`}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-6 text-gray-500">

@@ -28,18 +28,22 @@ export interface NewPostEvent {
   postId: string;
   title: string;
   content: string;
-  cleanedText: string;
   mainCategory: string;
   subCategory: string;
   channelId: string;
   channelName: string;
+  teamName?: string;
   userId: string;
   userName: string;
-  deadline: string;
-  campusList: string;
-  fileIds: string[];
+  deadline: string | null;
+  campusList: string | null;
   createdAt: string;
   webhookTimestamp: number;
+  fileIds: string[] | string | null;
+  positionId: number | null;
+  positionName: string | null;
+  url: string | null;
+  position: string | null;
 }
 
 /**
