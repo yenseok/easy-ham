@@ -467,7 +467,7 @@ public class NotificationService {
 
 
 
-            String message = String.format("이 공지사항이 곧 마감입니다 확인하세요! [%s]\n\n [%s]", post.getTitle()
+            String message = String.format("[%s]\n이 공지사항이 곧 마감입니다 확인하세요! :ttabong_ham:\n[%s]", post.getTitle()
             ,post.getLink());
             AlarmEvent alarmEvent = new AlarmEvent(user.getEmail(), message);
             eventPublisher.publishEvent(alarmEvent);
