@@ -423,6 +423,7 @@ public class SearchService {
      */
     public void deletePost(String postId) {
         try {
+            log.info("try Delete post: {}", postId);
             Index index = meilisearchClient.index(INDEX_NAME);
             index.deleteDocument(postId);
             log.info("✅ Deleted post: {}", postId);

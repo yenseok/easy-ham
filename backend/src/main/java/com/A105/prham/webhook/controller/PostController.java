@@ -75,6 +75,7 @@ public class PostController {
 				log.info("{} changed",request.getPostId());
 				//TODO 엔티티수정
 			} else {
+				log.info("{} deleted",request.getPostId());
 				// 삭제 이벤트: DB삭제, meilisearch에서 삭제
 				searchService.deletePost(request.getPostId());
 				int result = postService.DeletePostByPostId(request.getPostId());
@@ -82,7 +83,7 @@ public class PostController {
 					log.error("존재하지 않는 Post를 삭제 시도 하였습니다.");
 					return ApiResponseDto.fail(ErrorCode.BAD_REQUEST);
 				}
-				log.info("{} deleted",request.getPostId());
+
 			}
 
 			return ApiResponseDto.success(SuccessCode.SUCCESS,"업데이트 성공");
