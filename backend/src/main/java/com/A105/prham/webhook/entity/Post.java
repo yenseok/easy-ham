@@ -45,6 +45,8 @@ public class Post extends BaseTimeEntity {
 	@Column(name = "file_ids")
 	private String fileIds;
 
+	@Column(name = "link")
+	private String link;
 
 	// after llm
 	@Column(name = "cleaned_text", columnDefinition = "TEXT")

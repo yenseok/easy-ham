@@ -1,5 +1,6 @@
 package com.A105.prham.notification.service;
 
+import com.A105.prham.bot.event.AlarmEvent;
 import com.A105.prham.common.exception.CustomException;
 import com.A105.prham.common.response.ErrorCode;
 import com.A105.prham.keyword.Keyword;
@@ -18,6 +19,7 @@ import com.A105.prham.webhook.entity.Post;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,6 +46,8 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final TaskScheduler taskScheduler;
+    private final ApplicationEventPublisher eventPublisher;
+
 
     @Transactional
     public void addKeyword(User user, KeywordCreateRequest keywordCreateRequest) {
@@ -302,6 +306,14 @@ public class NotificationService {
                 .append("hours_left", hoursLeft)
                 .append("created_at", LocalDateTime.now());
             send(user, data, NotificationType.DEADLINE_APPROACHING.name().toLowerCase());
+
+            String link = null;
+
+            String message = String.format("이 공지사항이 곧 마감입니다 확인하세요! [%s]\n\n [%s]", post.getTitle()
+            ,link);
+            AlarmEvent alarmEvent = new AlarmEvent(user.getEmail(), message);
+            eventPublisher.publishEvent(alarmEvent);
+
         } catch (Exception e) {
             //예외 안던짐
         }

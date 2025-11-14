@@ -48,6 +48,14 @@ public class WebhookIngestionService {
 		log.info("채널 정보 - channelId: {}, displayName: {}, payload.channelName: {}",
 			payload.getChannelId(), channelDisplayName, payload.getChannelName());
 
+
+		String link = null;
+		try {
+			link = mattermostService.getPostLink(payload.getPostId());
+		} catch (Exception e) {
+			log.warn("⚠️ Failed to get post link for {}: {}", payload.getPostId(), e.getMessage());
+		}
+
 		// 2. 최소 정보로 Post Entity 생성 (PENDING 상태)
 		Post post = Post.builder()
 			.postId(payload.getPostId())
@@ -57,6 +65,7 @@ public class WebhookIngestionService {
 			.userName(payload.getUserName())
 			.originalText(payload.getText())
 			.webhookTimestamp(payload.getTimestamp())
+			.link(link)
 			.fileIds(payload.getFileIds())
 			.teamId(payload.getTeamId())
 			.teamName(teamName)

@@ -116,6 +116,7 @@ public class AsyncPostProcessor {
 		}
 	}
 
+
 	// 일반 공지사항 저장
 	private void saveOriginalPost(Post post, LlmClassificationResult result, boolean fileProcessingFailed) {
 		// 마감일 처리
