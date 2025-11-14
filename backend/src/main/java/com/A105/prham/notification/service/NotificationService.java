@@ -175,6 +175,8 @@ public class NotificationService {
 
     // SSE 전송 - MongoDB만 저장,
     public void send(User receiver, Document eventData, String type){
+        // log.info("🔔 알림 전송 시작 - User ID: {}, Type: {}", receiver.getId(), type);
+
         Notification notification = new Notification(
                 null, // MongoDB에서 자동 생성
                 receiver.getId(),
@@ -184,8 +186,14 @@ public class NotificationService {
                 false // isRead
         );
         notificationRepository.save(notification);
+        // log.info("💾 알림 MongoDB 저장 완료 - User ID: {}", receiver.getId());
 
         Map<String,SseEmitter> sseEmitters = findAllEmitterByUserId(receiver.getId().toString());
+        // log.info("📡 SSE Emitter 확인 - User ID: {}, Emitter 개수: {}", receiver.getId(), sseEmitters.size());
+        if(sseEmitters.isEmpty()) {
+            // log.warn("⚠️ SSE 연결 없음 - User ID: {}는 현재 /notifications/stream에 연결되지 않음", receiver.getId());
+            return;
+        }
         // sseEmitters.forEach((key, emitter) -> {
         //     eventCache.put(key, notification); // 캐시 저장 (복구용)
         //     sentToClient(emitter, key, notification.getEventType(), notification.getEventData());
@@ -199,10 +207,16 @@ public class NotificationService {
                     .id(key)
                     .name(notification.getEventType())
                     .data(notification.getEventData()));
+                // log.info("✅ SSE 알림 전송 성공 - Emitter ID: {}", key);
+
             }catch (Exception e) {
                 emitters.remove(key);
+                log.error("❌ SSE 알림 전송 실패 - Emitter ID: {}, Error: {}", key, e.getMessage());
+
             }
         });
+        // log.info("🎉 알림 전송 완료 - User ID: {}", receiver.getId());
+
     }
 
     // private void sentToClient(SseEmitter sseEmitter, String emitterId, String eventType, Object data){
@@ -237,7 +251,14 @@ public class NotificationService {
         List<User> usersWithKeywords = fetchUsersWithKeywords();
 
         // 2️⃣ 트랜잭션 밖에서 키워드 매칭 및 알림 전송
+        int matchedUserCount = 0;
         for(User user : usersWithKeywords){
+            // notification 설정 확인
+            NotificationSetting setting = user.getNotificationSetting();
+            if(setting == null || !setting.getKeywordAlertEnabled()) {
+                log.debug("키워드 알림 비활성화 - User ID: {}", user.getId());
+                continue;
+            }
             // Fetch Join으로 이미 로드된 키워드 사용 (추가 쿼리 발생 안 함!)
             List<String> matchedKeywords = user.getKeywords().stream()
                     .map(Keyword::getWord)
@@ -247,6 +268,8 @@ public class NotificationService {
                     .collect(Collectors.toList());
 
             if(!matchedKeywords.isEmpty()){
+                matchedUserCount++;
+                log.info("✅ 키워드 매칭 성공 - User ID: {}, 매칭된 키워드: {}", user.getId(), matchedKeywords);
                 Document data = new Document()
                         .append("notice_id", post.getId())
                         .append("title", post.getTitle())
@@ -255,6 +278,8 @@ public class NotificationService {
                 send(user, data, NotificationType.KEYWORD_MATCHING.name().toLowerCase());
             }
         }
+        log.info("🔔 키워드 매칭 완료 - 총 {}명에게 알림 전송", matchedUserCount);
+
     }
 
     // 🎯 한 번의 쿼리로 유저와 키워드를 함께 조회 (N+1 해결)
