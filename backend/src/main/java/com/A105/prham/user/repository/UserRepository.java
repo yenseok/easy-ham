@@ -50,6 +50,24 @@ public interface UserRepository extends JpaRepository<User, Long> {
     """)
     int setUserUnable(@Param("ssoSubId") String ssoSubId);
 
+    @Query("SELECT u FROM User u " +
+        "LEFT JOIN FETCH u.userPositions up " +
+        "LEFT JOIN FETCH up.position " +
+        "WHERE u.id = :userId")
+    Optional<User> findByIdWithPositions(@Param("userId") Long userId);
+
     @Query("SELECT DISTINCT u FROM User u JOIN u.keywords k WHERE k IS NOT NULL")
     List<User> findUsersWithKeywords();
+
+
+    // 유저와 키워드를 한 번에 조회
+    @Query("SELECT DISTINCT u FROM User u " +
+            "LEFT JOIN FETCH u.keywords k " +
+            "WHERE SIZE(u.keywords) > 0")
+    List<User> findUsersWithKeywordsFetch();
+
+    // 유저와 알림 설정을 한 번에 조회
+    @Query("SELECT DISTINCT u FROM User u " +
+            "LEFT JOIN FETCH u.notificationSetting")
+    List<User> findAllWithNotificationSettings();
 }

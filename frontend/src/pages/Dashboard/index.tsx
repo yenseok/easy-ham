@@ -1,12 +1,14 @@
 import { useEffect, useState, useMemo } from "react";
 import { PageLayout } from "@/components/layouts/PageLayout";
-import { getMockDashboardData } from "@/services/mock/dashboardData";
 import { searchApi } from "@/services/api/search";
+import { jobsApi } from "@/services/api/jobs";
 import { sseManager } from "@/services/sse/sseManager";
 import { useSSEPostStore } from "@/stores/useSSEPostStore";
 import { bookmarksApi } from "@/services/api/bookmarks";
 import { convertBookmarkItemToNotice } from "@/utils/bookmarkMapper";
+import { convertSSEEventToNotice } from "@/utils/sseMapper";
 import type { Notice } from "@/types/notice";
+import type { JobPostItem } from "@/types/api";
 import BookmarkedNoticesWidget from "./components/BookmarkedNoticesWidget";
 import UrgentDeadlinesWidget from "./components/UrgentDeadlinesWidget";
 import PersonalizedJobsWidget from "./components/PersonalizedJobsWidget";
@@ -18,6 +20,7 @@ import { LayoutDashboard } from "lucide-react";
 export default function DashboardPage() {
   const [allNotices, setAllNotices] = useState<Notice[]>([]);
   const [bookmarkedNotices, setBookmarkedNotices] = useState<Notice[]>([]);
+  const [jobPosts, setJobPosts] = useState<JobPostItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { newPosts } = useSSEPostStore();
 
@@ -41,7 +44,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Search API 호출 (전체 공지 + 북마크 공지)
+  // Search API 호출 (전체 공지 + 북마크 공지 + 채용공고)
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -56,6 +59,15 @@ export default function DashboardPage() {
 
         // 2. 북마크된 공지사항 조회
         await refreshBookmarks();
+
+        // 3. 채용공고 조회
+        try {
+          const jobs = await jobsApi.getPersonalizedJobs();
+          setJobPosts(jobs);
+        } catch (error) {
+          console.error('[Dashboard] 채용공고 로드 실패:', error);
+          setJobPosts([]); // 실패 시 빈 배열
+        }
       } catch (error) {
         console.error('[Dashboard] 데이터 로드 실패:', error);
       } finally {
@@ -78,9 +90,74 @@ export default function DashboardPage() {
     };
   }, []);
 
-  // Mock 데이터 (채용공고용)
+  // SSE 데이터 통합: newPosts를 allNotices 및 jobPosts에 실시간 병합
+  useEffect(() => {
+    if (newPosts.length > 0) {
+      console.log(`[Dashboard] Received ${newPosts.length} new posts via SSE, integrating...`);
 
-  const { notices: mockNotices } = getMockDashboardData();
+      // 1. SSE 이벤트를 Notice 타입 또는 JobPostItem 타입으로 분류
+      const convertedNotices: Notice[] = [];
+      const newJobPosts: JobPostItem[] = [];
+
+      newPosts.forEach(event => {
+        try {
+          // subCategory가 "채용"이면 채용공고로 분류
+          if (event.subCategory === '채용') {
+            newJobPosts.push({
+              id: event.id,
+              postId: event.postId,
+              company: event.title,
+              position: event.position || '채용 공고',
+              url: event.url || '',
+              positionId: event.positionId || 0,
+              positionName: event.positionName || '기타',
+              deadline: event.deadline,
+              channelName: event.channelName,
+              createdAt: event.createdAt,
+            });
+          } else {
+            // 일반 공지사항
+            convertedNotices.push(convertSSEEventToNotice(event));
+          }
+        } catch (error) {
+          console.error('[Dashboard] Failed to convert SSE event:', error, event);
+        }
+      });
+
+      // 2. 일반 공지사항 업데이트
+      if (convertedNotices.length > 0) {
+        setAllNotices(prev => {
+          const existingIds = new Set(prev.map(n => n.id));
+          const newUniquePosts = convertedNotices.filter(p => !existingIds.has(p.id));
+
+          if (newUniquePosts.length > 0) {
+            console.log(`[Dashboard] Adding ${newUniquePosts.length} unique notices to allNotices`);
+            return [...newUniquePosts, ...prev];
+          }
+
+          return prev;
+        });
+      }
+
+      // 3. 채용공고 업데이트
+      if (newJobPosts.length > 0) {
+        setJobPosts(prev => {
+          const existingIds = new Set(prev.map(j => j.id));
+          const newUniqueJobs = newJobPosts.filter(j => !existingIds.has(j.id));
+
+          if (newUniqueJobs.length > 0) {
+            console.log(`[Dashboard] Adding ${newUniqueJobs.length} unique job postings to jobPosts`);
+            return [...newUniqueJobs, ...prev];
+          }
+
+          return prev;
+        });
+      }
+
+      // 4. 소비한 SSE 데이터 정리
+      useSSEPostStore.getState().clearPosts();
+    }
+  }, [newPosts]);
 
   // 마감 임박 할일 (D-7 이내, deadline 있는 것만, 마감일 지난 것 제외)
   const urgentDeadlines = useMemo(() => {
@@ -122,8 +199,10 @@ export default function DashboardPage() {
     });
   }, [allNotices]);
 
-  // 채용공고 (Mock 데이터 사용 - 기능 미구현)
-  const jobs = mockNotices.filter((n) => n.category === "취업").slice(0, 4);
+  // 채용공고 (실제 API 데이터 사용, 최대 4개)
+  const displayedJobs = useMemo(() => {
+    return jobPosts?.slice(0, 4) ?? [];
+  }, [jobPosts]);
 
   /**
    * 공지사항 클릭 핸들러 (모달 열기)
@@ -171,7 +250,7 @@ export default function DashboardPage() {
             notices={urgentDeadlines}
             onNoticeClick={handleNoticeClick}
           />
-          <PersonalizedJobsWidget jobs={jobs} />
+          <PersonalizedJobsWidget jobs={displayedJobs} />
         </div>
 
         {/* 주간 캘린더 */}
@@ -179,9 +258,12 @@ export default function DashboardPage() {
           <WeeklyCalendarWidget events={weeklyEvents} />
         </div>
 
-        {/* 최근 공지 (실제 API 연결) */}
+        {/* 최근 공지 (SSE 실시간 연동) */}
         <div>
-          <RecentNoticesWidget onNoticeClick={handleNoticeClick} />
+          <RecentNoticesWidget
+            notices={allNotices}
+            onNoticeClick={handleNoticeClick}
+          />
         </div>
       </div>
 

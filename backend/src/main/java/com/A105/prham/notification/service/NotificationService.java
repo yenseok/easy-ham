@@ -1,5 +1,6 @@
 package com.A105.prham.notification.service;
 
+import com.A105.prham.bot.event.AlarmEvent;
 import com.A105.prham.common.exception.CustomException;
 import com.A105.prham.common.response.ErrorCode;
 import com.A105.prham.keyword.Keyword;
@@ -8,9 +9,7 @@ import com.A105.prham.notification.NotificationRepository;
 import com.A105.prham.notification.NotificationType;
 import com.A105.prham.notification.dto.request.KeywordCreateRequest;
 import com.A105.prham.notification.dto.request.NotificationSettingUpdateRequest;
-import com.A105.prham.notification.dto.response.KeywordDto;
-import com.A105.prham.notification.dto.response.KeywordListGetResponse;
-import com.A105.prham.notification.dto.response.NotificationSettingGetResponse;
+import com.A105.prham.notification.dto.response.*;
 import com.A105.prham.notification.entity.Notification;
 import com.A105.prham.notification_setting.entity.NotificationSetting;
 import com.A105.prham.notification_setting.repository.NotificationSettingRepository;
@@ -20,12 +19,17 @@ import com.A105.prham.webhook.entity.Post;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.IOException;
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -35,16 +39,17 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-@Transactional(readOnly = true)
 public class NotificationService {
-
     private final KeywordRepository keywordRepository;
     private final NotificationSettingRepository notificationSettingRepository;
     private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
     private final Map<String, Notification> eventCache = new ConcurrentHashMap<>();
-    private final Long TIME_OUT = 60L * 1000;
+    private final Long TIME_OUT = 60L * 60L * 1000L;
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final TaskScheduler taskScheduler;
+    private final ApplicationEventPublisher eventPublisher;
+
 
     @Transactional
     public void addKeyword(User user, KeywordCreateRequest keywordCreateRequest) {
@@ -66,6 +71,8 @@ public class NotificationService {
         keywordRepository.delete(keyword);
     }
 
+    // ✅ 읽기만 - readOnly
+    @Transactional(readOnly = true)
     public KeywordListGetResponse getKeywordList(User user) {
         List<Keyword> keywordList = keywordRepository.findByUser(user);
         List<KeywordDto> keywordDtoList = keywordList.stream()
@@ -80,7 +87,6 @@ public class NotificationService {
 
     @Transactional
     public void createNotificationSetting(User user){
-
         // 유효성 검사
         if(notificationSettingRepository.findByUser(user) != null){
             throw new CustomException(ErrorCode.DUPLICATED_NOTIFICATION_SETTING);
@@ -95,6 +101,8 @@ public class NotificationService {
         notificationSettingRepository.save(notificationSetting);
     }
 
+    // ✅ 읽기만 - readOnly
+    @Transactional(readOnly = true)
     public NotificationSettingGetResponse getNotificationSetting(User user){
         NotificationSetting notificationSetting = notificationSettingRepository.findByUser(user);
         return NotificationSettingGetResponse.builder()
@@ -115,62 +123,212 @@ public class NotificationService {
         notificationSettingRepository.save(notificationSetting);
     }
 
+    // SSE 구독 - 트랜잭션 필요 없음!
+    // public SseEmitter subscribe(User user, String lastEventId) {
+    //     // 고유 생성 아이디 + emitter 저장
+    //     SseEmitter sseEmitter = new SseEmitter(TIME_OUT);
+    //     String emitterId = user.getId() + "_" + UUID.randomUUID().toString();
+    //     emitters.put(emitterId, sseEmitter);
+    //
+    //     // 시간 초과 or 비동기 요청 불가 시 해당 아이디의 emitter 삭제
+    //     sseEmitter.onCompletion(() -> emitters.remove(emitterId));
+    //     sseEmitter.onTimeout(() -> emitters.remove(emitterId));
+    //     sseEmitter.onError((e) -> emitters.remove(emitterId));
+    //
+    //     // 503 오류 방지용 더미 전송
+    //     try {
+    //         sseEmitter.send(SseEmitter.event()
+    //             .name("connected")
+    //             .data("Event sTream created. userId: " + user.getId()));
+    //     } catch (Exception e) {
+    //         emitters.remove(emitterId);
+    //         //예외 안던지고 제거
+    //         throw new RuntimeException("SSE connection failed", e);
+    //     }
+    //     // sentToClient(sseEmitter, emitterId, "connected","Event Stream Created. User Id : " + user.getId());
+    //
+    //     if(!lastEventId.isEmpty()){
+    //         Map<String, Notification> events = findAllEventCacheByUserId(user.getId().toString());
+    //         // events.entrySet().stream()
+    //         //         .filter(entry -> lastEventId.compareTo(entry.getKey()) < 0)
+    //         //         .forEach(entry -> {
+    //         //             Notification notification = entry.getValue();
+    //         //             sentToClient(sseEmitter, entry.getKey(), notification.getEventType() ,entry.getValue());
+    //         //         });
+    //         events.entrySet().stream()
+    //             .filter(entry -> lastEventId.compareTo(entry.getKey()) < 0)
+    //             .forEach(entry -> {
+    //                 Notification notification = entry.getValue();
+    //                 try {
+    //                     sseEmitter.send(SseEmitter.event()
+    //                         .id(entry.getKey())
+    //                         .name(notification.getEventType())
+    //                         .data(notification.getEventData()));
+    //                 } catch (Exception e) {
+    //                     log.error("notification sse 캐시 이벤트 전송 실패: {}", e.getMessage());
+    //                 }
+    //             });
+    //     }
+    //
+    //     return sseEmitter;
+    // }
+
+    // SSE 구독 - 트랜잭션 필요 없음!
     public SseEmitter subscribe(User user, String lastEventId) {
+        String userId = user.getId().toString();
 
-        // 고유 생성 아이디 + emitter 저장
+        // 기존 연결이 있으면 제거 (중복 연결 방지)
+        SseEmitter oldEmitter = emitters.remove(userId);
+        if (oldEmitter != null) {
+            try {
+                oldEmitter.complete();
+            } catch (Exception e) {
+                log.warn("기존 emitter 종료 중 오류 (무시 가능): {}", e.getMessage());
+            }
+        }
+
+        // 새 emitter 생성 및 저장
         SseEmitter sseEmitter = new SseEmitter(TIME_OUT);
-        String emitterId = user.getId() + "_" + UUID.randomUUID().toString();
-        emitters.put(emitterId, sseEmitter);
+        emitters.put(userId, sseEmitter);
 
-        // 시간 초과 or 비동기 요청 불가 시 해당 아이디의 emitter 삭제
-        sseEmitter.onCompletion(() -> emitters.remove(emitterId));
-        sseEmitter.onTimeout(() -> emitters.remove(emitterId));
+        // 콜백 핸들러 등록
+        sseEmitter.onCompletion(() -> {
+            log.info("🔌 SSE connection completed for userId: {}", userId);
+            emitters.remove(userId);
+        });
+
+        sseEmitter.onTimeout(() -> {
+            log.info(" SSE connection timeout for userId: {}", userId);
+            emitters.remove(userId);
+            try {
+                sseEmitter.complete();
+            } catch (Exception e) {
+                log.warn("Emitter 완료 처리 중 오류: {}", e.getMessage());
+            }
+        });
+
+        sseEmitter.onError((e) -> {
+            log.warn(" SSE connection error for userId: {}", userId, e);
+            emitters.remove(userId);
+        });
 
         // 503 오류 방지용 더미 전송
-        sentToClient(sseEmitter, emitterId, "test","Event Stream Created. User Id : " + user.getId());
+        try {
+            sseEmitter.send(SseEmitter.event()
+                .name("connected")
+                .data("Event Stream created. userId: " + userId));
+        } catch (IOException e) {
+            log.error(" Initial SSE event send failed for userId: {}", userId, e);
+            emitters.remove(userId);
+            throw new CustomException(ErrorCode.SSE_DATA_SEND_ERROR);
+        }
 
-        if(!lastEventId.isEmpty()){
-            Map<String, Notification> events = findAllEventCacheByUserId(user.getId().toString());
-            events.entrySet().stream()
-                    .filter(entry -> lastEventId.compareTo(entry.getKey()) < 0)
-                    .forEach(entry -> {
-                        Notification notification = entry.getValue();
-                        sentToClient(sseEmitter, entry.getKey(), notification.getEventType() ,entry.getValue());
-                    });
+        // lastEventId가 있으면 미수신 이벤트 재전송
+        if (lastEventId != null && !lastEventId.isEmpty()) {
+            sendMissedEvents(sseEmitter, userId, lastEventId);
         }
 
         return sseEmitter;
     }
 
+    // 미수신 이벤트 재전송
+    private void sendMissedEvents(SseEmitter emitter, String userId, String lastEventId) {
+        try {
+            // MongoDB에서 직접 조회
+            List<Notification> missedNotifications = notificationRepository
+                .findByUserIdAndCreatedAtAfter(
+                    Long.parseLong(userId),
+                    parseEventIdToDateTime(lastEventId)
+                )
+                .stream()
+                .sorted((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()))
+                .toList();
+
+            for (Notification notification : missedNotifications) {
+                try {
+                    emitter.send(SseEmitter.event()
+                        .id(notification.getId())
+                        .name(notification.getEventType())
+                        .data(notification.getEventData()));
+                } catch (IOException e) {
+                    log.error(" 미수신 이벤트 전송 실패 - userId: {}, notificationId: {}",
+                        userId, notification.getId(), e);
+                    throw new RuntimeException(e);
+                }
+            }
+
+        } catch (Exception e) {
+            log.error(" 미수신 이벤트 재전송 중 오류 발생 for userId: {}", userId, e);
+        }
+    }
+
+    private LocalDateTime parseEventIdToDateTime(String eventId) {
+        try {
+            // MongoDB ObjectId에서 timestamp 추출
+            return LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(Long.parseLong(eventId.substring(0, 8), 16) * 1000),
+                ZoneId.systemDefault()
+            );
+        } catch (Exception e) {
+            log.warn("EventId 파싱 실패, 1시간 전으로 대체: {}", eventId);
+            return LocalDateTime.now().minusHours(1);
+        }
+    }
+
+    // SSE 전송 - MongoDB만 저장,
     public void send(User receiver, Document eventData, String type){
-        Notification notification = new Notification(
+        String userId = receiver.getId().toString();
+
+        try {
+            Notification notification = new Notification(
                 null, // MongoDB에서 자동 생성
                 receiver.getId(),
                 type,
                 eventData, // 자유구조 알림 데이터
                 LocalDateTime.now(),
                 false // isRead
-        );
-        notificationRepository.save(notification);
-        Map<String,SseEmitter> sseEmitters = findAllEmitterByUserId(receiver.getId().toString());
-        sseEmitters.forEach((key, emitter) -> {
-            eventCache.put(key, notification); // 캐시 저장 (복구용)
-            sentToClient(emitter, key, notification.getEventType(), notification.getEventData());
-        });
+            );
+            notificationRepository.save(notification);
+
+            // Map<String,SseEmitter> sseEmitters = findAllEmitterByUserId(receiver.getId().toString());
+            //userId로 emitter 직접 조회
+            SseEmitter emitter = emitters.get(userId);
+            if (emitter == null) {
+                return;
+            }
+            // sseEmitters.forEach((key, emitter) -> {
+            //     eventCache.put(key, notification); // 캐시 저장 (복구용)
+            //     sentToClient(emitter, key, notification.getEventType(), notification.getEventData());
+            // });
+            //sendToClient 대신 직접 send
+            try {
+                emitter.send(SseEmitter.event()
+                    .id(notification.getId()) // MongoDB의 알림 ID 사용
+                    .name(notification.getEventType())
+                    .data(notification.getEventData()));
+
+            } catch (IOException e) {
+                emitters.remove(userId);
+                // Broken pipe는 정상적인 클라이언트 종료일 수 있으므로 예외 던지지 않음
+            }
+        } catch (Exception e) {
+            log.error("알림 전송 중 예외 발생 userId: {}, type:{}", receiver.getId(), type);
+        }
+
     }
 
-    private void sentToClient(SseEmitter sseEmitter, String emitterId, String eventType, Object data){
-        try {
-            sseEmitter.send(SseEmitter.event()
-                    .id(emitterId)
-                    .name(eventType)
-                    .data(data));
-        } catch (Exception e) {
-            emitters.remove(emitterId);
-            log.error(e.getMessage(), e);
-            throw new CustomException(ErrorCode.SSE_DATA_SEND_ERROR);
-        }
-    }
+    // private void sentToClient(SseEmitter sseEmitter, String emitterId, String eventType, Object data){
+    //     try {
+    //         sseEmitter.send(SseEmitter.event()
+    //                 .id(emitterId)
+    //                 .name(eventType)
+    //                 .data(data));
+    //     } catch (Exception e) {
+    //         emitters.remove(emitterId);
+    //         log.error(e.getMessage(), e);
+    //         throw new CustomException(ErrorCode.SSE_DATA_SEND_ERROR);
+    //     }
+    // }
 
     private Map<String, Notification> findAllEventCacheByUserId(String userId){
         return eventCache.entrySet().stream()
@@ -184,27 +342,138 @@ public class NotificationService {
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
     }
 
-    //키워드 매칭 알림
+    // 🎯 키워드 매칭 알림 - N+1 완전 해결!
+    // 한 번의 트랜잭션에서 필요한 데이터를 모두 조회하고, 비즈니스 로직은 밖에서 처리
+    @Async
     public void sendKeywordMatchingNotification(Post post){
-        List<User> userList = userRepository.findUsersWithKeywords();
-        for(User user : userList){
-            List<Keyword> keywordList = keywordRepository.findByUser(user);
-            List<String> matchedKeywordList = new ArrayList<>();
+        // 1️⃣ 짧은 트랜잭션으로 유저와 키워드를 한 번에 조회 (Fetch Join)
+        List<User> usersWithKeywords = fetchUsersWithKeywords();
 
-            for(Keyword keyword : keywordList){
-                if(post.getTitle().contains(keyword.getWord()) || post.getCleanedText().contains(keyword.getWord())){
-                    matchedKeywordList.add(keyword.getWord());
-                }
+        // 2️⃣ 트랜잭션 밖에서 키워드 매칭 및 알림 전송
+        for(User user : usersWithKeywords){
+            // notification 설정 확인
+            NotificationSetting setting = user.getNotificationSetting();
+            if(setting == null || !setting.getKeywordAlertEnabled()) {
+                log.debug("키워드 알림 비활성화 - User ID: {}", user.getId());
+                continue;
             }
+            // Fetch Join으로 이미 로드된 키워드 사용 (추가 쿼리 발생 안 함!)
+            List<String> matchedKeywords = user.getKeywords().stream()
+                    .map(Keyword::getWord)
+                    .filter(keyword ->
+                            post.getTitle().contains(keyword) ||
+                                    post.getCleanedText().contains(keyword))
+                    .collect(Collectors.toList());
 
-            if(!matchedKeywordList.isEmpty()){
+            if(!matchedKeywords.isEmpty()){
+                log.info("✅ 키워드 매칭 성공 - User ID: {}, 매칭된 키워드: {}", user.getId(), matchedKeywords);
                 Document data = new Document()
                         .append("notice_id", post.getId())
                         .append("title", post.getTitle())
-                        .append("match_keyword",matchedKeywordList);
+                        .append("match_keyword", matchedKeywords)
+                        .append("created_at", LocalDateTime.now());
                 send(user, data, NotificationType.KEYWORD_MATCHING.name().toLowerCase());
             }
         }
+    }
 
+    // 🎯 한 번의 쿼리로 유저와 키워드를 함께 조회 (N+1 해결)
+    @Transactional(readOnly = true)
+    protected List<User> fetchUsersWithKeywords() {
+        return userRepository.findUsersWithKeywordsFetch();
+    }
+
+    // 🎯 데드라인 알림 스케줄링 - N+1 완전 해결 + Null 체크
+    public void scheduleDeadlineNotification(Post post){
+        // 데드라인 존재 여부 검사
+        if(post.getDeadline() == null) {
+            log.debug("Deadline이 없는 공지. Post Id : {}", post.getId());
+            return;
+        }
+    // 1️⃣ 짧은 트랜잭션으로 유저와 알림 설정을 한 번에 조회 (Fetch Join)
+    List<User> usersWithSettings = fetchUsersWithNotificationSettings();
+
+    // 2️⃣ 트랜잭션 밖에서 스케줄링
+    String deadline = post.getDeadline();
+    LocalDateTime parsedDeadline = LocalDateTime.parse(deadline);
+
+    for(User user : usersWithSettings){
+        try {
+                // Fetch Join으로 이미 로드된 설정 사용 (추가 쿼리 발생 안 함!)
+            NotificationSetting setting = user.getNotificationSetting();
+
+                // Null 체크 추가 (부하 테스트 안정화)
+                Integer hoursBefore;
+                if (setting == null) {
+                    hoursBefore = 24;
+                } else {
+                    hoursBefore = setting.getDeadlineAlertHours();
+                }
+
+                LocalDateTime notificationTime = parsedDeadline.minusHours(hoursBefore);
+
+                if(notificationTime.isBefore(LocalDateTime.now())) {
+                    log.debug("알림 시간이 이미 지났습니다. User: {}, Post: {}", user.getId(), post.getId());
+                    continue;
+                }
+
+                Instant instant = notificationTime.atZone(ZoneId.systemDefault()).toInstant();
+                taskScheduler.schedule(() -> sendDeadlineNotification(user, post, hoursBefore), instant);
+                log.info("✅ 알림 예약 완료. Post Id: {}, User Id: {}, 예약 시간: {}",
+                    post.getId(), user.getId(), instant);
+
+            } catch (Exception e) {
+            // 한 사용자 실패해도 다른 사용자는 계속 처리
+        }
+        }
+    }
+
+    public NotificationListGetResponse getNotificationList(User user){
+            List<Notification> notificationList = notificationRepository.findByUserId(user.getId());
+            List<NotificationDto> notificationDtoList = notificationList.stream()
+                    .map(notification -> NotificationDto.builder()
+                            .id(notification.getId())
+                            .eventType(notification.getEventType())
+                            .eventData(notification.getEventData())
+                            .createdAt(notification.getCreatedAt())
+                            .isRead(notification.getIsRead())
+                            .build())
+                    .toList();
+            return NotificationListGetResponse.builder()
+                    .notificationList(notificationDtoList)
+                    .build();
+
+    }
+    // 🎯 한 번의 쿼리로 유저와 알림 설정을 함께 조회 (N+1 해결)
+    @Transactional(readOnly = true)
+    protected List<User> fetchUsersWithNotificationSettings() {
+        return userRepository.findAllWithNotificationSettings();
+    }
+
+    // 🎯 스케줄된 알림 전송 - 트랜잭션 필요 없음
+    // private void sendDeadlineNotification(User user, Post post, Integer hoursLeft){
+    //     Document data = new Document()
+    private void sendDeadlineNotification(User user, Post post, Integer hoursLeft){
+        try {
+            Document data = new Document()
+                .append("notice_id", post.getId())
+                .append("title", post.getTitle())
+                .append("deadline", post.getDeadline())
+                .append("hours_left", hoursLeft)
+                // .append("hours_left", notificationSettingRepository.findByUser(user).getDeadlineAlertHours())
+                .append("hours_left", hoursLeft)
+                .append("created_at", LocalDateTime.now());
+            send(user, data, NotificationType.DEADLINE_APPROACHING.name().toLowerCase());
+
+
+
+            String message = String.format("[%s]\n이 공지사항이 곧 마감입니다 확인하세요! :ttabong_ham:\n[%s]", post.getTitle()
+            ,post.getLink());
+            AlarmEvent alarmEvent = new AlarmEvent(user.getEmail(), message);
+            eventPublisher.publishEvent(alarmEvent);
+
+        } catch (Exception e) {
+            //예외 안던짐
+        }
     }
 }

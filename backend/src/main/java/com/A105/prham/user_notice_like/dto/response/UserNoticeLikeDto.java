@@ -26,6 +26,8 @@ public record UserNoticeLikeDto(
 
         String deadline,
 
-        Boolean isLiked
+        Boolean isLiked,
+
+        String teamName
 ) {
 }

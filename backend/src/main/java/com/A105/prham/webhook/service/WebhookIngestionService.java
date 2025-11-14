@@ -2,10 +2,12 @@ package com.A105.prham.webhook.service;
 
 import java.util.List;
 
+import com.A105.prham.mattermost.dto.MattermostChannel;
 import com.A105.prham.mattermost.dto.MattermostTeam;
 import com.A105.prham.mattermost.service.MattermostAdminService;
 import com.A105.prham.messages.service.MattermostService;
 import com.A105.prham.webhook.dto.MattermostWebhookDto;
+import com.A105.prham.webhook.dto.UpdatePostRequest;
 import com.A105.prham.webhook.entity.Post;
 import com.A105.prham.webhook.entity.PostStatus;
 import com.A105.prham.webhook.event.PostReceivedEvent;
@@ -41,21 +43,34 @@ public class WebhookIngestionService {
 		//팀 명 추가
 		String teamName = getTeamName(payload.getTeamId(), payload.getUserId());
 
+		String channelDisplayName = getChannelDisplayName(payload.getChannelId());
+
+		log.info("채널 정보 - channelId: {}, displayName: {}, payload.channelName: {}",
+			payload.getChannelId(), channelDisplayName, payload.getChannelName());
+
+
+		String link = null;
+		try {
+			link = mattermostService.getPostLink(payload.getPostId());
+		} catch (Exception e) {
+			log.warn("⚠️ Failed to get post link for {}: {}", payload.getPostId(), e.getMessage());
+		}
+
 		// 2. 최소 정보로 Post Entity 생성 (PENDING 상태)
-		Post post = new Post();
-		post.setPostId(payload.getPostId());
-		post.setChannelId(payload.getChannelId());
-		post.setUserId(payload.getUserId());
-		post.setUserName(payload.getUserName());
-		post.setOriginalText(payload.getText());
-		post.setWebhookTimestamp(payload.getTimestamp());
-		post.setStatus(PostStatus.PENDING);
-		post.setChannelName(payload.getChannelName());
-		// 3.  원본 File ID 문자열 저장 (비동기 프로세서가 이 값을 사용)
-		post.setFileIds(payload.getFileIds());
-		//팀 정보
-		post.setTeamId(payload.getTeamId());
-		post.setTeamName(teamName);
+		Post post = Post.builder()
+			.postId(payload.getPostId())
+			.channelId(payload.getChannelId())
+			.channelName(channelDisplayName != null ? channelDisplayName : payload.getChannelName())
+			.userId(payload.getUserId())
+			.userName(payload.getUserName())
+			.originalText(payload.getText())
+			.webhookTimestamp(payload.getTimestamp())
+			.link(link)
+			.fileIds(payload.getFileIds())
+			.teamId(payload.getTeamId())
+			.teamName(teamName)
+			.status(PostStatus.PENDING)
+			.build();
 
 		// 4. DB에 저장
 		Post savedPost = postRepository.save(post);
@@ -81,5 +96,40 @@ public class WebhookIngestionService {
 		} catch (Exception e) {
 			return "unknown teamname";
 		}
+	}
+
+	private String getChannelDisplayName(String channelId) {
+		try {
+			MattermostChannel channel = mattermostAdminService.getChannelById(channelId);
+
+			if (channel != null && channel.getDisplayName() != null) {
+				return channel.getDisplayName();
+			}
+			return null;
+		}catch (Exception e) {
+			return null;
+		}
+	}
+
+
+	/**
+	 * Mattermost 웹훅 페이로드를 받아 DB에 PENDING 상태로 저장하고
+	 * 비동기 처리를 위한 이벤트를 발행합니다.
+	 */
+	@Transactional
+	public void updateAndPublish(UpdatePostRequest request) {
+
+		//post 찾기
+		Post post = postRepository.findByPostId(request.getPostId()).orElseThrow(()-> new RuntimeException("존재하지 않는 post 수정 시도"));
+
+		post.setOriginalText(request.getMessage());
+
+		//DB에 저장
+		Post savedPost = postRepository.save(post);
+		log.info("Post changed. DB ID: {}", savedPost.getId());
+
+		// 5. 비동기 처리를 위해 이벤트 발행
+		eventPublisher.publishEvent(new PostReceivedEvent(this, savedPost.getId()));
+		log.info("Published PostReceivedEvent for DB ID: {}", savedPost.getId());
 	}
 }

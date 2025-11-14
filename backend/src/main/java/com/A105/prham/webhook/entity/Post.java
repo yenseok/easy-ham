@@ -1,22 +1,20 @@
 package com.A105.prham.webhook.entity;
 
-import com.A105.prham.messages.dto.FileInfo;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 import com.A105.prham.common.domain.BaseTimeEntity;
+import com.A105.prham.position.entity.Position;
 
 @Entity
 @Table(name = "posts")
-@Data
+@Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Post {
+@Builder
+public class Post extends BaseTimeEntity {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,14 +38,15 @@ public class Post {
 	@Column(name = "webhook_timestamp")
 	private String webhookTimestamp;
 
+	@Setter
 	@Column(name = "original_text", columnDefinition = "TEXT")
 	private String originalText;
 
 	@Column(name = "file_ids")
 	private String fileIds;
 
-//	@OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-//	private List<File> files = new ArrayList<>();
+	@Column(name = "link")
+	private String link;
 
 	// after llm
 	@Column(name = "cleaned_text", columnDefinition = "TEXT")
@@ -75,25 +74,58 @@ public class Post {
 	@Column(name = "processed_at")
 	private String processedAt;
 
-	@Column(name = "created_at", nullable = false)
-	private String createdAt;
-
 	@Column(name = "team_id", nullable = false)
 	private String teamId;
 
 	@Column(name = "team_name", nullable = false)
 	private String teamName;
 
-	@PrePersist
-	protected void onCreate() {
-		createdAt = LocalDateTime.now().toString();
-		if (status == null) {
-			status = PostStatus.PENDING; // ✨ 기본 상태는 PENDING
-		}
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "position_id")
+	private Position position;
+
+	// 상태 변경
+	public void updateStatus(PostStatus newStatus) {
+		this.status = newStatus;
 	}
 
-//	public void addFile(File file) {
-//		files.add(file);
-//		file.setPost(this); // File 엔티티의 setPost 메서드 호출
-//	}
+	// llm 분류 완료
+	public void markAsProcessed() {
+		this.status = PostStatus.PROCESSED;
+		this.processedAt = LocalDateTime.now().toString();
+	}
+
+	// llm 분류 실패
+	public void markAsFailed() {
+		this.status = PostStatus.FAILED;
+		this.processedAt = LocalDateTime.now().toString();
+	}
+
+	// cleanedText
+	public void updateCleanedText(String cleanedText) {
+		this.cleanedText = cleanedText;
+	}
+
+	// llm 분류 결과 업데이트
+	public void updateClassificationResult(
+		String cleanedText,
+		String title,
+		String mainCategory,
+		String subCategory,
+		String deadline,
+		String campusList
+	) {
+		this.cleanedText = cleanedText;
+		this.title = title;
+		this.mainCategory = mainCategory;
+		this.subCategory = subCategory;
+		this.deadline = deadline;
+		this.campusList = campusList;
+	}
+
+	// 채용 공고 업데이트
+	public void updatePosition(Position position) {
+		this.position = position;
+	}
+
 }
