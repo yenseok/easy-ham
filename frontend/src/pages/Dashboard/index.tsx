@@ -1,13 +1,14 @@
 import { useEffect, useState, useMemo } from "react";
 import { PageLayout } from "@/components/layouts/PageLayout";
-import { getMockDashboardData } from "@/services/mock/dashboardData";
 import { searchApi } from "@/services/api/search";
+import { jobsApi } from "@/services/api/jobs";
 import { sseManager } from "@/services/sse/sseManager";
 import { useSSEPostStore } from "@/stores/useSSEPostStore";
 import { bookmarksApi } from "@/services/api/bookmarks";
 import { convertBookmarkItemToNotice } from "@/utils/bookmarkMapper";
 import { convertSSEEventToNotice } from "@/utils/sseMapper";
 import type { Notice } from "@/types/notice";
+import type { JobPostItem } from "@/types/api";
 import BookmarkedNoticesWidget from "./components/BookmarkedNoticesWidget";
 import UrgentDeadlinesWidget from "./components/UrgentDeadlinesWidget";
 import PersonalizedJobsWidget from "./components/PersonalizedJobsWidget";
@@ -19,6 +20,7 @@ import { LayoutDashboard } from "lucide-react";
 export default function DashboardPage() {
   const [allNotices, setAllNotices] = useState<Notice[]>([]);
   const [bookmarkedNotices, setBookmarkedNotices] = useState<Notice[]>([]);
+  const [jobPosts, setJobPosts] = useState<JobPostItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { newPosts } = useSSEPostStore();
 
@@ -42,7 +44,7 @@ export default function DashboardPage() {
     }
   };
 
-  // Search API 호출 (전체 공지 + 북마크 공지)
+  // Search API 호출 (전체 공지 + 북마크 공지 + 채용공고)
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -57,6 +59,15 @@ export default function DashboardPage() {
 
         // 2. 북마크된 공지사항 조회
         await refreshBookmarks();
+
+        // 3. 채용공고 조회
+        try {
+          const jobs = await jobsApi.getPersonalizedJobs();
+          setJobPosts(jobs);
+        } catch (error) {
+          console.error('[Dashboard] 채용공고 로드 실패:', error);
+          setJobPosts([]); // 실패 시 빈 배열
+        }
       } catch (error) {
         console.error('[Dashboard] 데이터 로드 실패:', error);
       } finally {
@@ -115,10 +126,6 @@ export default function DashboardPage() {
     }
   }, [newPosts]);
 
-  // Mock 데이터 (채용공고용)
-
-  const { notices: mockNotices } = getMockDashboardData();
-
   // 마감 임박 할일 (D-7 이내, deadline 있는 것만, 마감일 지난 것 제외)
   const urgentDeadlines = useMemo(() => {
     const today = new Date();
@@ -159,8 +166,8 @@ export default function DashboardPage() {
     });
   }, [allNotices]);
 
-  // 채용공고 (Mock 데이터 사용 - 기능 미구현)
-  const jobs = mockNotices.filter((n) => n.category === "취업").slice(0, 4);
+  // 채용공고 (실제 API 데이터 사용, 최대 4개)
+  const displayedJobs = jobPosts.slice(0, 4);
 
   /**
    * 공지사항 클릭 핸들러 (모달 열기)
@@ -208,7 +215,7 @@ export default function DashboardPage() {
             notices={urgentDeadlines}
             onNoticeClick={handleNoticeClick}
           />
-          <PersonalizedJobsWidget jobs={jobs} />
+          <PersonalizedJobsWidget jobs={displayedJobs} />
         </div>
 
         {/* 주간 캘린더 */}
