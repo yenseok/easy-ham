@@ -73,7 +73,7 @@ public class PostController {
 			if ("post_updated".equals(request.getEventType())) {
 				// 수정 이벤트: DB업데이트 meilisearch에서 업데이트
 				log.info("{} changed",request.getPostId());
-				//TODO 엔티티수정
+				//엔티티수정
 				webhookIngestionService.updateAndPublish(request);
 			} else {
 				log.info("{} deleted",request.getPostId());
