@@ -58,4 +58,16 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @Query("SELECT DISTINCT u FROM User u JOIN u.keywords k WHERE k IS NOT NULL")
     List<User> findUsersWithKeywords();
+
+
+    // 유저와 키워드를 한 번에 조회
+    @Query("SELECT DISTINCT u FROM User u " +
+            "LEFT JOIN FETCH u.keywords k " +
+            "WHERE SIZE(u.keywords) > 0")
+    List<User> findUsersWithKeywordsFetch();
+
+    // 유저와 알림 설정을 한 번에 조회
+    @Query("SELECT DISTINCT u FROM User u " +
+            "LEFT JOIN FETCH u.notificationSetting")
+    List<User> findAllWithNotificationSettings();
 }
