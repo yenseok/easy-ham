@@ -5,7 +5,7 @@ import java.util.List;
 import com.A105.prham.common.response.ErrorCode;
 import com.A105.prham.search.service.SearchService;
 import com.A105.prham.webhook.dto.UpdatePostRequest;
-import com.fasterxml.jackson.databind.JsonNode;
+import com.A105.prham.webhook.service.WebhookIngestionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,6 +28,7 @@ public class PostController {
 
 	private final PostService postService;
 	private final SearchService searchService;
+	private final WebhookIngestionService webhookIngestionService;
 
 	//전체 채용 공고 목록 조회
 	@GetMapping("/jobs")
@@ -73,6 +74,7 @@ public class PostController {
 				// 수정 이벤트: DB업데이트 meilisearch에서 업데이트
 				log.info("{} changed",request.getPostId());
 				//TODO 엔티티수정
+				webhookIngestionService.updateAndPublish(request);
 			} else {
 				log.info("{} deleted",request.getPostId());
 				// 삭제 이벤트: DB삭제, meilisearch에서 삭제

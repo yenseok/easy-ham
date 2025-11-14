@@ -1,10 +1,7 @@
 package com.A105.prham.webhook.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -41,6 +38,7 @@ public class Post extends BaseTimeEntity {
 	@Column(name = "webhook_timestamp")
 	private String webhookTimestamp;
 
+	@Setter
 	@Column(name = "original_text", columnDefinition = "TEXT")
 	private String originalText;
 
