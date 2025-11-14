@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -28,11 +29,10 @@ import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
-@RequiredArgsConstructor
 public class LlmClassificationService {
 	private final CodeService codeService;
 	private final CampusService campusService;
-	private final RestTemplate restTemplate;
+	private final RestTemplate llmRestTemplate;
 	private final ObjectMapper objectMapper;
 
 	@Value("${llm.api.key}")
@@ -40,6 +40,19 @@ public class LlmClassificationService {
 
 	@Value("${llm.api.url}")
 	private String llmApiUrl;
+
+	// llmRestTemplate
+	public LlmClassificationService(
+		CodeService codeService,
+		CampusService campusService,
+		@Qualifier("llmRestTemplate") RestTemplate llmRestTemplate,
+		ObjectMapper objectMapper
+	) {
+		this.codeService = codeService;
+		this.campusService = campusService;
+		this.llmRestTemplate = llmRestTemplate;
+		this.objectMapper = objectMapper;
+	}
 
 	public LlmClassificationResult classify(Post post){
 		List<MaincodeResponseDto> mainCodes = codeService.getAllMaincodes();
@@ -69,7 +82,7 @@ public class LlmClassificationService {
 		try {
 			log.info("OpenAi API 호출 시작");
 
-			OpenAiChatResponse response = restTemplate.postForObject(llmApiUrl, entity, OpenAiChatResponse.class);
+			OpenAiChatResponse response = llmRestTemplate.postForObject(llmApiUrl, entity, OpenAiChatResponse.class);
 
 			if (response == null || response.getChoices() == null || response.getChoices().isEmpty()) {
 				throw new RuntimeException("llm 응답이 비었음");

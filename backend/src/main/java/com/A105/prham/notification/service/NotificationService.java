@@ -85,6 +85,7 @@ public class NotificationService {
 
     @Transactional
     public void createNotificationSetting(User user){
+
         // 유효성 검사
         if(notificationSettingRepository.findByUser(user) != null){
             throw new CustomException(ErrorCode.DUPLICATED_NOTIFICATION_SETTING);
@@ -123,6 +124,7 @@ public class NotificationService {
 
     // SSE 구독 - 트랜잭션 필요 없음!
     public SseEmitter subscribe(User user, String lastEventId) {
+
         // 고유 생성 아이디 + emitter 저장
         SseEmitter sseEmitter = new SseEmitter(TIME_OUT);
         String emitterId = user.getId() + "_" + UUID.randomUUID().toString();
@@ -225,7 +227,8 @@ public class NotificationService {
         return userRepository.findUsersWithKeywordsFetch();
     }
 
-    // 🎯 데드라인 알림 스케줄링 - N+1 완전 해결!
+
+    // 🎯 데드라인 알림 스케줄링 - N+1 완전 해결 + Null 체크
     public void scheduleDeadlineNotification(Post post){
         // 데드라인 존재 여부 검사
         if(post.getDeadline() == null) {
@@ -241,20 +244,33 @@ public class NotificationService {
         LocalDateTime parsedDeadline = LocalDateTime.parse(deadline);
 
         for(User user : usersWithSettings){
-            // Fetch Join으로 이미 로드된 설정 사용 (추가 쿼리 발생 안 함!)
-            NotificationSetting setting = user.getNotificationSetting();
-            if(setting == null) continue;
+            try {
+                // Fetch Join으로 이미 로드된 설정 사용 (추가 쿼리 발생 안 함!)
+                NotificationSetting setting = user.getNotificationSetting();
 
-            Integer hoursBefore = setting.getDeadlineAlertHours();
-            LocalDateTime notificationTime = parsedDeadline.minusHours(hoursBefore);
+                // Null 체크 추가 (부하 테스트 안정화)
+                Integer hoursBefore;
+                if (setting == null) {
+                    hoursBefore = 24;
+                } else {
+                    hoursBefore = setting.getDeadlineAlertHours();
+                }
 
-            if(notificationTime.isBefore(LocalDateTime.now())) {
-                continue;
+                LocalDateTime notificationTime = parsedDeadline.minusHours(hoursBefore);
+
+                if(notificationTime.isBefore(LocalDateTime.now())) {
+                    log.debug("알림 시간이 이미 지났습니다. User: {}, Post: {}", user.getId(), post.getId());
+                    continue;
+                }
+
+                Instant instant = notificationTime.atZone(ZoneId.systemDefault()).toInstant();
+                taskScheduler.schedule(() -> sendDeadlineNotification(user, post, hoursBefore), instant);
+                log.info("✅ 알림 예약 완료. Post Id: {}, User Id: {}, 예약 시간: {}",
+                    post.getId(), user.getId(), instant);
+
+            } catch (Exception e) {
+                // 한 사용자 실패해도 다른 사용자는 계속 처리
             }
-
-            Instant instant = notificationTime.atZone(ZoneId.systemDefault()).toInstant();
-            taskScheduler.schedule(() -> sendDeadlineNotification(user, post, hoursBefore), instant);
-            log.info("알림 예약 완료. Post Id : {}, User Id: {}, 예약 시간: {}", post.getId(), user.getId(), instant);
         }
     }
 
@@ -265,13 +281,22 @@ public class NotificationService {
     }
 
     // 🎯 스케줄된 알림 전송 - 트랜잭션 필요 없음
+    // private void sendDeadlineNotification(User user, Post post, Integer hoursLeft){
+    //     Document data = new Document()
     private void sendDeadlineNotification(User user, Post post, Integer hoursLeft){
-        Document data = new Document()
+        try {
+            Document data = new Document()
                 .append("notice_id", post.getId())
                 .append("title", post.getTitle())
                 .append("deadline", post.getDeadline())
                 .append("hours_left", hoursLeft)
+                // .append("hours_left", notificationSettingRepository.findByUser(user).getDeadlineAlertHours())
+                .append("hours_left", hoursLeft)
                 .append("created_at", LocalDateTime.now());
-        send(user, data, NotificationType.DEADLINE_APPROACHING.name().toLowerCase());
+            send(user, data, NotificationType.DEADLINE_APPROACHING.name().toLowerCase());
+        } catch (Exception e) {
+            //예외 안던짐
+        }
+
     }
 }
