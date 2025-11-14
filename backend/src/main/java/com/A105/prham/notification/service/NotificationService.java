@@ -8,9 +8,7 @@ import com.A105.prham.notification.NotificationRepository;
 import com.A105.prham.notification.NotificationType;
 import com.A105.prham.notification.dto.request.KeywordCreateRequest;
 import com.A105.prham.notification.dto.request.NotificationSettingUpdateRequest;
-import com.A105.prham.notification.dto.response.KeywordDto;
-import com.A105.prham.notification.dto.response.KeywordListGetResponse;
-import com.A105.prham.notification.dto.response.NotificationSettingGetResponse;
+import com.A105.prham.notification.dto.response.*;
 import com.A105.prham.notification.entity.Notification;
 import com.A105.prham.notification_setting.entity.NotificationSetting;
 import com.A105.prham.notification_setting.repository.NotificationSettingRepository;
@@ -254,5 +252,21 @@ public class NotificationService {
                 .append("hours_left", notificationSettingRepository.findByUser(user).getDeadlineAlertHours())
                 .append("created_at", LocalDateTime.now());
         send(user, data, NotificationType.DEADLINE_APPROACHING.name().toLowerCase());
+    }
+
+    public NotificationListGetResponse getNotificationList(User user){
+        List<Notification> notificationList = notificationRepository.findByUserId(user.getId());
+        List<NotificationDto> notificationDtoList = notificationList.stream()
+                .map(notification -> NotificationDto.builder()
+                        .id(notification.getId())
+                        .eventType(notification.getEventType())
+                        .eventData(notification.getEventData())
+                        .createdAt(notification.getCreatedAt())
+                        .isRead(notification.getIsRead())
+                        .build())
+                .toList();
+        return NotificationListGetResponse.builder()
+                .notificationList(notificationDtoList)
+                .build();
     }
 }
