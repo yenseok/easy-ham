@@ -1,20 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Bell } from "lucide-react";
-import { searchApi } from "@/services/api/search";
 import type { Notice } from "@/types/notice";
 
 interface RecentNoticesWidgetProps {
+  notices: Notice[]; // 🔄 Dashboard의 allNotices를 props로 받음
   onNoticeClick?: (notice: Notice) => void;
 }
 
-export default function RecentNoticesWidget({ onNoticeClick }: RecentNoticesWidgetProps) {
-  const [notices, setNotices] = useState<Notice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
+export default function RecentNoticesWidget({ notices: allNotices, onNoticeClick }: RecentNoticesWidgetProps) {
   // 반응형: 모바일 감지
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" && window.innerWidth < 768
@@ -26,26 +21,11 @@ export default function RecentNoticesWidget({ onNoticeClick }: RecentNoticesWidg
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  useEffect(() => {
-    const fetchRecentNotices = async () => {
-      try {
-        setLoading(true);
-        const { notices: fetchedNotices } = await searchApi.searchPosts({
-          page: 0,
-          size: isMobile ? 3 : 5, // 모바일 3개, 데스크탑 5개
-        });
-        setNotices(fetchedNotices);
-        setError(false);
-      } catch (err) {
-        console.error("최근 공지 로드 실패:", err);
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRecentNotices();
-  }, [isMobile]);
+  // 🔄 allNotices에서 최신순으로 필요한 개수만 추출
+  const notices = useMemo(() => {
+    const count = isMobile ? 3 : 5;
+    return allNotices.slice(0, count);
+  }, [allNotices, isMobile]);
 
   const getCategoryColor = (subcategory: string) => {
     switch (subcategory) {
@@ -77,17 +57,7 @@ export default function RecentNoticesWidget({ onNoticeClick }: RecentNoticesWidg
         </h2>
       </div>
       <div className="px-4 py-4">
-        {loading ? (
-          <div className="space-y-2">
-            {Array.from({ length: isMobile ? 3 : 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full" />
-            ))}
-          </div>
-        ) : error ? (
-          <div className="text-sm text-red-500 text-center py-8">
-            공지를 불러올 수 없습니다
-          </div>
-        ) : notices.length === 0 ? (
+        {notices.length === 0 ? (
           <div className="text-sm text-gray-400 text-center py-8">
             최근 공지가 없습니다
           </div>

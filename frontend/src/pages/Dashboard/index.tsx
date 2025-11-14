@@ -216,9 +216,12 @@ export default function DashboardPage() {
           <WeeklyCalendarWidget events={weeklyEvents} />
         </div>
 
-        {/* 최근 공지 (실제 API 연결) */}
+        {/* 최근 공지 (SSE 실시간 연동) */}
         <div>
-          <RecentNoticesWidget onNoticeClick={handleNoticeClick} />
+          <RecentNoticesWidget
+            notices={allNotices}
+            onNoticeClick={handleNoticeClick}
+          />
         </div>
       </div>
 
