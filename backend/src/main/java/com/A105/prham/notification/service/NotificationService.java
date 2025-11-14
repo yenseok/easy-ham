@@ -19,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
 import org.springframework.scheduling.TaskScheduler;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -190,6 +191,7 @@ public class NotificationService {
 
     // 🎯 키워드 매칭 알림 - N+1 완전 해결!
     // 한 번의 트랜잭션에서 필요한 데이터를 모두 조회하고, 비즈니스 로직은 밖에서 처리
+    @Async
     public void sendKeywordMatchingNotification(Post post){
         // 1️⃣ 짧은 트랜잭션으로 유저와 키워드를 한 번에 조회 (Fetch Join)
         List<User> usersWithKeywords = fetchUsersWithKeywords();
