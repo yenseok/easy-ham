@@ -179,6 +179,9 @@ export const NotificationDropdown = () => {
                   <p className="text-sm font-medium text-gray-900">
                     {notif.title}
                   </p>
+                  {notif.content && (
+                    <p className="text-xs text-gray-600 mt-1">{notif.content}</p>
+                  )}
                   <p className="text-xs text-gray-500 mt-1">{notif.time}</p>
                 </div>
                 {!notif.read && (

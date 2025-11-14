@@ -9,7 +9,13 @@ import { useSSEStore } from "@/stores/useSSEStore";
 import { useSSEPostStore } from "@/stores/useSSEPostStore";
 import { useNotificationStore } from "@/stores/useNotificationStore";
 import { API_ENDPOINTS } from "@/constants/api";
-import type { SSEError, NewPostEvent, NotificationEvent } from "./types";
+import type {
+  SSEError,
+  NewPostEvent,
+  NotificationEvent,
+  KeywordMatchingEvent,
+  DeadlineApproachingEvent,
+} from "./types";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
@@ -192,18 +198,45 @@ class SSEManager {
     notificationStreamClient.onMessage((data) => {
       console.log("[SSE Manager] Received notification:", data);
       const notificationData = data as NotificationEvent;
-      // notification store에 추가 (이미 unreadCount 증가 로직 포함)
-      const keywords = Array.isArray(notificationData.match_keyword)
-        ? notificationData.match_keyword.join(", ")
-        : "Unknown keywords";
 
-      useNotificationStore.getState().addSSENotification?.({
-        id: notificationData.notice_id,
-        type: "info",
-        title: notificationData.title,
-        content: `Matched keywords: ${keywords}`,
-        read: false,
-      });
+      // keyword_matching 이벤트 처리
+      if ("match_keyword" in notificationData) {
+        const keywordEvent = notificationData as KeywordMatchingEvent;
+        const keywords = Array.isArray(keywordEvent.match_keyword)
+          ? keywordEvent.match_keyword.join(", ")
+          : "Unknown keywords";
+
+        useNotificationStore.getState().addSSENotification?.({
+          id: keywordEvent.notice_id,
+          type: "info",
+          title: keywordEvent.title,
+          content: `Matched keywords: ${keywords}`,
+          read: false,
+        });
+      }
+      // deadline_approaching 이벤트 처리
+      else if ("hours_left" in notificationData) {
+        const deadlineEvent = notificationData as DeadlineApproachingEvent;
+
+        // hours_left 기반 긴급도 판단
+        let notificationType: "danger" | "info" = "danger";
+        if (deadlineEvent.hours_left > 24) {
+          notificationType = "info";
+        }
+
+        const hoursText =
+          deadlineEvent.hours_left < 1
+            ? "1시간 이내"
+            : `${Math.round(deadlineEvent.hours_left)}시간`;
+
+        useNotificationStore.getState().addSSENotification?.({
+          id: String(deadlineEvent.notice_id),
+          type: notificationType,
+          title: deadlineEvent.title,
+          content: `마감 ${hoursText} 남음 (${deadlineEvent.deadline})`,
+          read: false,
+        });
+      }
     });
 
     notificationStreamClient.onError((error: SSEError) => {
@@ -214,8 +247,12 @@ class SSEManager {
     });
 
     try {
-      // notifications/stream: handshake 이벤트는 "connected", 데이터 이벤트는 "keyword_matching"
+      // notifications/stream: handshake 이벤트는 "connected", 데이터 이벤트는 "keyword_matching"과 "deadline_approaching"
       notificationStreamClient.connect(url, "keyword_matching", "connected");
+
+      // 추가 이벤트 타입 리스닝 (같은 연결에서)
+      notificationStreamClient.addEventListenerForType("deadline_approaching");
+
       sseStore.setNotificationStreamStatus("connected");
       this.notificationStreamRetries = 0;
     } catch (error) {

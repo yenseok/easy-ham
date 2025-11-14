@@ -50,12 +50,32 @@ export interface NewPostEvent {
  * keyword_matching 이벤트 스키마
  * /api/v1/notifications/stream에서 수신
  */
-export interface NotificationEvent {
+export interface KeywordMatchingEvent {
   notice_id: string;
   title: string;
   match_keyword: string[];
   [key: string]: unknown;
 }
+
+/**
+ * deadline_approaching 이벤트 스키마
+ * /api/v1/notifications/stream에서 수신
+ * 마감일이 다가올 때 발송되는 긴급 알림
+ */
+export interface DeadlineApproachingEvent {
+  notice_id: number;
+  title: string;
+  deadline: string; // ISO 8601 형식
+  hours_left: number;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+/**
+ * SSE Notification 이벤트 Union 타입
+ * keyword_matching과 deadline_approaching을 모두 지원
+ */
+export type NotificationEvent = KeywordMatchingEvent | DeadlineApproachingEvent;
 
 /**
  * SSE 에러 상태
