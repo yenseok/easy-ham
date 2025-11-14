@@ -5,7 +5,6 @@ import java.util.List;
 import com.A105.prham.common.response.ErrorCode;
 import com.A105.prham.search.service.SearchService;
 import com.A105.prham.webhook.dto.UpdatePostRequest;
-<<<<<<< backend/src/main/java/com/A105/prham/webhook/controller/PostController.java
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
