@@ -6,6 +6,7 @@ import { sseManager } from "@/services/sse/sseManager";
 import { useSSEPostStore } from "@/stores/useSSEPostStore";
 import { bookmarksApi } from "@/services/api/bookmarks";
 import { convertBookmarkItemToNotice } from "@/utils/bookmarkMapper";
+import { convertSSEEventToNotice } from "@/utils/sseMapper";
 import type { Notice } from "@/types/notice";
 import BookmarkedNoticesWidget from "./components/BookmarkedNoticesWidget";
 import UrgentDeadlinesWidget from "./components/UrgentDeadlinesWidget";
@@ -77,6 +78,42 @@ export default function DashboardPage() {
       sseManager.closePostStream();
     };
   }, []);
+
+  // SSE 데이터 통합: newPosts를 allNotices에 실시간 병합
+  useEffect(() => {
+    if (newPosts.length > 0) {
+      console.log(`[Dashboard] Received ${newPosts.length} new posts via SSE, integrating...`);
+
+      // 1. SSE 이벤트를 Notice 타입으로 변환
+      const convertedPosts = newPosts.map(event => {
+        try {
+          return convertSSEEventToNotice(event);
+        } catch (error) {
+          console.error('[Dashboard] Failed to convert SSE event:', error, event);
+          return null;
+        }
+      }).filter((post): post is Notice => post !== null);
+
+      if (convertedPosts.length > 0) {
+        // 2. allNotices 상태 업데이트 (중복 제거)
+        setAllNotices(prev => {
+          const existingIds = new Set(prev.map(n => n.id));
+          const newUniquePosts = convertedPosts.filter(p => !existingIds.has(p.id));
+
+          if (newUniquePosts.length > 0) {
+            console.log(`[Dashboard] Adding ${newUniquePosts.length} unique posts to allNotices`);
+            // 새 게시글을 맨 앞에 추가 (최신순)
+            return [...newUniquePosts, ...prev];
+          }
+
+          return prev;
+        });
+      }
+
+      // 3. 소비한 SSE 데이터 정리
+      useSSEPostStore.getState().clearPosts();
+    }
+  }, [newPosts]);
 
   // Mock 데이터 (채용공고용)
 
