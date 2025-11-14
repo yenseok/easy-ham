@@ -35,9 +35,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-//여기 Transactional 땜
 public class NotificationService {
-
     private final KeywordRepository keywordRepository;
     private final NotificationSettingRepository notificationSettingRepository;
     private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
@@ -231,63 +229,62 @@ public class NotificationService {
             log.debug("Deadline이 없는 공지. Post Id : {}", post.getId());
             return;
         }
-    }
 
-        // 1️⃣ 짧은 트랜잭션으로 유저와 알림 설정을 한 번에 조회 (Fetch Join)
-        List<User> usersWithSettings = fetchUsersWithNotificationSettings();
+    // 1️⃣ 짧은 트랜잭션으로 유저와 알림 설정을 한 번에 조회 (Fetch Join)
+    List<User> usersWithSettings = fetchUsersWithNotificationSettings();
 
-        // 2️⃣ 트랜잭션 밖에서 스케줄링
-        String deadline = post.getDeadline();
-        LocalDateTime parsedDeadline = LocalDateTime.parse(deadline);
+    // 2️⃣ 트랜잭션 밖에서 스케줄링
+    String deadline = post.getDeadline();
+    LocalDateTime parsedDeadline = LocalDateTime.parse(deadline);
 
         for(User user : usersWithSettings){
-            // Fetch Join으로 이미 로드된 설정 사용 (추가 쿼리 발생 안 함!)
-            NotificationSetting setting = user.getNotificationSetting();
-            if(setting == null) continue;
+        // Fetch Join으로 이미 로드된 설정 사용 (추가 쿼리 발생 안 함!)
+        NotificationSetting setting = user.getNotificationSetting();
+        if(setting == null) continue;
 
-            Integer hoursBefore = setting.getDeadlineAlertHours();
-            LocalDateTime notificationTime = parsedDeadline.minusHours(hoursBefore);
+        Integer hoursBefore = setting.getDeadlineAlertHours();
+        LocalDateTime notificationTime = parsedDeadline.minusHours(hoursBefore);
 
-            if(notificationTime.isBefore(LocalDateTime.now())) {
-                continue;
-            }
-
-            Instant instant = notificationTime.atZone(ZoneId.systemDefault()).toInstant();
-            taskScheduler.schedule(() -> sendDeadlineNotification(user, post, hoursBefore), instant);
-            log.info("알림 예약 완료. Post Id : {}, User Id: {}, 예약 시간: {}", post.getId(), user.getId(), instant);
+        if(notificationTime.isBefore(LocalDateTime.now())) {
+            continue;
         }
-    }
 
-    // 🎯 한 번의 쿼리로 유저와 알림 설정을 함께 조회 (N+1 해결)
-    @Transactional(readOnly = true)
-    protected List<User> fetchUsersWithNotificationSettings() {
-        return userRepository.findAllWithNotificationSettings();
+        Instant instant = notificationTime.atZone(ZoneId.systemDefault()).toInstant();
+        taskScheduler.schedule(() -> sendDeadlineNotification(user, post, hoursBefore), instant);
+        log.info("알림 예약 완료. Post Id : {}, User Id: {}, 예약 시간: {}", post.getId(), user.getId(), instant);
     }
+}
 
-    // 🎯 스케줄된 알림 전송 - 트랜잭션 필요 없음
-    private void sendDeadlineNotification(User user, Post post, Integer hoursLeft){
-        Document data = new Document()
-                .append("notice_id", post.getId())
-                .append("title", post.getTitle())
-                .append("deadline", post.getDeadline())
-                .append("hours_left", notificationSettingRepository.findByUser(user).getDeadlineAlertHours())
-                .append("created_at", LocalDateTime.now());
-        send(user, data, NotificationType.DEADLINE_APPROACHING.name().toLowerCase());
-    }
+// 🎯 한 번의 쿼리로 유저와 알림 설정을 함께 조회 (N+1 해결)
+@Transactional(readOnly = true)
+protected List<User> fetchUsersWithNotificationSettings() {
+    return userRepository.findAllWithNotificationSettings();
+}
 
-    public NotificationListGetResponse getNotificationList(User user){
-        List<Notification> notificationList = notificationRepository.findByUserId(user.getId());
-        List<NotificationDto> notificationDtoList = notificationList.stream()
-                .map(notification -> NotificationDto.builder()
-                        .id(notification.getId())
-                        .eventType(notification.getEventType())
-                        .eventData(notification.getEventData())
-                        .createdAt(notification.getCreatedAt())
-                        .isRead(notification.getIsRead())
-                        .build())
-                .toList();
-        return NotificationListGetResponse.builder()
-                .notificationList(notificationDtoList)
-                .build();
+// 🎯 스케줄된 알림 전송 - 트랜잭션 필요 없음
+private void sendDeadlineNotification(User user, Post post, Integer hoursLeft){
+    Document data = new Document()
+            .append("notice_id", post.getId())
+            .append("title", post.getTitle())
+            .append("deadline", post.getDeadline())
+            .append("hours_left", notificationSettingRepository.findByUser(user).getDeadlineAlertHours())
+            .append("created_at", LocalDateTime.now());
+    send(user, data, NotificationType.DEADLINE_APPROACHING.name().toLowerCase());
+}
+
+public NotificationListGetResponse getNotificationList(User user){
+    List<Notification> notificationList = notificationRepository.findByUserId(user.getId());
+    List<NotificationDto> notificationDtoList = notificationList.stream()
+            .map(notification -> NotificationDto.builder()
+                    .id(notification.getId())
+                    .eventType(notification.getEventType())
+                    .eventData(notification.getEventData())
+                    .createdAt(notification.getCreatedAt())
+                    .isRead(notification.getIsRead())
+                    .build())
+            .toList();
+    return NotificationListGetResponse.builder()
+            .notificationList(notificationDtoList)
+            .build();
     }
 }
