@@ -22,6 +22,12 @@ pipeline {
         EC2_HOST = '3.39.246.235'
         EC2_PATH = '/home/ubuntu/deploy'
         SSH_CREDENTIAL_ID = 'ec2-deploy-key'
+
+        // 프론트엔드 환경변수 추가
+        VITE_SSO_CLIENT_ID = '1292a035-be8b-4e8d-919c-0898c6b957c5'
+        VITE_SSO_REDIRECT_URI = 'https://pyeonriham.site/callback'
+        VITE_API_BASE_URL = 'https://pyeonriham.site/api/v1'
+        VITE_MATTERMOST_FILE_TOKEN = 'rxafdmytmjbxdepbfe4pe55zta'
     }
 
     stages {
@@ -84,7 +90,12 @@ pipeline {
                     }
                     dir(FRONTEND_DIR) {
                         sh """
-                            docker build --no-cache -t ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} .
+                            docker build --no-cache \
+                                --build-arg VITE_SSO_CLIENT_ID=${VITE_SSO_CLIENT_ID} \
+                                --build-arg VITE_SSO_REDIRECT_URI=${VITE_SSO_REDIRECT_URI} \
+                                --build-arg VITE_API_BASE_URL=${VITE_API_BASE_URL} \
+                                --build-arg VITE_MATTERMOST_FILE_TOKEN=${VITE_MATTERMOST_FILE_TOKEN} \
+                                -t ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} .
                             docker tag ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} ${DOCKER_FRONTEND_IMAGE}:latest
                         """
                     }
