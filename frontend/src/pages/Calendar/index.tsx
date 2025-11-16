@@ -31,6 +31,9 @@ export default function CalendarPage() {
   // 채널 필터 접기/펴기 상태
   const [channelExpanded, setChannelExpanded] = useState(true);
 
+  // 사이드바 접기/펴기 상태
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   // 모달 상태
   const [selectedMessage, setSelectedMessage] = useState<MessageDetail | null>(
     null
@@ -355,6 +358,7 @@ export default function CalendarPage() {
           channelExpanded={channelExpanded}
           selectedWeek={selectedWeek}
           availableChannels={availableChannels}
+          collapsed={sidebarCollapsed}
           getEventsForDate={getEventsForDate}
           formatMonthYear={formatMonthYear}
           isSameDay={isSameDay}
@@ -367,6 +371,7 @@ export default function CalendarPage() {
           onMiniCalendarWeekClick={handleMiniCalendarWeekClick}
           onMiniCalendarDateClick={handleMiniCalendarDateClick}
           onDateChange={setCurrentDate}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
 
         {/* 메인 캘린더 영역 (75%) */}
