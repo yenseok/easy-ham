@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { PERIOD_OPTIONS } from "@/constants";
+import { formatChannelDisplayName } from "@/utils/formatUtils";
 import type { Subcategory, PeriodFilter } from "@/types";
 import type { UserChannel } from "@/types/api";
 
@@ -265,7 +266,7 @@ export function SearchFilterBar({
               {/* 개별 채널 버튼들 */}
               {availableChannels.map((channel) => {
                 const isSelected = selectedChannels.includes(channel.channelId);
-                const displayName = `${channel.teamName} - ${channel.channelName}`;
+                const displayName = formatChannelDisplayName(channel.teamName, channel.channelName);
 
                 return (
                   <Button
