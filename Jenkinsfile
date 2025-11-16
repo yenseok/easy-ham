@@ -28,6 +28,7 @@ pipeline {
         VITE_SSO_REDIRECT_URI = 'https://pyeonriham.site/callback'
         VITE_API_BASE_URL = 'https://pyeonriham.site/api/v1'
         VITE_MATTERMOST_FILE_TOKEN = 'rxafdmytmjbxdepbfe4pe55zta'
+        VITE_MATTERMOST_URL = 'https://pyeonriham.site:8065'
     }
 
     stages {
@@ -59,10 +60,16 @@ pipeline {
             steps {
                 echo '=== Building Frontend (npm) ==='
                 dir(FRONTEND_DIR) {
-                    sh '''
-                        npm ci --prefer-offline  # npm install보다 빠르고 안정적
-                        npm run build
-                    '''
+                    sh """
+                        docker build --no-cache \
+                            --build-arg VITE_SSO_CLIENT_ID=${VITE_SSO_CLIENT_ID} \
+                            --build-arg VITE_SSO_REDIRECT_URI=${VITE_SSO_REDIRECT_URI} \
+                            --build-arg VITE_API_BASE_URL=${VITE_API_BASE_URL} \
+                            --build-arg VITE_MATTERMOST_FILE_TOKEN=${VITE_MATTERMOST_FILE_TOKEN} \
+                            --build-arg VITE_MATTERMOST_URL=${VITE_MATTERMOST_URL} \
+                            -t ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} .
+                        docker tag ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} ${DOCKER_FRONTEND_IMAGE}:latest
+                    """
                 }
                 echo '✅ Frontend 빌드 완료!'
             }
