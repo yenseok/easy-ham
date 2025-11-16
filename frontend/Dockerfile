@@ -1,24 +1,24 @@
-# =====================
-# 1) Build Stage
-# =====================
 FROM node:20-alpine AS build
-
 WORKDIR /app
 
 COPY package*.json ./
 RUN npm install
 
 COPY . .
+
+# 환경변수 설정
+ARG VITE_SSO_CLIENT_ID
+ARG VITE_SSO_REDIRECT_URI
+ARG VITE_API_BASE_URL
+
+ENV VITE_SSO_CLIENT_ID=$VITE_SSO_CLIENT_ID
+ENV VITE_SSO_REDIRECT_URI=$VITE_SSO_REDIRECT_URI
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 RUN npm run build
 
-
-# =====================
-# 2) Deploy Stage
-# =====================
 FROM nginx:1.25-alpine
-
-# 결과물 경로 수정! dist → build
-COPY --from=build /app/build /usr/share/nginx/html
+COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
