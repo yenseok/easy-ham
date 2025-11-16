@@ -1,21 +1,35 @@
-FROM eclipse-temurin:17-jdk-jammy AS builder
+# =====================
+# 1) Build Stage
+# =====================
+FROM node:20-alpine AS build
 WORKDIR /app
-# Gradle Wrapper 및 설정 파일 복사
-COPY build.gradle settings.gradle gradlew ./
-COPY gradle gradle
-# 소스 코드 복사
-COPY src src
-# Gradlew 실행 권한 부여 및 빌드
-RUN chmod +x gradlew && ./gradlew bootJar
-FROM eclipse-temurin:17-jre-jammy
-WORKDIR /app
-# 타임존 설정
-ENV TZ=Asia/Seoul
-# 빌드 결과물(JAR) 복사
-COPY --from=builder /app/build/libs/*.jar app.jar
-# 헬스체크 
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD wget -q --spider http://localhost:8080/actuator/health || exit 1
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
 
+# package.json 복사 및 의존성 설치
+COPY package*.json ./
+RUN npm install
+
+# 소스 코드 복사
+COPY . .
+
+# 빌드 시 환경변수 주입 (ARG로 받아서 ENV로 설정)
+ARG VITE_SSO_CLIENT_ID
+ARG VITE_SSO_REDIRECT_URI
+ARG VITE_API_BASE_URL
+
+ENV VITE_SSO_CLIENT_ID=$VITE_SSO_CLIENT_ID
+ENV VITE_SSO_REDIRECT_URI=$VITE_SSO_REDIRECT_URI
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
+# 빌드 실행
+RUN npm run build
+
+# =====================
+# 2) Deploy Stage
+# =====================
+FROM nginx:1.25-alpine
+
+# Vite 빌드 결과물은 dist에 생성됨
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
