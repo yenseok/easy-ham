@@ -406,78 +406,80 @@ export default function SearchPage() {
 
   return (
     <PageLayout>
-      <div className="flex-1 flex gap-6 px-8 py-6">
-        {/* 메인 콘텐츠 */}
-        <div className="flex-1 space-y-6">
-          {/* 검색 및 필터 섹션 */}
-          <SearchFilterBar
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            availableChannels={availableChannels}
-            selectedChannels={selectedChannels}
-            onChannelToggle={toggleChannel}
-            selectedAcademicCategories={selectedAcademicCategories}
-            onAcademicCategoryToggle={toggleAcademicCategory}
-            selectedCareerCategories={selectedCareerCategories}
-            onCareerCategoryToggle={toggleCareerCategory}
-            periodFilter={periodFilter}
-            onPeriodChange={setPeriodFilter}
-            customStartDate={customStartDate}
-            customEndDate={customEndDate}
-            onCustomDateRangeChange={setCustomDateRange}
-            showBookmarkedOnly={showBookmarkedOnly}
-            onBookmarkFilterToggle={toggleBookmarkFilter}
-            showCompletedOnly={showCompletedOnly}
-            onCompletedFilterToggle={toggleCompletedFilter}
-            onReset={resetFilters}
-            onSearch={() => {
-              setIsFilteredSearch(true); // 필터 적용 상태로 변경
-              handleSearch(true, true); // 새 검색, 필터 적용
-            }}
-          />
-
-          {/* 공지사항 리스트 */}
-          <Card className="shadow-md">
-            {/* 리스트 헤더 */}
-            <div className="h-16 px-6 flex items-center justify-between border-b">
-              <h2 className="text-lg" style={{ fontWeight: 700 }}>
-                공지사항
-              </h2>
-              <Select value={sortBy} onValueChange={setSortBy as any}>
-                <SelectTrigger className="w-[160px] h-10 text-base">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="latest">정렬: 최신순</SelectItem>
-                  <SelectItem value="deadline">정렬: 마감일순</SelectItem>
-                  <SelectItem value="title">정렬: 제목순</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* 리스트 */}
-            <NoticeListContainer
-              notices={notices}
-              onBookmarkToggle={toggleBookmark}
-              onCompleteToggle={toggleComplete}
-              onNoticeClick={handleNoticeClick}
-              lastNoticeRef={lastNoticeElementRef}
-              isLoading={isLoading}
-              hasMore={hasMore}
+      <div className="max-w-[1920px] mx-auto px-4 md:px-8 py-6">
+        <div className="flex flex-col lg:flex-row gap-6">
+          {/* 메인 콘텐츠 */}
+          <div className="flex-1 space-y-6 min-w-0">
+            {/* 검색 및 필터 섹션 */}
+            <SearchFilterBar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              availableChannels={availableChannels}
+              selectedChannels={selectedChannels}
+              onChannelToggle={toggleChannel}
+              selectedAcademicCategories={selectedAcademicCategories}
+              onAcademicCategoryToggle={toggleAcademicCategory}
+              selectedCareerCategories={selectedCareerCategories}
+              onCareerCategoryToggle={toggleCareerCategory}
+              periodFilter={periodFilter}
+              onPeriodChange={setPeriodFilter}
+              customStartDate={customStartDate}
+              customEndDate={customEndDate}
+              onCustomDateRangeChange={setCustomDateRange}
+              showBookmarkedOnly={showBookmarkedOnly}
+              onBookmarkFilterToggle={toggleBookmarkFilter}
+              showCompletedOnly={showCompletedOnly}
+              onCompletedFilterToggle={toggleCompletedFilter}
+              onReset={resetFilters}
+              onSearch={() => {
+                setIsFilteredSearch(true); // 필터 적용 상태로 변경
+                handleSearch(true, true); // 새 검색, 필터 적용
+              }}
             />
-          </Card>
-        </div>
 
-        {/* 우측 사이드바 */}
-        <div className="w-80 space-y-6 sticky top-6 self-start">
-          {/* 미니 캘린더 */}
-          <MiniCalendar onNavigateToCalendar={() => navigate('/calendar')} />
+            {/* 공지사항 리스트 */}
+            <Card className="shadow-md">
+              {/* 리스트 헤더 */}
+              <div className="h-16 px-4 md:px-6 flex items-center justify-between border-b">
+                <h2 className="text-base md:text-lg" style={{ fontWeight: 700 }}>
+                  공지사항
+                </h2>
+                <Select value={sortBy} onValueChange={setSortBy as any}>
+                  <SelectTrigger className="w-[140px] md:w-[160px] h-10 text-sm md:text-base">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="latest">정렬: 최신순</SelectItem>
+                    <SelectItem value="deadline">정렬: 마감일순</SelectItem>
+                    <SelectItem value="title">정렬: 제목순</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          {/* 채용 정보 위젯 */}
-          <JobPostingsWidget
-            postings={jobPostings}
-            onViewAll={() => navigate('/jobs')}
-          />
+              {/* 리스트 */}
+              <NoticeListContainer
+                notices={notices}
+                onBookmarkToggle={toggleBookmark}
+                onCompleteToggle={toggleComplete}
+                onNoticeClick={handleNoticeClick}
+                lastNoticeRef={lastNoticeElementRef}
+                isLoading={isLoading}
+                hasMore={hasMore}
+              />
+            </Card>
+          </div>
+
+          {/* 우측 사이드바 (1024px 이상에서만 표시) */}
+          <div className="hidden lg:block w-80 space-y-6 sticky top-6 self-start shrink-0">
+            {/* 미니 캘린더 */}
+            <MiniCalendar onNavigateToCalendar={() => navigate('/calendar')} />
+
+            {/* 채용 정보 위젯 */}
+            <JobPostingsWidget
+              postings={jobPostings}
+              onViewAll={() => navigate('/jobs')}
+            />
+          </div>
         </div>
       </div>
 
