@@ -240,7 +240,7 @@ export default function DashboardPage() {
         </h1>
 
         {/* 상단 3개 위젯 (북마크 / 마감 임박 / 채용공고) */}
-        <div className="grid grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <BookmarkedNoticesWidget
             notices={bookmarkedNotices.slice(0, 5)} // 위젯에서는 상위 5개만 표시
             onRefresh={refreshBookmarks}
