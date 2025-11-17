@@ -222,7 +222,7 @@ public class AsyncPostProcessor {
 			ssePostService.sendNewPost(savedPost);
 			notificationService.sendKeywordMatchingNotification(savedPost);
 			notificationService.scheduleDeadlineNotification(savedPost);
-
+			notificationService.sendJobMatchingNotification(savedPost);
 		} catch (Exception e) {
 			log.error("개별 채용 공고 생성 실패: {}", jobPosting.getCompany(), e);
 		}
