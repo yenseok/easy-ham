@@ -48,6 +48,7 @@ export default function BookmarkedNoticesWidget({
   };
 
   const getDdayColor = (dday: number) => {
+    if (dday < 0) return "bg-gray-400"; // 마감 지난 경우 회색
     if (dday <= 3) return "bg-red-500";
     if (dday <= 7) return "bg-yellow-500";
     return "bg-green-500";
@@ -100,7 +101,7 @@ export default function BookmarkedNoticesWidget({
                       )}`}
                       style={{ fontWeight: 600 }}
                     >
-                      D-{notice.dday}
+                      {notice.dday === 0 ? 'D-Day' : notice.dday > 0 ? `D-${notice.dday}` : `D+${Math.abs(notice.dday)}`}
                     </span>
                   )}
                 </div>
