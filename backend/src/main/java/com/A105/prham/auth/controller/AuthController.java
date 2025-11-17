@@ -168,7 +168,9 @@ public class AuthController {
         // cookie.setSecure(false); //로컬용
         cookie.setPath(path);
         cookie.setMaxAge(maxAge);
+        // cookie.setAttribute("SameSite", "LAX"); //로컬용
         cookie.setAttribute("SameSite", "None");
+
         return cookie;
     }
 
