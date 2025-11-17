@@ -37,6 +37,8 @@ public class SearchService {
     private final PostService postService;
     private final UserNoticeLikeRepository userNoticeLikeRepository;
     private final PostUserCompletedRepository postUserCompletedRepository;
+
+
     /**
      * 검색 모드 정의
      */
@@ -270,12 +272,9 @@ public class SearchService {
             //유저 네임 찾아서 넣기
             String userName = mattermostService.getUserNameFromID((String) hitMap.get("userId"));
 
-            //post id 찾아서 넣기
-            Long id = postService.getPostIdByMMPostId((String) hitMap.get("postId"));
-
             return PostSearchItem.builder()
-                    .id(id)
-                    .mmMessageId((String) hitMap.get("postId"))
+                    .id(((Double) hitMap.get("postId")).longValue())
+                    .mmMessageId((String) hitMap.get("mmPostId"))
                     .title((String) hitMap.get("title"))
                     .campusId((String) hitMap.get("campusList"))
                     .teamName((String) hitMap.get("teamName"))
@@ -283,7 +282,6 @@ public class SearchService {
                     .mmChannelId((String) hitMap.get("channelId"))
                     .userName(userName)
                     .deadline((String) hitMap.get("deadline"))
-                    .campusId((String) hitMap.get("campusId"))
                     .content((String) hitMap.get("cleanedText"))
                     .highlightedContent(highlightedContent != null ? highlightedContent : (String) hitMap.get("cleanedText"))
                     .mmCreatedAt(getLongValue(hitMap.get("timestamp")))
@@ -517,4 +515,46 @@ public class SearchService {
     }
 
 
+    public PostSearchItem getPostByPostId(Long postId, Long userId) {
+        try {
+            Index index = meilisearchClient.index(INDEX_NAME);
+
+            // postId 필터로 검색
+            String filter = "postId = " + postId;
+
+            SearchRequest searchRequest = SearchRequest.builder()
+                    .q("")
+                    .filter(new String[]{filter})
+                    .limit(1)
+                    .build();
+
+            SearchResult result = (SearchResult) index.search(searchRequest);
+
+            if (result.getHits().isEmpty()) {
+                log.warn("❌ Post not found with postId: {}", postId);
+                return null;
+            }
+
+            // 단일 결과 변환
+            PostSearchItem item = convertToSearchItem(result.getHits().get(0));
+
+            // 사용자별 데이터 추가
+            if (userId != null) {
+                Set<Long> likedPostIds = userNoticeLikeRepository.findLikedPostIdsByUserId(userId);
+                Set<Long> completedPostIds = postUserCompletedRepository.findCompletedPostIdsByUserId(userId);
+
+                item.setIsLiked(likedPostIds.contains(item.getId()));
+                item.setIsCompleted(completedPostIds.contains(item.getId()));
+            } else {
+                item.setIsLiked(false);
+                item.setIsCompleted(false);
+            }
+
+            return item;
+
+        } catch (Exception e) {
+            log.error("❌ Failed to get post by postId: {}", postId, e);
+            throw new RuntimeException("Failed to get post by postId", e);
+        }
+    }
 }

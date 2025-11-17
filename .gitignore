@@ -209,3 +209,16 @@ my_notes/
 jenkins_data/
 jenkins_data_cp/
 jenkins-cli.jar
+
+.idea/
+plugin/prham-spring-notifier-plugin/.editorconfig
+plugin/prham-spring-notifier-plugin/.gitattributes
+plugin/prham-spring-notifier-plugin/.github/
+plugin/prham-spring-notifier-plugin/.gitpod.yml
+plugin/prham-spring-notifier-plugin/.golangci.yml
+plugin/prham-spring-notifier-plugin/.nvmrc
+plugin/prham-spring-notifier-plugin/LICENSE
+plugin/prham-spring-notifier-plugin/README.md
+plugin/prham-spring-notifier-plugin/assets/
+plugin/prham-spring-notifier-plugin/public/
+plugin/prham-spring-notifier-plugin.tar.gz

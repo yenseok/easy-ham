@@ -1,0 +1,19 @@
+{
+    "id": "prham-spring-notifier-plugin",
+    "name": "편리햄 post notifier plugin",
+    "description": "post 수정,삭제시 요청을 보냅니다.",
+    "homepage_url": "https://k13a105.p.ssafy.io",
+    "support_url": "https://k13a105.p.ssafy.io",
+    "icon_path": "assets/starter-template-icon.svg",
+    "min_server_version": "6.2.1",
+    "server": {
+        "executables": {
+            "linux-amd64": "server/plugin"
+        }
+    },
+    "settings_schema": {
+        "header": "",
+        "footer": "",
+        "settings": []
+    }
+}

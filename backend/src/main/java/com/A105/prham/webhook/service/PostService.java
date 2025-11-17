@@ -15,11 +15,14 @@ import com.A105.prham.webhook.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.cglib.core.Local;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.awt.print.Pageable;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -129,9 +132,44 @@ public class PostService {
 		//채널 id로 post 조회
 		List<Post> posts = postRepository.findPostsByChannelIds(allowedChannelIds, mainCategory, subCategory);
 
+		String userCampusName = user.getCampus().getName();
+
+		//현재 시간
+		LocalDateTime now = LocalDateTime.now();
+
 		return posts.stream()
+			.filter(post -> isCampusMatched(post, userCampusName))
+			.filter(post -> !isDeadlinePassed(post, now))
 			.map(PostNotificationDto::from)
 			.collect(Collectors.toList());
+	}
+
+	//캠퍼스 매칭 로직
+	private boolean isCampusMatched(Post post, String userCampusName) {
+		String campusList = post.getCampusList();
+
+		if (campusList == null || campusList.isEmpty()) {
+			return true;
+		}
+
+		return campusList.contains(userCampusName);
+	}
+
+	// 마감일 지났는지 확인
+	private boolean isDeadlinePassed(Post post, LocalDateTime now) {
+		String deadline = post.getDeadline();
+
+		//deadline이 null이면 마감일 없는 공지사항으로 포함
+		if (deadline == null || deadline.isEmpty()) {
+			return false;
+		}
+
+		try {
+			LocalDateTime deadlineDateTime = LocalDateTime.parse(deadline, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+			return now.isAfter(deadlineDateTime);
+		} catch (Exception e) {
+			return false;
+		}
 	}
 
 	public int DeletePostByPostId(String postId){

@@ -10,7 +10,9 @@ import lombok.*;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "post_user_completed",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "post_id"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "post_id"}),
+        indexes = @Index(name = "idx_post_user_completed_lookup",
+                columnList = "post_id, user_id, is_completed"))
 public class PostUserCompleted extends BaseTimeEntity {
 
     @Id

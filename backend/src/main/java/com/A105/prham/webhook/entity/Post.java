@@ -9,7 +9,8 @@ import com.A105.prham.common.domain.BaseTimeEntity;
 import com.A105.prham.position.entity.Position;
 
 @Entity
-@Table(name = "posts")
+@Table(name = "posts",
+		indexes = @Index(name = "idx_posts_deadline", columnList = "deadline"))
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
