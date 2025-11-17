@@ -430,7 +430,7 @@ public class NotificationService {
     }
 
     public NotificationListGetResponse getNotificationList(User user){
-            List<Notification> notificationList = notificationRepository.findByUserId(user.getId());
+            List<Notification> notificationList = notificationRepository.findByUserIdAndIsReadFalse(user.getId(),  false);
             List<NotificationDto> notificationDtoList = notificationList.stream()
                     .map(notification -> NotificationDto.builder()
                             .id(notification.getId())
@@ -443,7 +443,6 @@ public class NotificationService {
             return NotificationListGetResponse.builder()
                     .notificationList(notificationDtoList)
                     .build();
-
     }
     // 🎯 한 번의 쿼리로 유저와 알림 설정을 함께 조회 (N+1 해결)
     @Transactional(readOnly = true)
