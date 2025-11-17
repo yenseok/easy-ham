@@ -182,32 +182,32 @@ export const NotificationDropdown = () => {
               <div
                 key={notif.id}
                 onClick={() => handleNotificationClick(notif.id, notif.notice_id)}
-                className={`flex items-start gap-3 p-4 hover:bg-gray-50 transition-colors border-l-4 cursor-pointer ${getBorderColor(
+                className={`flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors border-l-4 cursor-pointer ${getBorderColor(
                   notif.type
                 )} ${!notif.read ? "bg-blue-50" : ""}`}
               >
-                <div className="flex-shrink-0 mt-1">
+                <div className="shrink-0">
                   {getNotificationIcon(notif.type)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  {/* 제목 + 배지 */}
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium text-gray-900">
-                      {notif.title}
+                  {/* 제목 */}
+                  <p className="text-sm font-medium text-gray-900">
+                    {notif.title}
+                  </p>
+                  {/* 상대 시간 + 배지 */}
+                  <div className="flex items-center justify-between gap-2 mt-1">
+                    <p className="text-xs text-gray-500">
+                      {notif.relativeTime || formatRelativeTime(notif.time)}
                     </p>
                     {notif.badge && (
-                      <span className="flex-shrink-0 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded whitespace-nowrap">
+                      <span className="shrink-0 text-[11px] bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded whitespace-nowrap">
                         {notif.badge}
                       </span>
                     )}
                   </div>
-                  {/* 상대 시간 */}
-                  <p className="text-xs text-gray-500 mt-1">
-                    {notif.relativeTime || formatRelativeTime(notif.time)}
-                  </p>
                 </div>
                 {!notif.read && (
-                  <div className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0 mt-1" />
+                  <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
                 )}
               </div>
             ))
