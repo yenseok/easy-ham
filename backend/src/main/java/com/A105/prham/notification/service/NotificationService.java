@@ -307,5 +307,13 @@ public class NotificationService {
         } catch (Exception e) {
             //예외 안던짐
         }
+
+    }
+
+    public void sendJobMatchingNotification(Post post){
+        List<User> users = userRepository.findUsersWithJobAlertEnabled();
+        for(User user : users){
+
+        }
     }
 }
