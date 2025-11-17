@@ -1,6 +1,7 @@
 package com.A105.prham.notification;
 
 import com.A105.prham.notification.entity.Notification;
+import org.glassfish.jaxb.runtime.v2.schemagen.xmlschema.NoFixedFacet;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.time.LocalDateTime;
@@ -11,4 +12,5 @@ public interface NotificationRepository extends MongoRepository<Notification,Str
 
     List<Notification> findByUserIdAndCreatedAtAfter(Long userId, LocalDateTime after);
 
+    List<Notification> findByUserIdAndIsReadFalse(Long userId, Boolean isRead);
 }
