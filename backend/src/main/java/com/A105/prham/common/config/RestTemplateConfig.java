@@ -45,8 +45,8 @@ public class RestTemplateConfig {
         return builder
             .requestFactory(() -> {
                 SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-                factory.setConnectTimeout(10000);
-                factory.setReadTimeout(65000); //65초
+                factory.setConnectTimeout(15000);
+                factory.setReadTimeout(120000); //120초
                 return new BufferingClientHttpRequestFactory(factory);
             })
             .interceptors(loggingInterceptor("LLM"))
