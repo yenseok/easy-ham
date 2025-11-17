@@ -22,6 +22,7 @@ public enum SuccessCode {
     NOTIFICATION_SETTING_UPDATE_SUCCESS(200, HttpStatus.OK, "알림 설정 수정 성공"),
     NOTIFICATION_LIST_GET_SUCCESS(200, HttpStatus.OK, "알림 목록 조회 성공"),
     NOTIFICATION_READ_STATUS_UPDATE_SUCCESS(200, HttpStatus.OK, "알림 읽음 상태 변경 성공"),
+    NOTIFICATION_READ_STATUS_ALL_UPDATE_SUCCESS(200, HttpStatus.OK, "알림 전체 읽음 처리 성공"),
     SUCCESS(200,HttpStatus.OK, "요청 성공"),
 
     // SSO용 Code

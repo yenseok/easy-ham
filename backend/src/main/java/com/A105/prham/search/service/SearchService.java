@@ -283,7 +283,6 @@ public class SearchService {
                     .mmChannelId((String) hitMap.get("channelId"))
                     .userName(userName)
                     .deadline((String) hitMap.get("deadline"))
-                    .campusId((String) hitMap.get("campusId"))
                     .content((String) hitMap.get("cleanedText"))
                     .highlightedContent(highlightedContent != null ? highlightedContent : (String) hitMap.get("cleanedText"))
                     .mmCreatedAt(getLongValue(hitMap.get("timestamp")))

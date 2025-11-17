@@ -32,15 +32,19 @@ public class SsePostService {
 
 	private final Map<String, Set<Long>> emitterPositionIds = new ConcurrentHashMap<>();
 
+	// 사용자 캠퍼스
+	private final Map<String, String> emitterCampusMap = new ConcurrentHashMap<>();
+
 	private final Long TIME_OUT = 60L * 60 * 1000 * 2; //2시간
 
 	// 새 공지사항 스트림 구독 시작
-	public SseEmitter subscribe(String userId, List<String> allowedChannels, List<Long> userPositionIds) {
+	public SseEmitter subscribe(String userId, List<String> allowedChannels, List<Long> userPositionIds, String userCampusName) {
 		SseEmitter emitter = new SseEmitter(TIME_OUT);
 		String emitterId = userId + "_" + System.currentTimeMillis();
 
 		this.emitters.put(emitterId, emitter);
 		this.emitterChannelMap.put(emitterId, allowedChannels);
+		this.emitterCampusMap.put(emitterId, userCampusName);
 
 		// positionId 저장
 		if (userPositionIds != null && !userPositionIds.isEmpty()) {
@@ -55,6 +59,7 @@ public class SsePostService {
 			this.emitters.remove(emitterId);
 			this.emitterChannelMap.remove(emitterId);
 			this.emitterPositionIds.remove(emitterId);
+			this.emitterCampusMap.remove(emitterId);
 			log.info("sse 연결 정상 종료: {}", emitterId);
 		});
 
@@ -62,6 +67,7 @@ public class SsePostService {
 			this.emitters.remove(emitterId);
 			this.emitterChannelMap.remove(emitterId);
 			this.emitterPositionIds.remove(emitterId);
+			this.emitterCampusMap.remove(emitterId);
 			emitter.complete();
 		});
 
@@ -69,6 +75,7 @@ public class SsePostService {
 			this.emitters.remove(emitterId);
 			this.emitterChannelMap.remove(emitterId);
 			this.emitterPositionIds.remove(emitterId);
+			this.emitterCampusMap.remove(emitterId);
 		});
 
 		// 503 오류 방지용 더미 데이터
@@ -79,6 +86,7 @@ public class SsePostService {
 			this.emitters.remove(emitterId);
 			this.emitterChannelMap.remove(emitterId);
 			this.emitterPositionIds.remove(emitterId);
+			this.emitterCampusMap.remove(emitterId);
 		}
 		return emitter;
 	}
@@ -90,6 +98,7 @@ public class SsePostService {
 		String mainCategory = post.getMainCategory();
 		String subCategory = post.getSubCategory();
 		Long postPositionId = (post.getPosition() != null) ? post.getPosition().getId() : null;
+		String postCampusList = post.getCampusList();
 
 		PostNotificationDto dto = PostNotificationDto.from(post);
 
@@ -100,6 +109,11 @@ public class SsePostService {
 
 				if (emitter != null) {
 					try {
+						// 캠퍼스부터 필터링
+						String userCampus = emitterCampusMap.get(emitterId);
+						if (!isCampusMatched(postCampusList, userCampus)) {
+							return;
+						}
 						// 채용 공고인 경우 포지션 매칭 확인
 						if ("취업".equals(mainCategory) && "채용".equals(subCategory)) {
 							Set<Long> userPositionIds = this.emitterPositionIds.get(emitterId);
@@ -129,5 +143,18 @@ public class SsePostService {
 				}
 			}
 		});
+	}
+
+	//캠퍼스 매칭 확인
+	private boolean isCampusMatched(String postCampusList, String userCampus) {
+		if (postCampusList == null || postCampusList.isEmpty()) {
+			return true;
+		}
+
+		if (userCampus == null || userCampus.trim().isEmpty()) {
+			return true;
+		}
+
+		return postCampusList.contains(userCampus);
 	}
 }

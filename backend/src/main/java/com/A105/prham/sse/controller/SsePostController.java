@@ -49,26 +49,32 @@ public class SsePostController {
 			.map(up -> up.getPosition().getId())
 			.collect(Collectors.toList());
 
+		//사용자 캠퍼스 추출
+		String userCampusName = null;
+		if (user.getCampus() != null) {
+			userCampusName = user.getCampus().getName();
+		}
+
 		if (user.getGeneration() == null){
 			log.warn("user {}의 generation이 null입니다. 빈 SSE를 반환합니다.", springUserId);
-			return ssePostService.subscribe(springUserId, List.of(), userPositionIds);
+			return ssePostService.subscribe(springUserId, List.of(), userPositionIds, userCampusName);
 		}
 
 		if (user.getCampus() == null) {
 			log.warn("user {}의 campus가 null입니다.", springUserId);
-			return ssePostService.subscribe(springUserId, List.of(), userPositionIds);
+			return ssePostService.subscribe(springUserId, List.of(), userPositionIds, null);
 		}
 
 		if (user.getClassroom() == null) {
 			log.warn("user {}의 classroom이 null입니다. 빈 sse를 반환합니다.", springUserId);
-			return ssePostService.subscribe(springUserId, List.of(), userPositionIds);
+			return ssePostService.subscribe(springUserId, List.of(), userPositionIds, userCampusName);
 		}
 
 		String mmUserId = mattermostService.getUserIdByEmail(userEmail);
 
 		if (mmUserId == null) {
 			log.warn("mm 유저 찾을 수 없음. email: {}", userEmail);
-			return ssePostService.subscribe(springUserId, List.of(), userPositionIds);
+			return ssePostService.subscribe(springUserId, List.of(), userPositionIds, userCampusName);
 		}
 
 		List<String> allowedChannelIds = new ArrayList<>();
@@ -111,7 +117,7 @@ public class SsePostController {
 		}
 
 		log.info("유저 구독 채널 목록({}개): {}", allowedChannelIds.size(), allowedChannelIds);
-		return ssePostService.subscribe(springUserId, allowedChannelIds,userPositionIds);
+		return ssePostService.subscribe(springUserId, allowedChannelIds,userPositionIds, userCampusName);
 
 	}
 }
