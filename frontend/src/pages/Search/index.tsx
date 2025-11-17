@@ -315,6 +315,10 @@ export default function SearchPage() {
    * 브라우저 전역 스크롤을 NoticeList 스크롤로 연동
    */
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const prefersFinePointer = window.matchMedia('(pointer: fine)').matches;
+    if (!prefersFinePointer) return;
+
     const handleWheel = (e: WheelEvent) => {
       if (scrollContainerRef.current) {
         e.preventDefault();
@@ -437,7 +441,7 @@ export default function SearchPage() {
 
   return (
     <PageLayout>
-      <div className="max-w-[1920px] mx-auto px-4 md:px-8 py-4 h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)] min-h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
+      <div className="max-w-[1920px] mx-auto px-4 md:px-8 py-4 h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)] min-h-[calc(100vh-4rem)] overflow-y-auto md:overflow-hidden flex flex-col">
         <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
           {/* 메인 콘텐츠 */}
           <div className="flex-1 space-y-4 min-w-0 flex flex-col">
