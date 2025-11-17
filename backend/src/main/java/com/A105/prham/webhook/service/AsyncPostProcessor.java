@@ -185,6 +185,12 @@ public class AsyncPostProcessor {
 			//제목은 회사명만
 			String title = jobPosting.getCompany();
 
+			// URL 원본 추출 시도
+			String actualUrl = extractOriginalUrl(originalPost.getOriginalText(), jobPosting.getCompany());
+			if (actualUrl == null || actualUrl.isEmpty()) {
+				actualUrl = jobPosting.getUrl(); // LLM 파싱 결과 사용
+			}
+
 			//내용: 직무명 + url
 			String content = jobPosting.getPosition();
 			if (jobPosting.getUrl() != null && !jobPosting.getUrl().isEmpty()) {
@@ -226,6 +232,38 @@ public class AsyncPostProcessor {
 		} catch (Exception e) {
 			log.error("개별 채용 공고 생성 실패: {}", jobPosting.getCompany(), e);
 		}
+	}
+
+	// 원본 텍스트에서 URL 추출하는 헬퍼 메서드 추가
+	private String extractOriginalUrl(String originalText, String companyName) {
+		if (originalText == null || companyName == null) {
+			return null;
+		}
+
+		try {
+			// 회사명이 포함된 라인 찾기
+			String[] lines = originalText.split("\n");
+			for (String line : lines) {
+				if (line.contains(companyName)) {
+					// URL 패턴 추출 (http:// 또는 https://로 시작하는 URL)
+					java.util.regex.Pattern urlPattern = java.util.regex.Pattern.compile(
+						"(https?://[^\\s)]+)"
+					);
+					java.util.regex.Matcher matcher = urlPattern.matcher(line);
+					if (matcher.find()) {
+						String url = matcher.group(1);
+						// 끝에 불필요한 문자 제거 (괄호, 쉼표 등)
+						url = url.replaceAll("[,)]+$", "");
+						log.info("원본 URL 추출 성공: {} -> {}", companyName, url);
+						return url;
+					}
+				}
+			}
+		} catch (Exception e) {
+			log.warn("원본 URL 추출 실패: {}", companyName, e);
+		}
+
+		return null;
 	}
 
 	// 채용 공고 마감일 파싱 (MM/DD) -> ISO 형식
