@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, AlertCircle, CheckCircle, Info, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { formatRelativeTime } from "@/utils/timeUtils";
+import { calculateRemainingTime } from "@/utils/deadlineUtils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -25,9 +26,21 @@ export const NotificationDropdown = () => {
   const [selectedMessage, setSelectedMessage] = useState<MessageDetail | null>(
     null
   );
+  const [, setRefreshTrigger] = useState(0);
   const { notifications, unreadCount, markAsRead, markAllAsRead } =
     useNotificationStore();
   const { notificationStreamStatus } = useSSEStore();
+
+  // 드롭다운이 열려있을 때 30초마다 시간 재계산 (deadline 배지 갱신용)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const interval = setInterval(() => {
+      setRefreshTrigger((prev) => prev + 1);
+    }, 30000); // 30초마다 갱신
+
+    return () => clearInterval(interval);
+  }, [isOpen]);
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -216,7 +229,9 @@ export const NotificationDropdown = () => {
                     </p>
                     {notif.badge && (
                       <span className="shrink-0 text-[11px] bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded whitespace-nowrap">
-                        {notif.badge}
+                        {notif.deadline
+                          ? calculateRemainingTime(notif.deadline)
+                          : notif.badge}
                       </span>
                     )}
                   </div>
