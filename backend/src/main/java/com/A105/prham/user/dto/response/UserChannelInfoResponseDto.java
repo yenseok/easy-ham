@@ -10,5 +10,6 @@ public class UserChannelInfoResponseDto {
 	private String channelName;
 	private String teamId;
 	private String teamName;
+	private String displayName;
 	private String type;
 }

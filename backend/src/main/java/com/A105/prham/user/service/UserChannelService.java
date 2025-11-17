@@ -105,7 +105,7 @@ public class UserChannelService {
 		log.info("사용자 {}의 구독 가능 채널 상세 정보 조회", user.getId());
 
 		if (!isValidUser(user)) {
-			log.warn("사용자 정보 불완전: userId={}", user.getId());
+			log.warn("사용자 캠퍼스 반 정보 없음: userId={}", user.getId());
 			return List.of();
 		}
 
@@ -145,6 +145,7 @@ public class UserChannelService {
 								.channelName(c.getDisplayName())
 								.teamId(team.getId())
 								.teamName(teamName)
+								.displayName(generationPrefix)
 								.type("GLOBAL")
 								.build()
 						));
@@ -167,6 +168,7 @@ public class UserChannelService {
 								.channelName(c.getDisplayName())
 								.teamId(team.getId())
 								.teamName(teamName)
+								.displayName(campusInfix + classSuffix)
 								.type("CLASS")
 								.build()
 						));
