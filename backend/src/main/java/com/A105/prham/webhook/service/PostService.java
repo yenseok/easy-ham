@@ -129,9 +129,23 @@ public class PostService {
 		//채널 id로 post 조회
 		List<Post> posts = postRepository.findPostsByChannelIds(allowedChannelIds, mainCategory, subCategory);
 
+		String userCampusName = user.getCampus().getName();
+
 		return posts.stream()
+			.filter(post -> isCampusMatched(post, userCampusName))
 			.map(PostNotificationDto::from)
 			.collect(Collectors.toList());
+	}
+
+	//캠퍼스 매칭 로직
+	private boolean isCampusMatched(Post post, String userCampusName) {
+		String campusList = post.getCampusList();
+
+		if (campusList == null || campusList.isEmpty()) {
+			return true;
+		}
+
+		return campusList.contains(userCampusName);
 	}
 
 	public int DeletePostByPostId(String postId){

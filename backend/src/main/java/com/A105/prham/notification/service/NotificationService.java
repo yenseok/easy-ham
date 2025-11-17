@@ -19,6 +19,7 @@ import com.A105.prham.webhook.entity.Post;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Async;
@@ -429,7 +430,7 @@ public class NotificationService {
     }
 
     public NotificationListGetResponse getNotificationList(User user){
-            List<Notification> notificationList = notificationRepository.findByUserId(user.getId());
+            List<Notification> notificationList = notificationRepository.findByUserIdAndIsReadFalse(user.getId(),  false);
             List<NotificationDto> notificationDtoList = notificationList.stream()
                     .map(notification -> NotificationDto.builder()
                             .id(notification.getId())
@@ -442,7 +443,6 @@ public class NotificationService {
             return NotificationListGetResponse.builder()
                     .notificationList(notificationDtoList)
                     .build();
-
     }
     // 🎯 한 번의 쿼리로 유저와 알림 설정을 함께 조회 (N+1 해결)
     @Transactional(readOnly = true)
@@ -475,5 +475,21 @@ public class NotificationService {
         } catch (Exception e) {
             //예외 안던짐
         }
+    }
+
+
+
+
+
+
+    public void updateNotificationIsReadStatus(User user, String notificationId){
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
+        if(!notification.getUserId().equals(user.getId())){
+            log.error("");
+            throw new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND);
+        }
+        notification.updateStatus(true);
+        notificationRepository.save(notification);
     }
 }
