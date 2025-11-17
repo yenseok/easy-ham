@@ -41,6 +41,7 @@ interface SearchFilterBarProps {
   onCompletedFilterToggle: () => void;
   onReset: () => void;
   onSearch: () => void; // 검색 버튼 클릭 핸들러
+  isCollapsed?: boolean; // 자동 축소 상태
 }
 
 const SUBCATEGORIES: Subcategory[] = ["할일", "특강", "정보", "행사"];
@@ -77,8 +78,12 @@ export function SearchFilterBar({
   onCompletedFilterToggle,
   onReset,
   onSearch,
+  isCollapsed = false,
 }: SearchFilterBarProps) {
   const [filterExpanded, setFilterExpanded] = useState(true);
+
+  // isCollapsed가 true면 필터 영역을 자동으로 접음
+  const effectiveExpanded = isCollapsed ? false : filterExpanded;
 
   // "전체" 버튼 선택 상태: 모든 채널이 선택되었을 때
   const isAllChannelsSelected = availableChannels.length > 0 && selectedChannels.length === availableChannels.length;
@@ -105,7 +110,7 @@ export function SearchFilterBar({
   };
 
   return (
-    <Card className="p-5 shadow-md">
+    <Card className="p-5 shadow-md transition-all duration-300 ease-in-out">
       {/* 검색바 */}
       <div className="flex gap-2 mb-2">
         <div className="flex-1 relative">
@@ -133,20 +138,26 @@ export function SearchFilterBar({
       </div>
 
       {/* 필터 영역 토글 버튼 */}
-      <button
-        onClick={() => setFilterExpanded(!filterExpanded)}
-        className="flex items-center gap-2 my-3 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors"
-      >
-        <ChevronDown
-          className={`w-4 h-4 transition-transform ${
-            filterExpanded ? "rotate-180" : ""
-          }`}
-        />
-        필터 옵션
-      </button>
+      {!isCollapsed && (
+        <button
+          onClick={() => setFilterExpanded(!filterExpanded)}
+          className="flex items-center gap-2 my-3 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors"
+        >
+          <ChevronDown
+            className={`w-4 h-4 transition-transform ${
+              filterExpanded ? "rotate-180" : ""
+            }`}
+          />
+          필터 옵션
+        </button>
+      )}
 
       {/* 필터 영역 */}
-      {filterExpanded && (
+      <div
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${
+          effectiveExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
         <div className="space-y-4">
           {/* 기간 필터 & 북마크 필터 */}
           <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
@@ -391,7 +402,7 @@ export function SearchFilterBar({
             </Button>
           </div>
         </div>
-      )}
+      </div>
     </Card>
   );
 }

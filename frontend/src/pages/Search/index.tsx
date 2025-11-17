@@ -29,6 +29,11 @@ import type { SearchParams, JobPostItem } from '@/types/api';
 export default function SearchPage() {
   const navigate = useNavigate();
 
+  // FilterBar 축소/확장 상태
+  const [isFilterCollapsed, setIsFilterCollapsed] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const wheelListenerRef = useRef<((e: WheelEvent) => void) | null>(null);
+
   // Zustand 필터 스토어
   const filterStore = useFilterStore();
   const {
@@ -302,6 +307,39 @@ export default function SearchPage() {
 
 
   /**
+   * NoticeList 스크롤 핸들러
+   * 스크롤 위치에 따라 FilterBar 축소/확장
+   */
+  const handleNoticeScroll = (scrollTop: number) => {
+    if (scrollTop > 50) {
+      setIsFilterCollapsed(true);
+    } else {
+      setIsFilterCollapsed(false);
+    }
+  };
+
+  /**
+   * 브라우저 전역 스크롤을 NoticeList 스크롤로 연동
+   */
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (scrollContainerRef.current) {
+        e.preventDefault();
+        scrollContainerRef.current.scrollTop += e.deltaY;
+      }
+    };
+
+    wheelListenerRef.current = handleWheel;
+    window.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      if (wheelListenerRef.current) {
+        window.removeEventListener('wheel', wheelListenerRef.current);
+      }
+    };
+  }, []);
+
+  /**
    * 북마크 토글 (낙관적 업데이트)
    */
   const toggleBookmark = async (id: number) => {
@@ -406,10 +444,10 @@ export default function SearchPage() {
 
   return (
     <PageLayout>
-      <div className="max-w-[1920px] mx-auto px-4 md:px-8 py-6">
-        <div className="flex flex-col lg:flex-row gap-6">
+      <div className="max-w-[1920px] mx-auto px-4 md:px-8 py-4 h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)] min-h-[calc(100vh-4rem)] overflow-hidden flex flex-col">
+        <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
           {/* 메인 콘텐츠 */}
-          <div className="flex-1 space-y-6 min-w-0">
+          <div className="flex-1 space-y-4 min-w-0 flex flex-col">
             {/* 검색 및 필터 섹션 */}
             <SearchFilterBar
               searchQuery={searchQuery}
@@ -435,12 +473,13 @@ export default function SearchPage() {
                 setIsFilteredSearch(true); // 필터 적용 상태로 변경
                 handleSearch(true, true); // 새 검색, 필터 적용
               }}
+              isCollapsed={isFilterCollapsed}
             />
 
             {/* 공지사항 리스트 */}
-            <Card className="shadow-md">
+            <Card className="shadow-md flex-1 flex flex-col min-h-0">
               {/* 리스트 헤더 */}
-              <div className="h-16 px-4 md:px-6 flex items-center justify-between border-b">
+              <div className="h-14 px-4 md:px-6 flex items-center justify-between border-b shrink-0">
                 <h2 className="text-base md:text-lg" style={{ fontWeight: 700 }}>
                   공지사항
                 </h2>
@@ -465,20 +504,26 @@ export default function SearchPage() {
                 lastNoticeRef={lastNoticeElementRef}
                 isLoading={isLoading}
                 hasMore={hasMore}
+                onScroll={handleNoticeScroll}
+                scrollContainerRef={scrollContainerRef}
               />
             </Card>
           </div>
 
           {/* 우측 사이드바 (1024px 이상에서만 표시) */}
-          <div className="hidden lg:block w-80 space-y-6 sticky top-6 self-start shrink-0">
+          <div className="hidden lg:flex lg:flex-col w-80 gap-4 shrink-0 max-h-full">
             {/* 미니 캘린더 */}
-            <MiniCalendar onNavigateToCalendar={() => navigate('/calendar')} />
+            <div className="shrink-0">
+              <MiniCalendar onNavigateToCalendar={() => navigate('/calendar')} />
+            </div>
 
             {/* 채용 정보 위젯 */}
-            <JobPostingsWidget
-              postings={jobPostings}
-              onViewAll={() => navigate('/jobs')}
-            />
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <JobPostingsWidget
+                postings={jobPostings}
+                onViewAll={() => navigate('/jobs')}
+              />
+            </div>
           </div>
         </div>
       </div>

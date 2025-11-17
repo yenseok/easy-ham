@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { NoticeList } from './NoticeList';
 import type { Notice } from '@/types/notice';
 
@@ -9,13 +10,13 @@ interface NoticeListContainerProps {
   lastNoticeRef?: (node: HTMLDivElement | null) => void;
   isLoading?: boolean;
   hasMore?: boolean; // 더 불러올 데이터가 있는지
+  onScroll?: (scrollTop: number) => void; // 스크롤 이벤트 핸들러
+  scrollContainerRef?: React.RefObject<HTMLDivElement | null>; // 스크롤 컨테이너 ref
 }
 
 /**
  * NoticeList를 감싸는 컨테이너 컴포넌트
- * Card의 gap-6을 상쇄하고 헤더/하단과 바로 붙도록 처리
- * 첫 번째 항목의 위쪽 padding과 마지막 항목의 아래쪽 padding을 제거
- * 로딩 인디케이터와 완료 메시지도 포함하여 여백 제거
+ * 스크롤 영역을 제공하며, 헤더는 고정되고 리스트만 스크롤됨
  */
 export function NoticeListContainer({
   notices,
@@ -25,9 +26,24 @@ export function NoticeListContainer({
   lastNoticeRef,
   isLoading,
   hasMore = true,
+  onScroll,
+  scrollContainerRef,
 }: NoticeListContainerProps) {
+  const internalScrollRef = useRef<HTMLDivElement>(null);
+  const scrollRef = scrollContainerRef || internalScrollRef;
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (onScroll) {
+      onScroll(e.currentTarget.scrollTop);
+    }
+  };
+
   return (
-    <div>
+    <div
+      ref={scrollRef}
+      className="overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex-1 max-h-[calc(100%-0.5rem)]"
+      onScroll={handleScroll}
+    >
       <NoticeList
         notices={notices}
         onBookmarkToggle={onBookmarkToggle}
@@ -40,7 +56,7 @@ export function NoticeListContainer({
       {/* 로딩 인디케이터 */}
       {isLoading && (
         <div className="py-4 text-center text-gray-500 text-sm">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--brand-orange)]"></div>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-(--brand-orange)"></div>
           <p className="mt-2">로딩 중...</p>
         </div>
       )}
