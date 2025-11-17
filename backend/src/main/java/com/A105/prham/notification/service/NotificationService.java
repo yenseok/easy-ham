@@ -21,6 +21,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -491,5 +492,9 @@ public class NotificationService {
         }
         notification.updateStatus(true);
         notificationRepository.save(notification);
+    }
+
+    public void updateAllNotificationIsReadStatus(User user){
+       notificationRepository.updateAllToRead(user.getId());
     }
 }

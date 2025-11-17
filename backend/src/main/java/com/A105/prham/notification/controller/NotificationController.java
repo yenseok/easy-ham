@@ -73,4 +73,10 @@ public class NotificationController {
         notificationService.updateNotificationIsReadStatus(user, notificationId);
         return ApiResponseDto.success(SuccessCode.NOTIFICATION_READ_STATUS_UPDATE_SUCCESS);
     }
+
+    @PatchMapping
+    public ApiResponseDto updateAllNotificationIsReadStatus(@AuthenticationPrincipal User user){
+        notificationService.updateAllNotificationIsReadStatus(user);
+        return ApiResponseDto.success(SuccessCode.NOTIFICATION_READ_STATUS_UPDATE_SUCCESS);
+    }
 }
