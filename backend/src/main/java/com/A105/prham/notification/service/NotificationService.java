@@ -19,6 +19,7 @@ import com.A105.prham.webhook.entity.Post;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Async;
@@ -475,5 +476,21 @@ public class NotificationService {
         } catch (Exception e) {
             //예외 안던짐
         }
+    }
+
+
+
+
+
+
+    public void updateNotificationIsReadStatus(User user, String notificationId){
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
+        if(!notification.getUserId().equals(user.getId())){
+            log.error("");
+            throw new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND);
+        }
+        notification.updateStatus(true);
+        notificationRepository.save(notification);
     }
 }
