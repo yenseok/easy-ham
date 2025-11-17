@@ -72,7 +72,7 @@ export const API_ENDPOINTS = {
 
   // 게시물/공지사항 상세조회 엔드포인트
   posts: {
-    getDetail: (noticeId: number) => `/posts/${noticeId}`,
+    getDetail: (noticeId: number) => `/search/posts/${noticeId}`,
   },
 
   // SSE 스트림 엔드포인트

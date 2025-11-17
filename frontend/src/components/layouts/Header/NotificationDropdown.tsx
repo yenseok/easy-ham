@@ -13,7 +13,7 @@ import { useSSEStore } from "@/stores/useSSEStore";
 import { SubscriptionKeywordModal } from "@/components/modals/SubscriptionKeywordModal";
 import { MessageDetailModal, type MessageDetail } from "@/components/modals/MessageDetailModal";
 import { getPostDetail } from "@/services/api/posts";
-import { convertPostDetailToMessageDetail } from "@/utils/postMapper";
+import { convertSearchItemToNotice } from "@/utils/searchMapper";
 
 export const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -65,7 +65,27 @@ export const NotificationDropdown = () => {
       const response = await getPostDetail(notice_id);
 
       if (response.data) {
-        const messageDetail = convertPostDetailToMessageDetail(response.data);
+        // SearchResultItem → Notice 변환
+        const notice = convertSearchItemToNotice(response.data);
+
+        // Notice → MessageDetail 변환 (Search 페이지와 동일한 로직)
+        const mattermostUrl = notice.mattermostUrl || `https://mattermost.ssafy.com/ssafy/pl/message${notice.id}`;
+        const messageDetail: MessageDetail = {
+          id: notice.id,
+          title: notice.title,
+          content: notice.content,
+          author: notice.author,
+          category: notice.category,
+          subcategory: notice.subcategory,
+          created_at: notice.createdAt,
+          updated_at: notice.updatedAt,
+          channel: notice.channel,
+          teamName: notice.teamName,
+          dday: notice.dday,
+          mattermostUrl,
+          attachments: notice.attachments,
+        };
+
         setSelectedMessage(messageDetail);
         setIsDetailModalOpen(true);
       }
