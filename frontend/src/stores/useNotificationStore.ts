@@ -6,6 +6,7 @@
 import { create } from "zustand";
 import type { ServerNotification, UINotification } from "@/types/notification";
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "@/services/api/notifications";
+import { calculateRemainingTime } from "@/utils/deadlineUtils";
 
 export interface Notification {
   id: string; // 알림 고유 ID
@@ -17,6 +18,7 @@ export interface Notification {
   badge?: string; // 오른쪽에 표시할 배지 텍스트 (키워드, 마감시간, 직무 등)
   relativeTime?: string; // 캐시된 상대 시간 문자열 (최적화용)
   notice_id?: number; // 공지사항 상세조회용 ID
+  deadline?: string; // deadline_approaching 이벤트의 마감 시간 (ISO 8601 형식)
 }
 
 interface NotificationState {
@@ -48,19 +50,19 @@ function convertServerNotificationToUI(notification: ServerNotification): Notifi
   if (notification.eventType === "keyword_matching") {
     type = "info";
     const data = eventData as any;
-    title = data.title;
+    title = `구독 키워드: ${data.title}`;
     badge = data.match_keyword?.join(", ");
     notice_id = data.notice_id;
   } else if (notification.eventType === "deadline_approaching") {
     type = "danger";
     const data = eventData as any;
-    title = data.title;
-    badge = `${data.hours_left}시간 남음`;
+    title = `마감 임박: ${data.title}`;
+    badge = calculateRemainingTime(data.deadline);
     notice_id = data.notice_id;
   } else if (notification.eventType === "job_recommendation") {
     type = "success";
     const data = eventData as any;
-    title = data.title;
+    title = `관심 직무: ${data.title}`;
     badge = data.matched_jobs?.join(", ");
     notice_id = data.notice_id;
   }
@@ -74,6 +76,7 @@ function convertServerNotificationToUI(notification: ServerNotification): Notifi
     badge,
     relativeTime: "방금 전",
     notice_id,
+    deadline: (eventData as any)?.deadline,
   };
 }
 

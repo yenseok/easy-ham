@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, AlertCircle, CheckCircle, Info, Settings } from "lucide-react";
 import { toast } from "sonner";
 import { formatRelativeTime } from "@/utils/timeUtils";
+import { calculateRemainingTime } from "@/utils/deadlineUtils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -11,7 +12,10 @@ import {
 import { useNotificationStore } from "@/stores/useNotificationStore";
 import { useSSEStore } from "@/stores/useSSEStore";
 import { SubscriptionKeywordModal } from "@/components/modals/SubscriptionKeywordModal";
-import { MessageDetailModal, type MessageDetail } from "@/components/modals/MessageDetailModal";
+import {
+  MessageDetailModal,
+  type MessageDetail,
+} from "@/components/modals/MessageDetailModal";
 import { getPostDetail } from "@/services/api/posts";
 import { convertSearchItemToNotice } from "@/utils/searchMapper";
 
@@ -19,10 +23,24 @@ export const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isKeywordModalOpen, setIsKeywordModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedMessage, setSelectedMessage] = useState<MessageDetail | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<MessageDetail | null>(
+    null
+  );
+  const [, setRefreshTrigger] = useState(0);
   const { notifications, unreadCount, markAsRead, markAllAsRead } =
     useNotificationStore();
   const { notificationStreamStatus } = useSSEStore();
+
+  // 드롭다운이 열려있을 때 30초마다 시간 재계산 (deadline 배지 갱신용)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const interval = setInterval(() => {
+      setRefreshTrigger((prev) => prev + 1);
+    }, 30000); // 30초마다 갱신
+
+    return () => clearInterval(interval);
+  }, [isOpen]);
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -50,13 +68,16 @@ export const NotificationDropdown = () => {
     }
   };
 
-  const handleNotificationClick = async (notificationId: string, notice_id?: number) => {
+  const handleNotificationClick = async (
+    notificationId: string,
+    notice_id?: number
+  ) => {
     // 알림 읽음 처리 (비동기이지만 await하지 않음 - 즉시 UI 업데이트)
     markAsRead(notificationId);
 
     // notice_id가 없으면 반환
     if (!notice_id) {
-      console.warn('[NotificationDropdown] notice_id is missing');
+      console.warn("[NotificationDropdown] notice_id is missing");
       return;
     }
 
@@ -69,7 +90,9 @@ export const NotificationDropdown = () => {
         const notice = convertSearchItemToNotice(response.data);
 
         // Notice → MessageDetail 변환 (Search 페이지와 동일한 로직)
-        const mattermostUrl = notice.mattermostUrl || `https://mattermost.ssafy.com/ssafy/pl/message${notice.id}`;
+        const mattermostUrl =
+          notice.mattermostUrl ||
+          `https://mattermost.ssafy.com/ssafy/pl/message${notice.id}`;
         const messageDetail: MessageDetail = {
           id: notice.id,
           title: notice.title,
@@ -90,8 +113,11 @@ export const NotificationDropdown = () => {
         setIsDetailModalOpen(true);
       }
     } catch (error) {
-      console.error('[NotificationDropdown] Failed to fetch post detail:', error);
-      toast.error('공지사항 상세 정보를 불러올 수 없습니다.');
+      console.error(
+        "[NotificationDropdown] Failed to fetch post detail:",
+        error
+      );
+      toast.error("공지사항 상세 정보를 불러올 수 없습니다.");
     }
   };
 
@@ -181,33 +207,37 @@ export const NotificationDropdown = () => {
             notifications.map((notif) => (
               <div
                 key={notif.id}
-                onClick={() => handleNotificationClick(notif.id, notif.notice_id)}
-                className={`flex items-start gap-3 p-4 hover:bg-gray-50 transition-colors border-l-4 cursor-pointer ${getBorderColor(
+                onClick={() =>
+                  handleNotificationClick(notif.id, notif.notice_id)
+                }
+                className={`flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors border-l-4 cursor-pointer ${getBorderColor(
                   notif.type
                 )} ${!notif.read ? "bg-blue-50" : ""}`}
               >
-                <div className="flex-shrink-0 mt-1">
+                <div className="shrink-0">
                   {getNotificationIcon(notif.type)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  {/* 제목 + 배지 */}
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-medium text-gray-900">
-                      {notif.title}
+                  {/* 제목 */}
+                  <p className="text-sm font-medium text-gray-900">
+                    {notif.title}
+                  </p>
+                  {/* 상대 시간 + 배지 */}
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-gray-500">
+                      {notif.relativeTime || formatRelativeTime(notif.time)}
                     </p>
                     {notif.badge && (
-                      <span className="flex-shrink-0 text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded whitespace-nowrap">
-                        {notif.badge}
+                      <span className="shrink-0 text-[11px] bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded whitespace-nowrap">
+                        {notif.deadline
+                          ? calculateRemainingTime(notif.deadline)
+                          : notif.badge}
                       </span>
                     )}
                   </div>
-                  {/* 상대 시간 */}
-                  <p className="text-xs text-gray-500 mt-1">
-                    {notif.relativeTime || formatRelativeTime(notif.time)}
-                  </p>
                 </div>
                 {!notif.read && (
-                  <div className="w-2 h-2 rounded-full bg-blue-600 flex-shrink-0 mt-1" />
+                  <div className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
                 )}
               </div>
             ))

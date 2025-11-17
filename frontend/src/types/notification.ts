@@ -67,6 +67,7 @@ export interface UINotification {
   badge?: string; // 우측 배지 (키워드, 남은 시간, 직무 등)
   relativeTime?: string; // 상대 시간 ("방금 전", "5분 전" 등)
   notice_id: number; // 상세조회용 공지사항 ID
+  deadline?: string; // deadline_approaching 이벤트의 마감 시간 (ISO 8601 형식)
 }
 
 /**

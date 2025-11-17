@@ -10,6 +10,7 @@ import { useSSEPostStore } from "@/stores/useSSEPostStore";
 import { useNotificationStore } from "@/stores/useNotificationStore";
 import { API_ENDPOINTS } from "@/constants/api";
 import { formatRelativeTime } from "@/utils/timeUtils";
+import { calculateRemainingTime } from "@/utils/deadlineUtils";
 import type {
   SSEError,
   NewPostEvent,
@@ -231,10 +232,6 @@ class SSEManager {
           notificationType = "info";
         }
 
-        const hoursText =
-          deadlineEvent.hours_left < 1
-            ? "1시간 이내"
-            : `${Math.round(deadlineEvent.hours_left)}시간`;
         const now = new Date();
 
         useNotificationStore.getState().addSSENotification?.({
@@ -242,11 +239,12 @@ class SSEManager {
           type: notificationType,
           title: `마감 임박: ${deadlineEvent.title}`,
           content: undefined,
-          badge: hoursText,
+          badge: calculateRemainingTime(deadlineEvent.deadline),
           time: now.toISOString(),
           relativeTime: formatRelativeTime(now.toISOString()),
           read: false,
           notice_id: deadlineEvent.notice_id,
+          deadline: deadlineEvent.deadline,
         });
       }
       // job_recommendation 이벤트 처리
