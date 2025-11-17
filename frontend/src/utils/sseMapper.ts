@@ -162,6 +162,9 @@ export function convertSSEEventToNotice(event: NewPostEvent): Notice {
     // Mattermost URL 생성
     mattermostUrl: constructMattermostUrl(event.postId, event.channelId),
 
+    // 캠퍼스 정보 (SSE의 campusList를 Notice의 campusId로 매핑)
+    campusId: event.campusList || null,
+
     // 새 게시글 기본값
     bookmarked: false, // SSE로 온 게시글은 아직 북마크되지 않음
     completed: false,  // 새 게시글은 완료되지 않음

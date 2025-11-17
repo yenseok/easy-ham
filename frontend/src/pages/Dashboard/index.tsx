@@ -5,6 +5,7 @@ import { jobsApi } from "@/services/api/jobs";
 import { sseManager } from "@/services/sse/sseManager";
 import { useSSEPostStore } from "@/stores/useSSEPostStore";
 import { bookmarksApi } from "@/services/api/bookmarks";
+import { getUserProfile } from "@/services/api/auth";
 import { convertBookmarkItemToNotice } from "@/utils/bookmarkMapper";
 import { convertSSEEventToNotice } from "@/utils/sseMapper";
 import type { Notice } from "@/types/notice";
@@ -22,6 +23,7 @@ export default function DashboardPage() {
   const [bookmarkedNotices, setBookmarkedNotices] = useState<Notice[]>([]);
   const [jobPosts, setJobPosts] = useState<JobPostItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userCampus, setUserCampus] = useState<string | null>(null);
   const { newPosts } = useSSEPostStore();
 
   // 모달 상태
@@ -43,6 +45,21 @@ export default function DashboardPage() {
       console.error('[Dashboard] 북마크 갱신 실패:', error);
     }
   };
+
+  // 유저 정보 조회 (캠퍼스 정보 필요)
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const response = await getUserProfile();
+        setUserCampus(response.data.campus);
+      } catch (error) {
+        console.error('[Dashboard] 유저 정보 조회 실패:', error);
+        setUserCampus(null);
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
 
   // Search API 호출 (전체 공지 + 북마크 공지 + 채용공고)
   useEffect(() => {
@@ -159,19 +176,35 @@ export default function DashboardPage() {
     }
   }, [newPosts]);
 
-  // 마감 임박 할일 (D-7 이내, deadline 있는 것만, 마감일 지난 것 제외)
+  // 마감 임박 할일 (D-7 이내, deadline 있는 것만, 마감일 지난 것 제외, 캠퍼스 필터링)
   const urgentDeadlines = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     return allNotices
       .filter((n) => {
+        // 1. deadline 확인
         if (!n.deadline) return false;
+
         const deadline = typeof n.deadline === 'string' ? new Date(n.deadline) : n.deadline;
         deadline.setHours(0, 0, 0, 0);
         const daysLeft = Math.ceil((deadline.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        // 마감일이 지난 것(음수)은 제외, 오늘(0)부터 7일 이내만 포함
-        return daysLeft >= 0 && daysLeft <= 7;
+
+        // 2. 마감일이 지난 것(음수)은 제외, 오늘(0)부터 7일 이내만 포함
+        if (daysLeft < 0 || daysLeft > 7) return false;
+
+        // 3. 캠퍼스 필터링
+        // - campusId가 null이면 전체 공지이므로 통과
+        // - campusId가 있고, userCampus가 그 안에 포함되면 통과
+        // - campusId가 있고, userCampus가 없으면 제외
+        if (n.campusId) {
+          if (!userCampus) return false;
+          // campusId는 "서울,부울경" 형태의 문자열, 콤마로 분리해서 확인
+          const campusList = n.campusId.split(',').map(c => c.trim());
+          if (!campusList.includes(userCampus)) return false;
+        }
+
+        return true;
       })
       .sort((a, b) => {
         const aDeadline = a.deadline ? (typeof a.deadline === 'string' ? new Date(a.deadline) : a.deadline) : new Date();
@@ -179,7 +212,7 @@ export default function DashboardPage() {
         return aDeadline.getTime() - bDeadline.getTime();
       })
       .slice(0, 5);
-  }, [allNotices]);
+  }, [allNotices, userCampus]);
 
   // 이번 주 일정 (deadline이 이번 주에 있는 것)
   const weeklyEvents = useMemo(() => {

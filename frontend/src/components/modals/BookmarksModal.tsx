@@ -100,6 +100,7 @@ export function BookmarksModal({ open, onOpenChange }: BookmarksModalProps) {
 
   // D-day 색상 (Dashboard와 동일)
   const getDdayColor = (dday: number) => {
+    if (dday < 0) return 'bg-gray-400'; // 마감 지난 경우 회색
     if (dday <= 3) return 'bg-red-500';
     if (dday <= 7) return 'bg-yellow-500';
     return 'bg-green-500';
@@ -188,7 +189,7 @@ export function BookmarksModal({ open, onOpenChange }: BookmarksModalProps) {
                             )}`}
                             style={{ fontWeight: 600 }}
                           >
-                            D-{notice.dday}
+                            {notice.dday === 0 ? 'D-Day' : notice.dday > 0 ? `D-${notice.dday}` : `D+${Math.abs(notice.dday)}`}
                           </span>
                         )}
                       </div>
@@ -248,7 +249,7 @@ export function BookmarksModal({ open, onOpenChange }: BookmarksModalProps) {
                       )}`}
                       style={{ fontWeight: 600 }}
                     >
-                      D-{selectedNotice.dday}
+                      {selectedNotice.dday === 0 ? 'D-Day' : selectedNotice.dday > 0 ? `D-${selectedNotice.dday}` : `D+${Math.abs(selectedNotice.dday)}`}
                     </span>
                   )}
               </div>

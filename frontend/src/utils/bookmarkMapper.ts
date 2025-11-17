@@ -70,5 +70,6 @@ export function convertBookmarkItemToNotice(item: NoticeApiResponse): Notice {
     updatedAt: item.createdAt,
     dday: calculateDday(item.deadline),
     deadline: item.deadline || undefined,
+    campusId: item.campusId || null, // 캠퍼스 정보
   };
 }

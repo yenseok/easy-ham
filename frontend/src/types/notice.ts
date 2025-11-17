@@ -32,6 +32,7 @@ export interface Notice {
   mattermostUrl?: string;
   createdAt: string;
   updatedAt: string;
+  campusId?: string | null; // 캠퍼스 정보 (예: "서울,부울경" 또는 null)
 
   // 캘린더 필드
   startDate?: string | Date; // 이벤트/공지 시작일

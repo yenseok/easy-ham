@@ -49,7 +49,7 @@ export const MessageDetailModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto p-8" style={{ maxWidth: '60vw' }}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto p-4 sm:p-6 md:p-8 w-[95vw] sm:w-[90vw] md:w-[80vw] lg:w-[70vw] xl:w-[60vw] max-w-4xl">
         {/* 뒤로가기 버튼 (옵션) */}
         {showBackButton && onBack && (
           <Button
@@ -157,22 +157,22 @@ export const MessageDetailModal = ({
 
         {/* 푸터 액션 */}
         <Separator />
-        <div className="pt-4 flex items-center justify-between">
+        <div className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <Clock className="w-3.5 h-3.5" />
-            <span>메시지 ID: {message.id}</span>
+            <span className="break-all">메시지 ID: {message.id}</span>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             {message.mattermostUrl && (
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8"
+                className="h-8 w-full sm:w-auto"
                 onClick={() => window.open(message.mattermostUrl, '_blank')}
               >
                 <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                Mattermost에서 보기
+                <span className="truncate">Mattermost에서 보기</span>
               </Button>
             )}
           </div>

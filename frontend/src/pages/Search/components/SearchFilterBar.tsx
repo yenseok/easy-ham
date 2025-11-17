@@ -120,7 +120,7 @@ export function SearchFilterBar({
               }
             }}
             placeholder="공지사항, 채널, 키워드 검색..."
-            className="pl-10 h-12 border-0 bg-gray-50 rounded-lg"
+            className="pl-10 h-12 border-0 bg-gray-50 rounded-lg text-sm sm:text-base placeholder:text-xs sm:placeholder:text-sm"
           />
         </div>
         <Button

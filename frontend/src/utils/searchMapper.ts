@@ -165,6 +165,9 @@ export function convertSearchItemToNotice(item: SearchResultItem): Notice {
     dday: calculateDday(item.deadline),
     deadline: item.deadline || undefined,
 
+    // 캠퍼스 정보 (Search API의 campusId를 Notice의 campusId로 매핑)
+    campusId: item.campusId || null,
+
     // Mattermost 원문 링크 (백엔드에서 제공)
     mattermostUrl: item.originalLink || `https://mattermost.ssafy.com/message/${item.mmMessageId}`,
   };

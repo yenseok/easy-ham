@@ -13,6 +13,7 @@ export default function UrgentDeadlinesWidget({
   onNoticeClick,
 }: UrgentDeadlinesWidgetProps) {
   const getDdayColor = (daysLeft: number) => {
+    if (daysLeft < 0) return "bg-gray-400"; // 마감 지난 경우 회색
     if (daysLeft <= 3) return "bg-red-500";
     if (daysLeft <= 7) return "bg-yellow-500";
     return "bg-green-500";
@@ -62,7 +63,7 @@ export default function UrgentDeadlinesWidget({
                         )}`}
                         style={{ fontWeight: 600 }}
                       >
-                        {dday === 0 ? 'D-Day' : `D-${dday}`}
+                        {dday === 0 ? 'D-Day' : dday > 0 ? `D-${dday}` : `D+${Math.abs(dday)}`}
                       </span>
                     )}
                   </div>
