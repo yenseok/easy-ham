@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Bell, AlertCircle, CheckCircle, Info, Settings } from "lucide-react";
+import { toast } from "sonner";
 import { formatRelativeTime } from "@/utils/timeUtils";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +12,8 @@ import { useNotificationStore } from "@/stores/useNotificationStore";
 import { useSSEStore } from "@/stores/useSSEStore";
 import { SubscriptionKeywordModal } from "@/components/modals/SubscriptionKeywordModal";
 import { MessageDetailModal, type MessageDetail } from "@/components/modals/MessageDetailModal";
-import { noticesApi } from "@/services/api/notices";
+import { getPostDetail } from "@/services/api/posts";
+import { convertPostDetailToMessageDetail } from "@/utils/postMapper";
 
 export const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -48,37 +50,28 @@ export const NotificationDropdown = () => {
     }
   };
 
-  const handleNotificationClick = async (notificationId: string) => {
+  const handleNotificationClick = async (notificationId: string, notice_id?: number) => {
+    // 알림 읽음 처리 (비동기이지만 await하지 않음 - 즉시 UI 업데이트)
     markAsRead(notificationId);
+
+    // notice_id가 없으면 반환
+    if (!notice_id) {
+      console.warn('[NotificationDropdown] notice_id is missing');
+      return;
+    }
 
     // 상세 공지 정보를 가져와서 모달 열기
     try {
-      const noticeIdNum = parseInt(notificationId, 10);
-      const notice = await noticesApi.getById(noticeIdNum);
+      const response = await getPostDetail(notice_id);
 
-      if (notice) {
-        const mattermostUrl = notice.mattermostUrl || `https://mattermost.ssafy.com/ssafy/pl/message${notice.id}`;
-
-        const messageDetail: MessageDetail = {
-          id: notice.id,
-          title: notice.title,
-          content: notice.content,
-          author: notice.author,
-          category: notice.category,
-          subcategory: notice.subcategory,
-          created_at: notice.createdAt,
-          updated_at: notice.updatedAt,
-          channel: notice.channel,
-          dday: notice.dday,
-          mattermostUrl,
-          attachments: notice.attachments,
-        };
-
+      if (response.data) {
+        const messageDetail = convertPostDetailToMessageDetail(response.data);
         setSelectedMessage(messageDetail);
         setIsDetailModalOpen(true);
       }
     } catch (error) {
-      console.error('[NotificationDropdown] Failed to fetch notice detail:', error);
+      console.error('[NotificationDropdown] Failed to fetch post detail:', error);
+      toast.error('공지사항 상세 정보를 불러올 수 없습니다.');
     }
   };
 
@@ -168,7 +161,7 @@ export const NotificationDropdown = () => {
             notifications.map((notif) => (
               <div
                 key={notif.id}
-                onClick={() => handleNotificationClick(notif.id)}
+                onClick={() => handleNotificationClick(notif.id, notif.notice_id)}
                 className={`flex items-start gap-3 p-4 hover:bg-gray-50 transition-colors border-l-4 cursor-pointer ${getBorderColor(
                   notif.type
                 )} ${!notif.read ? "bg-blue-50" : ""}`}

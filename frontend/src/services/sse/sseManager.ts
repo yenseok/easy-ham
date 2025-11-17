@@ -203,14 +203,14 @@ class SSEManager {
 
       // keyword_matching 이벤트 처리
       if ("match_keyword" in notificationData) {
-        const keywordEvent = notificationData as KeywordMatchingEvent;
+        const keywordEvent = notificationData as KeywordMatchingEvent & { id?: string };
         const keywords = Array.isArray(keywordEvent.match_keyword)
           ? keywordEvent.match_keyword.join(", ")
           : "Unknown keywords";
         const now = new Date();
 
         useNotificationStore.getState().addSSENotification?.({
-          id: keywordEvent.notice_id,
+          id: keywordEvent.id || String(keywordEvent.notice_id), // SSE id 사용, 없으면 notice_id 사용
           type: "info",
           title: `구독 키워드: ${keywordEvent.title}`,
           content: undefined,
@@ -218,11 +218,12 @@ class SSEManager {
           time: now.toISOString(),
           relativeTime: formatRelativeTime(now.toISOString()),
           read: false,
+          notice_id: keywordEvent.notice_id,
         });
       }
       // deadline_approaching 이벤트 처리
       else if ("hours_left" in notificationData) {
-        const deadlineEvent = notificationData as DeadlineApproachingEvent;
+        const deadlineEvent = notificationData as DeadlineApproachingEvent & { id?: string };
 
         // hours_left 기반 긴급도 판단
         let notificationType: "danger" | "info" = "danger";
@@ -237,7 +238,7 @@ class SSEManager {
         const now = new Date();
 
         useNotificationStore.getState().addSSENotification?.({
-          id: String(deadlineEvent.notice_id),
+          id: deadlineEvent.id || String(deadlineEvent.notice_id), // SSE id 사용, 없으면 notice_id 사용
           type: notificationType,
           title: `마감 임박: ${deadlineEvent.title}`,
           content: undefined,
@@ -245,18 +246,19 @@ class SSEManager {
           time: now.toISOString(),
           relativeTime: formatRelativeTime(now.toISOString()),
           read: false,
+          notice_id: deadlineEvent.notice_id,
         });
       }
       // job_recommendation 이벤트 처리
       else if ("matched_jobs" in notificationData) {
-        const jobEvent = notificationData as JobRecommendationEvent;
+        const jobEvent = notificationData as JobRecommendationEvent & { id?: string };
         const jobs = Array.isArray(jobEvent.matched_jobs)
           ? jobEvent.matched_jobs.join(", ")
           : "Unknown jobs";
         const now = new Date();
 
         useNotificationStore.getState().addSSENotification?.({
-          id: jobEvent.notice_id,
+          id: jobEvent.id || String(jobEvent.notice_id), // SSE id 사용, 없으면 notice_id 사용
           type: "success",
           title: `관심 직무: ${jobEvent.title}`,
           content: undefined,
@@ -264,6 +266,7 @@ class SSEManager {
           time: now.toISOString(),
           relativeTime: formatRelativeTime(now.toISOString()),
           read: false,
+          notice_id: jobEvent.notice_id,
         });
       }
     });
