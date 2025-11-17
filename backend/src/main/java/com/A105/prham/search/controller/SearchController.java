@@ -4,6 +4,7 @@ import com.A105.prham.common.response.ApiResponseDto;
 import com.A105.prham.common.response.ErrorCode;
 import com.A105.prham.common.response.SuccessCode;
 import com.A105.prham.search.dto.request.PostSearchRequest;
+import com.A105.prham.search.dto.response.PostSearchItem;
 import com.A105.prham.search.dto.response.PostSearchResponse;
 import com.A105.prham.search.service.SearchService;
 import com.A105.prham.user.entity.User;
@@ -72,6 +73,34 @@ public class SearchController {
 
         } catch (Exception e) {
             log.error("❌ Search failed", e);
+            return ApiResponseDto.fail(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    /**
+     * postId로 단일 게시물 조회
+     */
+    @GetMapping("/posts/{postId}")
+    public ApiResponseDto<PostSearchItem> getPostByPostId(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal User user) {
+        try {
+            log.info("단일 조회 시도 : {}",postId);
+            Long userId = user != null ? user.getId() : null;
+            if(userId == null){
+                return ApiResponseDto.fail(ErrorCode.USER_NOT_FOUND);
+            }
+            PostSearchItem item = searchService.getPostByPostId(postId, userId);
+
+            if (item == null) {
+                return ApiResponseDto.fail(ErrorCode.NOT_FOUND);
+            }
+
+            return ApiResponseDto.success(SuccessCode.SUCCESS, item);
+
+        } catch (Exception e) {
+            log.error("❌ Failed to get post by postId: {}", postId, e);
             return ApiResponseDto.fail(ErrorCode.INTERNAL_SERVER_ERROR);
         }
     }
