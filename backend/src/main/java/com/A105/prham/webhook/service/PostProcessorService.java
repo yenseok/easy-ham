@@ -43,12 +43,10 @@ public class PostProcessorService {
 		List<FileInfo> files = fetchFiles(post.getFileIds(), post.getPostId());
 		int fileCount = (files != null) ? files.size() : 0;
 
-
-
-
 		// 5️⃣ DTO 생성
 		PostIndexDocument doc = PostIndexDocument.builder()
-				.postId(post.getPostId())
+				.postId(post.getId())
+				.mmPostId(post.getPostId())
 				.channelId(post.getChannelId())
 				.channelName(post.getChannelName())
 				.teamName(post.getTeamName())
@@ -60,11 +58,11 @@ public class PostProcessorService {
 				.processedAt(post.getProcessedAt())
 				.title(post.getTitle())
 				.campusList(post.getCampusList())
-				.files(files)
+//				.files(files)
 				.fileCount(fileCount)
 				.originalLink(post.getLink())
 				.build();
-
+		doc.setFiles(files);
 		log.info("✅ Post processed for indexing: postId={}, fileCount={}, timestamp={}",
 				post.getPostId(), fileCount, timestamp);
 

@@ -31,6 +31,7 @@ public class MeilisearchIndexSetup implements ApplicationRunner {
 
             // 1. 필터 가능 속성
             index.updateFilterableAttributesSettings(new String[]{
+                    "postId",
                     "channelId",      // mmChannelId -> channelId
 //                    "mainCategory",
                     "subCategory",
@@ -47,6 +48,7 @@ public class MeilisearchIndexSetup implements ApplicationRunner {
             index.updateSearchableAttributesSettings(new String[]{
                     "title",          // 제목 (가장 중요)
                     "cleanedText",    // 본문 내용
+                    "fileNames",
                     "userId",         // 작성자
                     "userName",
                     "channelName",    // 채널명
@@ -69,8 +71,8 @@ public class MeilisearchIndexSetup implements ApplicationRunner {
 
             // HashMap으로 minWordSizeForTypos 설정
             HashMap<String, Integer> minWordSizeTypos = new HashMap<String, Integer>() {{
-                put("oneTypo", 4);   // 4글자 이상만 1개 오타 허용
-                put("twoTypos", 9);  // 9글자 이상만 2개 오타 허용
+                put("oneTypo", 3);   // 3글자 이상만 1개 오타 허용
+                put("twoTypos", 8);  // 8글자 이상만 2개 오타 허용
             }};
             typoTolerance.setMinWordSizeForTypos(minWordSizeTypos);
 
