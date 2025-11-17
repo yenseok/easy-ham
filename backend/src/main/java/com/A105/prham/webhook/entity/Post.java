@@ -9,7 +9,8 @@ import com.A105.prham.common.domain.BaseTimeEntity;
 import com.A105.prham.position.entity.Position;
 
 @Entity
-@Table(name = "posts")
+@Table(name = "posts",
+		indexes = @Index(name = "idx_posts_deadline", columnList = "deadline"))
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
@@ -45,6 +46,8 @@ public class Post extends BaseTimeEntity {
 	@Column(name = "file_ids")
 	private String fileIds;
 
+	@Column(name = "link")
+	private String link;
 
 	// after llm
 	@Column(name = "cleaned_text", columnDefinition = "TEXT")

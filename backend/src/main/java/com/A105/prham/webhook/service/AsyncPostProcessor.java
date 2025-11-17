@@ -88,8 +88,10 @@ public class AsyncPostProcessor {
 						createIndividualJobPost(post, jobPosting, result);
 					}
 
+					String markdownText = markdownFormatterService.formatForMarkdown(cleanedText);
+
 					post.updateClassificationResult(
-						cleanedText,
+						markdownText,
 						result.getTitle(),
 						result.getMainCategory(),
 						result.getSubCategory(),
@@ -115,6 +117,7 @@ public class AsyncPostProcessor {
 			}
 		}
 	}
+
 
 	// 일반 공지사항 저장
 	private void saveOriginalPost(Post post, LlmClassificationResult result, boolean fileProcessingFailed) {
@@ -217,7 +220,8 @@ public class AsyncPostProcessor {
 
 			// sse 전송
 			ssePostService.sendNewPost(savedPost);
-
+			notificationService.sendKeywordMatchingNotification(savedPost);
+			notificationService.scheduleDeadlineNotification(savedPost);
 
 		} catch (Exception e) {
 			log.error("개별 채용 공고 생성 실패: {}", jobPosting.getCompany(), e);
