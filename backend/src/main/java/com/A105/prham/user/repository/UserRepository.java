@@ -70,4 +70,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT DISTINCT u FROM User u " +
             "LEFT JOIN FETCH u.notificationSetting")
     List<User> findAllWithNotificationSettings();
+
+    // 유저 중 채용 공고 알림이 true인 유저만 조회
+    @Query("SELECT DISTINCT u FROM User u " +
+            "JOIN FETCH u.notificationSetting ns " +
+            "WHERE ns.jobAlertEnabled = true")
+    List<User> findUsersWithJobAlertEnabled();
+
 }
