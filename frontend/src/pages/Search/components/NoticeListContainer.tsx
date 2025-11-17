@@ -41,7 +41,7 @@ export function NoticeListContainer({
   return (
     <div
       ref={scrollRef}
-      className="overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 flex-1 max-h-[calc(100%-0.5rem)]"
+      className="lg:overflow-y-auto lg:scrollbar-thin lg:scrollbar-thumb-gray-300 lg:scrollbar-track-gray-100 lg:flex-1 lg:min-h-0"
       onScroll={handleScroll}
     >
       <NoticeList

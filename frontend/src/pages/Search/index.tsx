@@ -312,27 +312,53 @@ export default function SearchPage() {
   };
 
   /**
-   * 브라우저 전역 스크롤을 NoticeList 스크롤로 연동
+   * 브라우저 전역 스크롤 → NoticeList 스크롤 연동 (데스크톱 전용)
+   * lg 이상에서만 wheel 이벤트를 가로채도록 해 모바일·태블릿에서 스크롤이 막히지 않게 한다.
    */
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
     const prefersFinePointer = window.matchMedia('(pointer: fine)').matches;
     if (!prefersFinePointer) return;
 
-    const handleWheel = (e: WheelEvent) => {
-      if (scrollContainerRef.current) {
-        e.preventDefault();
-        scrollContainerRef.current.scrollTop += e.deltaY;
+    const lgMediaQuery = window.matchMedia('(min-width: 1024px)');
+
+    const removeWheelListener = () => {
+      if (wheelListenerRef.current) {
+        window.removeEventListener('wheel', wheelListenerRef.current);
+        wheelListenerRef.current = null;
       }
     };
 
-    wheelListenerRef.current = handleWheel;
-    window.addEventListener('wheel', handleWheel, { passive: false });
+    const addWheelListener = () => {
+      if (wheelListenerRef.current) return;
+      const handleWheel = (e: WheelEvent) => {
+        if (scrollContainerRef.current) {
+          e.preventDefault();
+          scrollContainerRef.current.scrollTop += e.deltaY;
+        }
+      };
+      wheelListenerRef.current = handleWheel;
+      window.addEventListener('wheel', handleWheel, { passive: false });
+    };
+
+    const handleMediaChange = (event: MediaQueryListEvent) => {
+      if (event.matches) {
+        addWheelListener();
+      } else {
+        removeWheelListener();
+      }
+    };
+
+    if (lgMediaQuery.matches) {
+      addWheelListener();
+    }
+
+    lgMediaQuery.addEventListener('change', handleMediaChange);
 
     return () => {
-      if (wheelListenerRef.current) {
-        window.removeEventListener('wheel', wheelListenerRef.current);
-      }
+      lgMediaQuery.removeEventListener('change', handleMediaChange);
+      removeWheelListener();
     };
   }, []);
 
@@ -441,10 +467,10 @@ export default function SearchPage() {
 
   return (
     <PageLayout>
-      <div className="max-w-[1920px] mx-auto px-4 md:px-8 py-4 h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)] min-h-[calc(100vh-4rem)] overflow-y-auto md:overflow-hidden flex flex-col">
-        <div className="flex flex-col lg:flex-row gap-4 flex-1 min-h-0">
+      <div className="max-w-[1920px] mx-auto px-4 md:px-8 py-4 lg:h-[calc(100vh-4rem)] lg:max-h-[calc(100vh-4rem)] lg:min-h-[calc(100vh-4rem)] lg:overflow-hidden flex flex-col">
+        <div className="flex flex-col lg:flex-row gap-4 lg:flex-1 lg:min-h-0">
           {/* 메인 콘텐츠 */}
-          <div className="flex-1 space-y-4 min-w-0 flex flex-col">
+          <div className="lg:flex-1 min-w-0 flex flex-col gap-4">
             {/* 검색 및 필터 섹션 */}
             <SearchFilterBar
               searchQuery={searchQuery}
@@ -475,7 +501,7 @@ export default function SearchPage() {
             />
 
             {/* 공지사항 리스트 */}
-            <Card className="shadow-md flex-1 flex flex-col min-h-0">
+            <Card className="shadow-md lg:flex-1 flex flex-col lg:min-h-0">
               {/* 리스트 헤더 */}
               <div className="h-14 px-4 md:px-6 flex items-center justify-between border-b shrink-0">
                 <h2 className="text-base md:text-lg" style={{ fontWeight: 700 }}>
