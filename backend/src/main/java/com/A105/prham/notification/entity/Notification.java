@@ -32,4 +32,8 @@ public class Notification {
 
     @Indexed
     private Boolean isRead;
+
+    public void updateStatus(Boolean isRead){
+        this.isRead = isRead;
+    }
 }
