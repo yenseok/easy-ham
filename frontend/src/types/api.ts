@@ -30,6 +30,7 @@ export interface NoticeApiResponse {
   deadline: string | null;
   isLiked: boolean; // 프론트엔드의 bookmarked
   isCompleted?: boolean; // 프론트엔드의 completed (북마크 API에서는 없을 수 있음)
+  campusId?: string | null; // 캠퍼스 정보
 }
 
 /**
@@ -108,6 +109,7 @@ export interface SearchResultItem {
   isLiked?: boolean;
   isCompleted?: boolean;
   originalLink?: string;  // Mattermost 원문 링크
+  campusId?: string | null;  // 캠퍼스 정보 (예: "서울,부울경" 또는 null)
 }
 
 /**
