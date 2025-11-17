@@ -10,7 +10,7 @@ import {
   Star,
   ChevronDown,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -42,6 +42,7 @@ interface SearchFilterBarProps {
   onReset: () => void;
   onSearch: () => void; // 검색 버튼 클릭 핸들러
   isCollapsed?: boolean; // 자동 축소 상태
+  collapseSignal?: number;
 }
 
 const SUBCATEGORIES: Subcategory[] = ["할일", "특강", "정보", "행사"];
@@ -79,11 +80,23 @@ export function SearchFilterBar({
   onReset,
   onSearch,
   isCollapsed = false,
+  collapseSignal = 0,
 }: SearchFilterBarProps) {
   const [filterExpanded, setFilterExpanded] = useState(true);
 
-  // isCollapsed가 true면 필터 영역을 자동으로 접음
-  const effectiveExpanded = isCollapsed ? false : filterExpanded;
+  useEffect(() => {
+    if (isCollapsed) {
+      setFilterExpanded(false);
+    } else {
+      setFilterExpanded(true);
+    }
+  }, [isCollapsed]);
+
+  useEffect(() => {
+    if (isCollapsed) {
+      setFilterExpanded(false);
+    }
+  }, [collapseSignal, isCollapsed]);
 
   // "전체" 버튼 선택 상태: 모든 채널이 선택되었을 때
   const isAllChannelsSelected = availableChannels.length > 0 && selectedChannels.length === availableChannels.length;
@@ -138,24 +151,22 @@ export function SearchFilterBar({
       </div>
 
       {/* 필터 영역 토글 버튼 */}
-      {!isCollapsed && (
-        <button
-          onClick={() => setFilterExpanded(!filterExpanded)}
-          className="flex items-center gap-2 my-3 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors"
-        >
-          <ChevronDown
-            className={`w-4 h-4 transition-transform ${
-              filterExpanded ? "rotate-180" : ""
-            }`}
-          />
-          필터 옵션
-        </button>
-      )}
+      <button
+        onClick={() => setFilterExpanded(!filterExpanded)}
+        className="flex items-center gap-2 my-3 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors"
+      >
+        <ChevronDown
+          className={`w-4 h-4 transition-transform ${
+            filterExpanded ? "rotate-180" : ""
+          }`}
+        />
+        필터 옵션
+      </button>
 
       {/* 필터 영역 */}
       <div
         className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          effectiveExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
+          filterExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
         <div className="space-y-4">

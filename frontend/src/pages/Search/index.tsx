@@ -8,13 +8,6 @@ import { MiniCalendar } from './components/MiniCalendar';
 import { JobPostingsWidget } from './components/JobPostingsWidget';
 import { MessageDetailModal, type MessageDetail } from '@/components/modals/MessageDetailModal';
 import { Card } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useFilterStore } from '@/stores/useFilterStore';
 import { bookmarksApi } from '@/services/api/bookmarks';
 import { completionsApi } from '@/services/api/completions';
@@ -31,6 +24,7 @@ export default function SearchPage() {
 
   // FilterBar 축소/확장 상태
   const [isFilterCollapsed, setIsFilterCollapsed] = useState(false);
+  const [filterCollapseSignal, setFilterCollapseSignal] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const wheelListenerRef = useRef<((e: WheelEvent) => void) | null>(null);
 
@@ -45,7 +39,6 @@ export default function SearchPage() {
     periodFilter,
     customStartDate,
     customEndDate,
-    sortBy,
     showBookmarkedOnly,
     showCompletedOnly,
     setAvailableChannels,
@@ -55,7 +48,6 @@ export default function SearchPage() {
     setSearchQuery,
     setPeriodFilter,
     setCustomDateRange,
-    setSortBy,
     toggleBookmarkFilter,
     toggleCompletedFilter,
     resetFilters,
@@ -313,6 +305,7 @@ export default function SearchPage() {
   const handleNoticeScroll = (scrollTop: number) => {
     if (scrollTop > 50) {
       setIsFilterCollapsed(true);
+      setFilterCollapseSignal((prev) => prev + 1);
     } else {
       setIsFilterCollapsed(false);
     }
@@ -474,6 +467,7 @@ export default function SearchPage() {
                 handleSearch(true, true); // 새 검색, 필터 적용
               }}
               isCollapsed={isFilterCollapsed}
+              collapseSignal={filterCollapseSignal}
             />
 
             {/* 공지사항 리스트 */}
@@ -483,16 +477,6 @@ export default function SearchPage() {
                 <h2 className="text-base md:text-lg" style={{ fontWeight: 700 }}>
                   공지사항
                 </h2>
-                <Select value={sortBy} onValueChange={setSortBy as any}>
-                  <SelectTrigger className="w-[140px] md:w-[160px] h-10 text-sm md:text-base">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="latest">정렬: 최신순</SelectItem>
-                    <SelectItem value="deadline">정렬: 마감일순</SelectItem>
-                    <SelectItem value="title">정렬: 제목순</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
 
               {/* 리스트 */}
