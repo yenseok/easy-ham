@@ -13,15 +13,15 @@ import com.A105.prham.notification.dto.response.*;
 import com.A105.prham.notification.entity.Notification;
 import com.A105.prham.notification_setting.entity.NotificationSetting;
 import com.A105.prham.notification_setting.repository.NotificationSettingRepository;
+import com.A105.prham.position.entity.Position;
 import com.A105.prham.user.entity.User;
+import com.A105.prham.user.entity.UserPosition;
 import com.A105.prham.user.repository.UserRepository;
 import com.A105.prham.webhook.entity.Post;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
-import org.bson.types.ObjectId;
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -32,9 +32,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -308,7 +306,7 @@ public class NotificationService {
                     .id(notification.getId()) // MongoDB의 알림 ID 사용
                     .name(notification.getEventType())
                     .data(notification.getEventData()));
-
+                log.info("알림 정상 전송");
             } catch (IOException e) {
                 emitters.remove(userId);
                 // Broken pipe는 정상적인 클라이언트 종료일 수 있으므로 예외 던지지 않음
@@ -476,18 +474,39 @@ public class NotificationService {
         } catch (Exception e) {
             //예외 안던짐
         }
+
     }
 
-
-
-
-
+    public void sendJobMatchingNotification(Post post){
+        List<User> users = userRepository.findUsersWithJobAlertEnabled();
+        for(User user : users){
+            Set<UserPosition> userPositions = user.getUserPositions();
+            List<String> matchingPositions = new ArrayList<>();
+            for(UserPosition userPosition : userPositions){
+                if(userPosition.getPosition().getPositionName().equals(post.getPosition().getPositionName())){
+                    matchingPositions.add(userPosition.getPosition().getPositionName());
+                }
+            }
+            log.info("position : {}", post.getPosition().getPositionName());
+            log.info("매칭된 포지션 갯수: {}", matchingPositions.size());
+            if(matchingPositions.isEmpty()){
+                continue;
+            }
+            Document data = new Document()
+                    .append("notice_id", post.getId())
+                    .append("company", post.getTitle())
+                    .append("matched_jobs", matchingPositions)
+                    .append("deadline", post.getDeadline())
+                    .append("created_at", LocalDateTime.now());
+            send(user, data, NotificationType.JOB_RECOMMENDATION.name().toLowerCase());
+        }
+    }
 
     public void updateNotificationIsReadStatus(User user, String notificationId){
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
         if(!notification.getUserId().equals(user.getId())){
-            log.error("");
+            log.error("해당 유저의 공지가 아닙니당, userId : {}, notification.getUserId : {}", user.getId(), notification.getUserId());
             throw new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND);
         }
         notification.updateStatus(true);

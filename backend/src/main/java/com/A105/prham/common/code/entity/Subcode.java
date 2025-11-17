@@ -9,7 +9,14 @@ import lombok.NoArgsConstructor;
 @Entity
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
-@Table(name = "subcode")
+@Table(name = "subcode",
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "unique_subcode",
+                        columnNames = {"upper_code_id", "sub_code"}
+                )
+        }
+)
 public class Subcode {
 
     @Id

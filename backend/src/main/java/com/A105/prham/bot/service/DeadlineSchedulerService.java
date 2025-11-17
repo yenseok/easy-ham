@@ -41,7 +41,7 @@ public class DeadlineSchedulerService {
             for (NotificationTargetDto target : targets) {
                 try {
 
-                    String message = String.format("[%s]\n%s님! 이 공지사항이 곧 마감이에요! 확인하세요! :ttabong_ham:\n%s"
+                    String message = String.format("# [%s]:ttabong_ham:\n### %s님! 이 공지사항이 곧 마감이에요! 확인하세요! :running_ham: \n%s"
                             ,target.getTitle()
                             ,target.getUserName()
                             ,target.getLink());

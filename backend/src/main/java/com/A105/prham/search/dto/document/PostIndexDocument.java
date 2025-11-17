@@ -8,6 +8,7 @@ import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * 📄 MeiliSearch 인덱스 전용 DTO
@@ -18,7 +19,8 @@ import java.util.List;
 @Slf4j
 public class PostIndexDocument {
 
-    private String postId;
+    private Long postId;
+    private String mmPostId;
     private String channelId;
     private String channelName;
     private String teamName;
@@ -34,7 +36,7 @@ public class PostIndexDocument {
     private List<FileInfo> files;
     private Integer fileCount;
     private String originalLink;
-
+    private List<String> fileNames;
     // ====== 변환 헬퍼 ======
     public static PostIndexDocument from(Post post, String originalLink) {
         Long ts = parseLong(post.getWebhookTimestamp());
@@ -42,7 +44,8 @@ public class PostIndexDocument {
         Long sub = parseLong(post.getSubCategory());
 
         return PostIndexDocument.builder()
-                .postId(post.getPostId())
+                .postId(post.getId())
+                .mmPostId(post.getPostId())
                 .channelId(post.getChannelId())
                 .channelName(post.getChannelName())
                 .userId(post.getUserId())
@@ -61,7 +64,7 @@ public class PostIndexDocument {
 
     public static PostIndexDocument from(ProcessedMessage msg, String originalLink) {
         return PostIndexDocument.builder()
-                .postId(msg.getPostId())
+                .mmPostId(msg.getPostId())
                 .channelId(msg.getChannelId())
                 .userId(msg.getUserId())
                 .cleanedText(msg.getCleanedText())
@@ -82,6 +85,18 @@ public class PostIndexDocument {
             return Long.parseLong(val);
         } catch (NumberFormatException e) {
             return null;
+        }
+    }
+
+    public void setFiles(List<FileInfo> files) {
+        this.files = files;
+        if (files != null && !files.isEmpty()) {
+            this.fileNames = files.stream()
+                    .map(FileInfo::getName)
+                    .filter(name -> name != null && !name.isEmpty())
+                    .collect(Collectors.toList());
+        } else {
+            this.fileNames = null;
         }
     }
 }
