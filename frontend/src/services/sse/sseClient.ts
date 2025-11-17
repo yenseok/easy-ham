@@ -48,8 +48,13 @@ class SSEClient {
         if (event instanceof MessageEvent) {
           try {
             const data = JSON.parse(event.data);
-            console.log(`[SSE] Received event: ${eventType}`, data);
-            this.messageCallback?.(data);
+            // SSE의 id 필드를 함께 전달 (lastEventId)
+            const messageWithId = {
+              id: event.lastEventId || undefined,
+              ...data,
+            };
+            console.log(`[SSE] Received event: ${eventType}`, messageWithId);
+            this.messageCallback?.(messageWithId);
           } catch (error) {
             console.error(`[SSE] Failed to parse message data:`, error);
             this.errorCallback?.({
@@ -122,8 +127,13 @@ class SSEClient {
       if (event instanceof MessageEvent) {
         try {
           const data = JSON.parse(event.data);
-          console.log(`[SSE] Received event: ${eventType}`, data);
-          this.messageCallback?.(data);
+          // SSE의 id 필드를 함께 전달 (lastEventId)
+          const messageWithId = {
+            id: event.lastEventId || undefined,
+            ...data,
+          };
+          console.log(`[SSE] Received event: ${eventType}`, messageWithId);
+          this.messageCallback?.(messageWithId);
         } catch (error) {
           console.error(`[SSE] Failed to parse message data:`, error);
           this.errorCallback?.({
