@@ -48,19 +48,19 @@ function convertServerNotificationToUI(notification: ServerNotification): Notifi
   if (notification.eventType === "keyword_matching") {
     type = "info";
     const data = eventData as any;
-    title = data.title;
+    title = `구독 키워드: ${data.title}`;
     badge = data.match_keyword?.join(", ");
     notice_id = data.notice_id;
   } else if (notification.eventType === "deadline_approaching") {
     type = "danger";
     const data = eventData as any;
-    title = data.title;
+    title = `마감 임박: ${data.title}`;
     badge = `${data.hours_left}시간 남음`;
     notice_id = data.notice_id;
   } else if (notification.eventType === "job_recommendation") {
     type = "success";
     const data = eventData as any;
-    title = data.title;
+    title = `관심 직무: ${data.title}`;
     badge = data.matched_jobs?.join(", ");
     notice_id = data.notice_id;
   }

@@ -11,7 +11,10 @@ import {
 import { useNotificationStore } from "@/stores/useNotificationStore";
 import { useSSEStore } from "@/stores/useSSEStore";
 import { SubscriptionKeywordModal } from "@/components/modals/SubscriptionKeywordModal";
-import { MessageDetailModal, type MessageDetail } from "@/components/modals/MessageDetailModal";
+import {
+  MessageDetailModal,
+  type MessageDetail,
+} from "@/components/modals/MessageDetailModal";
 import { getPostDetail } from "@/services/api/posts";
 import { convertSearchItemToNotice } from "@/utils/searchMapper";
 
@@ -19,7 +22,9 @@ export const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [isKeywordModalOpen, setIsKeywordModalOpen] = useState(false);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedMessage, setSelectedMessage] = useState<MessageDetail | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<MessageDetail | null>(
+    null
+  );
   const { notifications, unreadCount, markAsRead, markAllAsRead } =
     useNotificationStore();
   const { notificationStreamStatus } = useSSEStore();
@@ -50,13 +55,16 @@ export const NotificationDropdown = () => {
     }
   };
 
-  const handleNotificationClick = async (notificationId: string, notice_id?: number) => {
+  const handleNotificationClick = async (
+    notificationId: string,
+    notice_id?: number
+  ) => {
     // 알림 읽음 처리 (비동기이지만 await하지 않음 - 즉시 UI 업데이트)
     markAsRead(notificationId);
 
     // notice_id가 없으면 반환
     if (!notice_id) {
-      console.warn('[NotificationDropdown] notice_id is missing');
+      console.warn("[NotificationDropdown] notice_id is missing");
       return;
     }
 
@@ -69,7 +77,9 @@ export const NotificationDropdown = () => {
         const notice = convertSearchItemToNotice(response.data);
 
         // Notice → MessageDetail 변환 (Search 페이지와 동일한 로직)
-        const mattermostUrl = notice.mattermostUrl || `https://mattermost.ssafy.com/ssafy/pl/message${notice.id}`;
+        const mattermostUrl =
+          notice.mattermostUrl ||
+          `https://mattermost.ssafy.com/ssafy/pl/message${notice.id}`;
         const messageDetail: MessageDetail = {
           id: notice.id,
           title: notice.title,
@@ -90,8 +100,11 @@ export const NotificationDropdown = () => {
         setIsDetailModalOpen(true);
       }
     } catch (error) {
-      console.error('[NotificationDropdown] Failed to fetch post detail:', error);
-      toast.error('공지사항 상세 정보를 불러올 수 없습니다.');
+      console.error(
+        "[NotificationDropdown] Failed to fetch post detail:",
+        error
+      );
+      toast.error("공지사항 상세 정보를 불러올 수 없습니다.");
     }
   };
 
@@ -181,7 +194,9 @@ export const NotificationDropdown = () => {
             notifications.map((notif) => (
               <div
                 key={notif.id}
-                onClick={() => handleNotificationClick(notif.id, notif.notice_id)}
+                onClick={() =>
+                  handleNotificationClick(notif.id, notif.notice_id)
+                }
                 className={`flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors border-l-4 cursor-pointer ${getBorderColor(
                   notif.type
                 )} ${!notif.read ? "bg-blue-50" : ""}`}
@@ -195,7 +210,7 @@ export const NotificationDropdown = () => {
                     {notif.title}
                   </p>
                   {/* 상대 시간 + 배지 */}
-                  <div className="flex items-center justify-between gap-2 mt-1">
+                  <div className="flex items-center justify-between gap-2">
                     <p className="text-xs text-gray-500">
                       {notif.relativeTime || formatRelativeTime(notif.time)}
                     </p>
