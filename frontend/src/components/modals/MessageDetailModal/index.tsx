@@ -49,7 +49,7 @@ export const MessageDetailModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 w-[90vw] sm:w-[85vw] md:w-[70vw] lg:w-[65vw] xl:w-[55vw] sm:max-w-[85vw] md:max-w-[70vw] lg:max-w-[65vw] xl:max-w-[55vw] max-w-5xl">
+      <DialogContent className="max-h-[85vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 w-[64vw] sm:w-[62vw] md:w-[57vw] lg:w-[53vw] xl:w-[50vw] sm:max-w-[62vw] md:max-w-[57vw] lg:max-w-[53vw] xl:max-w-[50vw] max-w-4xl">
         {/* 뒤로가기 버튼 (옵션) */}
         {showBackButton && onBack && (
           <Button
