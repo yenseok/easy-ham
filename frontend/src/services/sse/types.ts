@@ -51,7 +51,7 @@ export interface NewPostEvent {
  * /api/v1/notifications/stream에서 수신
  */
 export interface KeywordMatchingEvent {
-  notice_id: string;
+  notice_id: number;
   title: string;
   match_keyword: string[];
   [key: string]: unknown;
@@ -77,7 +77,7 @@ export interface DeadlineApproachingEvent {
  * 사용자의 희망직무와 매칭되는 채용공고 알림
  */
 export interface JobRecommendationEvent {
-  notice_id: string;
+  notice_id: number;
   title: string;
   company: string;
   matched_jobs: string[];

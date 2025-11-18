@@ -62,7 +62,7 @@ function convertServerNotificationToUI(notification: ServerNotification): Notifi
   } else if (notification.eventType === "job_recommendation") {
     type = "success";
     const data = eventData as any;
-    title = `관심 직무: ${data.title}`;
+    title = `관심 직무: ${data.company} 채용 공고`;
     badge = data.matched_jobs?.join(", ");
     notice_id = data.notice_id;
   }
@@ -76,7 +76,7 @@ function convertServerNotificationToUI(notification: ServerNotification): Notifi
     badge,
     relativeTime: "방금 전",
     notice_id,
-    deadline: (eventData as any)?.deadline,
+    deadline: notification.eventType === "deadline_approaching" ? (eventData as any)?.deadline : undefined,
   };
 }
 
