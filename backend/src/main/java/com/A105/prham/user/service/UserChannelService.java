@@ -47,10 +47,6 @@ public class UserChannelService {
 
 		List<String> allowedChannelIds = new ArrayList<>();
 
-		String generationPrefix = user.getGeneration() + "기";
-		String campusInfix = user.getCampus().getName();
-		String classSuffix = user.getClassroom() + "반";
-
 		List<MattermostTeam> allTeams = mattermostService.getTeamsByUserId(mmUserId);
 		log.info("조회된 팀 개수: {}", allTeams != null ? allTeams.size() : 0);
 
@@ -76,17 +72,13 @@ public class UserChannelService {
 				}
 			}
 			// 현재 반 팀
-			else if (teamName.startsWith(generationPrefix) &&
-				teamName.contains(campusInfix) &&
-				teamName.endsWith(classSuffix)) {  // endsWith로 수정!
-
-				List<MattermostChannel> channels =
-					mattermostService.getChannelsForUsersInTeam(mmUserId, team.getId());
+			else if (teamName.endsWith("반")) {  // endsWith로 수정!
+				List<MattermostChannel> channels = mattermostService.getChannelsForUsersInTeam(mmUserId, team.getId());
 
 				if (channels != null) {
 					allowedChannelIds.addAll(
 						channels.stream()
-							.filter(c -> c.getDisplayName().endsWith(CLASS_CHANNEL_NAME))
+							.filter(c -> c.getDisplayName().equals(CLASS_CHANNEL_NAME))
 							.map(MattermostChannel::getId)
 							.collect(Collectors.toList())
 					);
@@ -102,12 +94,6 @@ public class UserChannelService {
 	 * 사용자가 구독 가능한 채널 상세 정보 반환 (프론트엔드 UI용)
 	 */
 	public List<UserChannelInfoResponseDto> getUserAllowedChannels(User user) {
-		log.info("사용자 {}의 구독 가능 채널 상세 정보 조회", user.getId());
-
-		if (!isValidUser(user)) {
-			log.warn("사용자 캠퍼스 반 정보 없음: userId={}", user.getId());
-			return List.of();
-		}
 
 		String mmUserId = mattermostService.getUserIdByEmail(user.getEmail());
 		if (mmUserId == null) {
@@ -118,8 +104,6 @@ public class UserChannelService {
 		List<UserChannelInfoResponseDto> channelInfos = new ArrayList<>();
 
 		String generationPrefix = user.getGeneration() + "기";
-		String campusInfix = user.getCampus().getName();
-		String classSuffix = user.getClassroom() + "반";
 
 		List<MattermostTeam> allTeams = mattermostService.getTeamsByUserId(mmUserId);
 		log.info("조회된 팀 개수: {}", allTeams != null ? allTeams.size() : 0);
@@ -152,23 +136,22 @@ public class UserChannelService {
 				}
 			}
 			//  현재 반 팀 처리 추가!
-			else if (teamName.startsWith(generationPrefix) &&
-				teamName.contains(campusInfix) &&
-				teamName.endsWith(classSuffix)) {
-
+			else if (teamName.endsWith("반")) {
 				List<MattermostChannel> channels =
 					mattermostService.getChannelsForUsersInTeam(mmUserId, team.getId());
 
 				if (channels != null) {
+					String displayName = getClassTeamDisplayName(teamName);
+
 					channels.stream()
-						.filter(c -> c.getDisplayName().endsWith(CLASS_CHANNEL_NAME))
+						.filter(c -> c.getDisplayName().equals(CLASS_CHANNEL_NAME))
 						.forEach(c -> channelInfos.add(
 							UserChannelInfoResponseDto.builder()
 								.channelId(c.getId())
 								.channelName(c.getDisplayName())
 								.teamId(team.getId())
 								.teamName(teamName)
-								.displayName(campusInfix + classSuffix)
+								.displayName(displayName)
 								.type("CLASS")
 								.build()
 						));
@@ -178,6 +161,18 @@ public class UserChannelService {
 
 		log.info("사용자 {}의 구독 가능 채널: {} 개", user.getId(), channelInfos.size());
 		return channelInfos;
+	}
+
+	private String getClassTeamDisplayName(String teamName) {
+		if (teamName.contains("자율")) {
+			return "자율";
+		} else if (teamName.contains("특화")) {
+			return "특화";
+		} else if (teamName.contains("공통")) {
+			return "공통";
+		} else {
+			return "1학기";
+		}
 	}
 
 	/**
