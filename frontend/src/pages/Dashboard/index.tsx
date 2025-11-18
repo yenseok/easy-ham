@@ -211,7 +211,7 @@ export default function DashboardPage() {
         const bDeadline = b.deadline ? (typeof b.deadline === 'string' ? new Date(b.deadline) : b.deadline) : new Date();
         return aDeadline.getTime() - bDeadline.getTime();
       })
-      .slice(0, 5);
+      .slice(0, 3);
   }, [allNotices, userCampus]);
 
   // 이번 주 일정 (deadline이 이번 주에 있는 것)
@@ -232,9 +232,9 @@ export default function DashboardPage() {
     });
   }, [allNotices]);
 
-  // 채용공고 (실제 API 데이터 사용, 최대 4개)
+  // 채용공고 (실제 API 데이터 사용, 최대 3개)
   const displayedJobs = useMemo(() => {
-    return jobPosts?.slice(0, 4) ?? [];
+    return jobPosts?.slice(0, 3) ?? [];
   }, [jobPosts]);
 
   /**
@@ -275,7 +275,7 @@ export default function DashboardPage() {
         {/* 상단 4개 위젯 (북마크 / 마감 임박 / 채용공고 / 최근 공지) */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
           <BookmarkedNoticesWidget
-            notices={bookmarkedNotices.slice(0, 5)} // 위젯에서는 상위 5개만 표시
+            notices={bookmarkedNotices.slice(0, 3)} // 위젯에서는 상위 3개만 표시
             onRefresh={refreshBookmarks}
             onNoticeClick={handleNoticeClick}
           />

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Bell } from "lucide-react";
@@ -10,22 +10,10 @@ interface RecentNoticesWidgetProps {
 }
 
 export default function RecentNoticesWidget({ notices: allNotices, onNoticeClick }: RecentNoticesWidgetProps) {
-  // 반응형: 모바일 감지
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== "undefined" && window.innerWidth < 768
-  );
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  // 🔄 allNotices에서 최신순으로 필요한 개수만 추출
+  // 🔄 allNotices에서 최신순으로 3개만 추출
   const notices = useMemo(() => {
-    const count = isMobile ? 3 : 5;
-    return allNotices.slice(0, count);
-  }, [allNotices, isMobile]);
+    return allNotices.slice(0, 3);
+  }, [allNotices]);
 
   const getCategoryColor = (subcategory: string) => {
     switch (subcategory) {
