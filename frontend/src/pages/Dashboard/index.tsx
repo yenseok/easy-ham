@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const [jobPosts, setJobPosts] = useState<JobPostItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [userCampus, setUserCampus] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
   const { newPosts } = useSSEPostStore();
 
   // 모달 상태
@@ -59,6 +60,19 @@ export default function DashboardPage() {
     };
 
     fetchUserInfo();
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   // Search API 호출 (전체 공지 + 북마크 공지 + 채용공고)
@@ -278,21 +292,24 @@ export default function DashboardPage() {
             notices={bookmarkedNotices.slice(0, 3)} // 위젯에서는 상위 3개만 표시
             onRefresh={refreshBookmarks}
             onNoticeClick={handleNoticeClick}
+            isMobile={isMobile}
           />
           <UrgentDeadlinesWidget
             notices={urgentDeadlines}
             onNoticeClick={handleNoticeClick}
+            isMobile={isMobile}
           />
-          <PersonalizedJobsWidget jobs={displayedJobs} />
+          <PersonalizedJobsWidget jobs={displayedJobs} isMobile={isMobile} />
           <RecentNoticesWidget
             notices={allNotices}
             onNoticeClick={handleNoticeClick}
+            isMobile={isMobile}
           />
         </div>
 
         {/* 주간 캘린더 */}
         <div>
-          <WeeklyCalendarWidget events={weeklyEvents} />
+          <WeeklyCalendarWidget events={weeklyEvents} isMobile={isMobile} />
         </div>
       </div>
 
