@@ -143,10 +143,10 @@ export function SearchFilterBar({
         </div>
         <Button
           onClick={onSearch}
-          className="h-12 px-6 bg-(--brand-orange) hover:bg-(--brand-orange-dark) text-white"
+          className="h-12 px-6 bg-(--brand-orange) hover:bg-(--brand-orange-dark) text-white flex items-center justify-center gap-2"
         >
-          <Search className="w-4 h-4 mr-2" />
-          검색
+          <Search className="w-4 h-4" />
+          <span className="text-sm">검색</span>
         </Button>
       </div>
 
@@ -288,7 +288,7 @@ export function SearchFilterBar({
               {/* 개별 채널 버튼들 */}
               {availableChannels.map((channel) => {
                 const isSelected = selectedChannels.includes(channel.channelId);
-                const displayName = formatChannelDisplayName(channel.teamName, channel.channelName);
+                const displayName = formatChannelDisplayName(channel.displayName, channel.channelName);
 
                 return (
                   <Button
