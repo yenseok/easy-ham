@@ -26,9 +26,11 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @Slf4j
@@ -83,9 +85,27 @@ public class AsyncPostProcessor {
 				if (parseResult != null && parseResult.getJobPostings() != null && !parseResult.getJobPostings().isEmpty()) {
 					List<JobPostingParseResponseDto.SingleJobPosting> jobPostings = parseResult.getJobPostings();
 
-					// 각 채용 공고를 개별 Post로 저장
+					// 각 채용 공고 저장 및 일괄 전송 준비
+					List<Post> savedJobPosts = new ArrayList<>();
 					for (JobPostingParseResponseDto.SingleJobPosting jobPosting : jobPostings) {
-						createIndividualJobPost(post, jobPosting, result);
+						Post savedPost = createAndSaveIndividualPost(post, jobPosting, result);
+						if (savedPost != null) {
+							savedJobPosts.add(savedPost);
+						}
+					}
+
+					//비동기로 일괄 전송
+					if (!savedJobPosts.isEmpty()) {
+						CompletableFuture.runAsync(() -> {
+							log.info("📤 채용 공고 일괄 전송 시작 - 총 {}건", savedJobPosts.size());
+							for (Post savedPost : savedJobPosts) {
+								ssePostService.sendNewPost(savedPost);
+								notificationService.sendKeywordMatchingNotification(savedPost);
+								notificationService.scheduleDeadlineNotification(savedPost);
+								notificationService.sendJobMatchingNotification(savedPost);
+							}
+							log.info("✅ 채용 공고 일괄 전송 완료 - 총 {}건", savedJobPosts.size());
+						});
 					}
 
 					String markdownText = markdownFormatterService.formatForMarkdown(cleanedText);
@@ -118,6 +138,68 @@ public class AsyncPostProcessor {
 		}
 	}
 
+	//개별 채용 공고를 개별 post로 생성하고 저장만 (전송은 나중에 한꺼번에)
+	private Post createAndSaveIndividualPost(Post originalPost, JobPostingParseResponseDto.SingleJobPosting jobPosting, LlmClassificationResult classificationResult) {
+		try {
+			//position 매핑
+			Position position = findPositionByCategory(jobPosting.getPositionCategory());
+
+			//llm이 db에 없는 직무로 추출하면 일단 다 전산으로
+			if (position == null) {
+				position = findDefaultPosition();
+			}
+
+			String uniquePostId = originalPost.getPostId() + "_" + UUID.randomUUID().toString().substring(0,8);
+
+			//제목은 회사명만
+			String title = jobPosting.getCompany();
+
+			//url 원분 추출 시도
+			String actualUrl = extractOriginalUrl(originalPost.getOriginalText(), jobPosting.getCompany());
+			if (actualUrl == null || actualUrl.isEmpty()) {
+				actualUrl = jobPosting.getUrl();
+			}
+
+			//내용: 직무먕 + url
+			String content = jobPosting.getPosition();
+			if (jobPosting.getUrl() != null &&  !jobPosting.getUrl().isEmpty()) {
+				content += "\n|||URL|||" + jobPosting.getUrl();
+			}
+
+			// 개별 post 생성
+			Post individualPost = Post.builder()
+				.postId(uniquePostId)
+				.channelId(originalPost.getChannelId())
+				.channelName(originalPost.getChannelName())
+				.userId(originalPost.getUserId())
+				.userName(originalPost.getUserName())
+				.webhookTimestamp(originalPost.getWebhookTimestamp())
+				.teamId(originalPost.getTeamId())
+				.teamName(originalPost.getTeamName())
+				.fileIds(null)
+				.originalText(content)
+				.cleanedText(content)
+				.title(title)
+				.mainCategory(classificationResult.getMainCategory())
+				.subCategory("채용")
+				.position(position)
+				.deadline(parseDeadline(jobPosting.getDeadline()))
+				.campusList(classificationResult.getCampusList() != null ?
+					String.join(",", classificationResult.getCampusList()) : null)
+				.originalPostId(originalPost.getId())
+				.status(PostStatus.PROCESSED)
+				.processedAt(LocalDateTime.now().toString())
+				.build();
+
+			// 개별 채용 공고로 저장 완료 (전송은 나중에 일괄)
+			Post savedPost = postRepository.save(individualPost);
+
+			return savedPost;
+		} catch (Exception e) {
+			log.error("개별 채용 공고 생성 실패: {}", jobPosting.getCompany(), e);
+			return null;
+		}
+	}
 
 	// 일반 공지사항 저장
 	private void saveOriginalPost(Post post, LlmClassificationResult result, boolean fileProcessingFailed) {
