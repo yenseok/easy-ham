@@ -24,6 +24,8 @@ public interface NotificationQueryRepository extends JpaRepository<com.A105.prha
             ns.deadline_alert_hours AS deadlineAlertHours
         FROM posts p
         CROSS JOIN users u
+        INNER JOIN campus c
+            ON c.campus_id = u.campus_id
         INNER JOIN notification_settings ns 
             ON ns.user_id = u.user_id
         LEFT JOIN deadline_notifications dn 
@@ -40,6 +42,7 @@ public interface NotificationQueryRepository extends JpaRepository<com.A105.prha
             AND TIMESTAMPDIFF(MINUTE, NOW(), 
                 TIMESTAMP(p.deadline) - INTERVAL ns.deadline_alert_hours HOUR) 
                 BETWEEN 0 AND 1
+            AND (p.campus_list IS NULL OR FIND_IN_SET(c.name, p.campus_list) > 0)
         """, nativeQuery = true)
     List<NotificationTargetDto> findNotificationTargets();
 }
