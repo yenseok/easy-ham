@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional//(readOnly = true)
 public class PostService {
 
 	private final PostRepository postRepository;

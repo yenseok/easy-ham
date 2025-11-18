@@ -113,7 +113,7 @@ public class TestDataController {
             log.info("Post deleted from DB: {}", postId);
 
             // 2. Meilisearch에서 삭제
-            searchService.deletePost(postId);
+            searchService.deletePost(post.getPostId());
             log.info("Post deleted from Meilisearch: {}", postId);
 
             Map<String, Object> response = new HashMap<>();

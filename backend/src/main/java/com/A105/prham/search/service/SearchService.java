@@ -419,14 +419,14 @@ public class SearchService {
     /**
      * Post 삭제
      */
-    public void deletePost(String postId) {
+    public void deletePost(String mmPostId) {
         try {
-            log.info("try Delete post: {}", postId);
+            log.info("try Delete post: {}", mmPostId);
             Index index = meilisearchClient.index(INDEX_NAME);
-            index.deleteDocument(postId);
-            log.info("✅ Deleted post: {}", postId);
+            index.deleteDocument(mmPostId);
+            log.info("✅ Deleted post: {}", mmPostId);
         } catch (Exception e) {
-            log.error("❌ Failed to delete post: {}", postId, e);
+            log.error("❌ Failed to delete post: {}", mmPostId, e);
             throw new RuntimeException("Failed to delete post", e);
         }
     }

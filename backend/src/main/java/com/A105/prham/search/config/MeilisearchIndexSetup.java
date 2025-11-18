@@ -22,7 +22,7 @@ public class MeilisearchIndexSetup implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         try {
             try {
-                meilisearchClient.createIndex("posts", "postId");
+                meilisearchClient.createIndex("posts", "mmPostId");
             } catch (Exception e) {
                 log.debug("Index already exists, updating settings...");
             }
