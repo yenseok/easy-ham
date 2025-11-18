@@ -60,11 +60,11 @@ class SSEManager {
 
     // 보호된 라우트 목록
     const protectedRoutes = [
-      '/dashboard',
-      '/calendar',
-      '/search',
-      '/mypage',
-      '/overview',
+      "/dashboard",
+      "/calendar",
+      "/search",
+      "/mypage",
+      "/overview",
     ];
 
     // 토큰 변경 감시 - 전체 상태를 받아서 토큰만 확인
@@ -76,17 +76,23 @@ class SSEManager {
 
         // 보호된 라우트에서만 notifications/stream 재연결
         if (protectedRoutes.includes(currentPath)) {
-          console.log(`[SSE Manager] Access token changed on ${currentPath}, reconnecting notifications/stream...`);
+          console.log(
+            `[SSE Manager] Access token changed on ${currentPath}, reconnecting notifications/stream...`
+          );
           this.reconnectNotificationStream();
 
           // Dashboard에서는 posts/stream도 재연결
           // (DashboardPage의 useEffect는 의존성 배열이 비어 1번만 실행되므로)
-          if (currentPath === '/dashboard') {
-            console.log('[SSE Manager] On dashboard, also reconnecting posts/stream...');
+          if (currentPath === "/dashboard") {
+            console.log(
+              "[SSE Manager] On dashboard, also reconnecting posts/stream..."
+            );
             this.reconnectPostStream();
           }
         } else {
-          console.log(`[SSE Manager] Token changed on ${currentPath}, skipping SSE reconnect`);
+          console.log(
+            `[SSE Manager] Token changed on ${currentPath}, skipping SSE reconnect`
+          );
         }
       }
       this.previousAccessToken = currentToken;
@@ -204,7 +210,9 @@ class SSEManager {
 
       // keyword_matching 이벤트 처리
       if ("match_keyword" in notificationData) {
-        const keywordEvent = notificationData as KeywordMatchingEvent & { id?: string };
+        const keywordEvent = notificationData as KeywordMatchingEvent & {
+          id?: string;
+        };
         const keywords = Array.isArray(keywordEvent.match_keyword)
           ? keywordEvent.match_keyword.join(", ")
           : "Unknown keywords";
@@ -224,7 +232,9 @@ class SSEManager {
       }
       // deadline_approaching 이벤트 처리
       else if ("hours_left" in notificationData) {
-        const deadlineEvent = notificationData as DeadlineApproachingEvent & { id?: string };
+        const deadlineEvent = notificationData as DeadlineApproachingEvent & {
+          id?: string;
+        };
 
         // hours_left 기반 긴급도 판단
         let notificationType: "danger" | "info" = "danger";
@@ -249,7 +259,9 @@ class SSEManager {
       }
       // job_recommendation 이벤트 처리
       else if ("matched_jobs" in notificationData) {
-        const jobEvent = notificationData as JobRecommendationEvent & { id?: string };
+        const jobEvent = notificationData as JobRecommendationEvent & {
+          id?: string;
+        };
         const jobs = Array.isArray(jobEvent.matched_jobs)
           ? jobEvent.matched_jobs.join(", ")
           : "Unknown jobs";
@@ -258,7 +270,7 @@ class SSEManager {
         useNotificationStore.getState().addSSENotification?.({
           id: jobEvent.id || String(jobEvent.notice_id), // SSE id 사용, 없으면 notice_id 사용
           type: "success",
-          title: `관심 직무: ${jobEvent.title}`,
+          title: `관심 직무: ${jobEvent.company} 채용 공고`,
           content: undefined,
           badge: jobs,
           time: now.toISOString(),
