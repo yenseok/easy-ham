@@ -493,7 +493,7 @@ public class NotificationService {
                 continue;
             }
             Document data = new Document()
-                    .append("notice_id", post.getId())
+                    .append("notice_id", post.getOriginalPostId())
                     .append("company", post.getTitle())
                     .append("matched_jobs", matchingPositions)
                     .append("deadline", post.getDeadline())
