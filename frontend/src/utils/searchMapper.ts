@@ -142,6 +142,7 @@ export function convertSearchItemToNotice(item: SearchResultItem): Notice {
 
     // 채널 및 팀: channelName, teamName 사용 (API에서 제공)
     channel: item.channelName,
+    mmChannelId: item.mmChannelId, // Mattermost 채널 ID (채널 필터링에 사용)
     teamName: item.teamName,
 
     // 카테고리 변환

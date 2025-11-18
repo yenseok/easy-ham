@@ -21,6 +21,7 @@ export interface Notice {
   content: string;
   author: string;
   channel: string;
+  mmChannelId?: string; // Mattermost 채널 ID (채널 필터링에 사용)
   teamName?: string;
   category: Category;
   subcategory: Subcategory;

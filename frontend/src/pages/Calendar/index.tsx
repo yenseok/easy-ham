@@ -153,14 +153,22 @@ export default function CalendarPage() {
         selectedChannels.includes(ch.channelId)
       );
 
-      // event.channel은 "팀명 - 채널명" 형식의 문자열
-      // availableChannels에서 매칭되는 channelId 찾기
-      const matchingChannel = availableChannels.find(
-        (ch) => `${ch.teamName} - ${ch.channelName}` === event.channel
-      );
-
-      if (!allChannelsSelected && matchingChannel && !selectedChannels.includes(matchingChannel.channelId)) {
-        return false;
+      if (!allChannelsSelected) {
+        // mmChannelId가 있으면 직접 비교, 없으면 문자열 매칭
+        if (event.mmChannelId) {
+          // mmChannelId로 직접 비교
+          if (!selectedChannels.includes(event.mmChannelId)) {
+            return false;
+          }
+        } else {
+          // fallback: 문자열 매칭 (레거시 데이터용)
+          const matchingChannel = availableChannels.find(
+            (ch) => `${ch.teamName} - ${ch.channelName}` === event.channel
+          );
+          if (matchingChannel && !selectedChannels.includes(matchingChannel.channelId)) {
+            return false;
+          }
+        }
       }
 
       // 카테고리 필터 - 모든 카테고리가 선택된 경우 필터링 안 함
