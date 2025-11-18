@@ -85,6 +85,10 @@ public class Post extends BaseTimeEntity {
 	@JoinColumn(name = "position_id")
 	private Position position;
 
+	//원본 채용 공고 postId
+	@Column(name = "original_post_id")
+	private Long originalPostId;
+
 	// 상태 변경
 	public void updateStatus(PostStatus newStatus) {
 		this.status = newStatus;

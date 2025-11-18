@@ -217,6 +217,7 @@ public class AsyncPostProcessor {
 				.deadline(parseDeadline(jobPosting.getDeadline()))
 				.campusList(classificationResult.getCampusList() != null ?
 					String.join(",", classificationResult.getCampusList()) : null)
+				.originalPostId(originalPost.getId())
 				.status(PostStatus.PROCESSED)
 				.processedAt(LocalDateTime.now().toString())
 				.build();
