@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { formatRelativeTime } from "@/utils/dateFormatter";
 import { Bell } from "lucide-react";
 import type { Notice } from "@/types/notice";
 
@@ -10,22 +11,10 @@ interface RecentNoticesWidgetProps {
 }
 
 export default function RecentNoticesWidget({ notices: allNotices, onNoticeClick }: RecentNoticesWidgetProps) {
-  // 반응형: 모바일 감지
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== "undefined" && window.innerWidth < 768
-  );
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  // 🔄 allNotices에서 최신순으로 필요한 개수만 추출
+  // 🔄 allNotices에서 최신순으로 3개만 추출
   const notices = useMemo(() => {
-    const count = isMobile ? 3 : 5;
-    return allNotices.slice(0, count);
-  }, [allNotices, isMobile]);
+    return allNotices.slice(0, 3);
+  }, [allNotices]);
 
   const getCategoryColor = (subcategory: string) => {
     switch (subcategory) {
@@ -66,7 +55,7 @@ export default function RecentNoticesWidget({ notices: allNotices, onNoticeClick
             {notices.map((notice) => (
               <div
                 key={notice.id}
-                className="p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-gray-200"
+                className="p-3 border rounded-lg hover:shadow-md transition-shadow cursor-pointer hover:border-(--brand-orange)"
                 onClick={() => onNoticeClick?.(notice)}
               >
                 <div className="flex items-center gap-2 mb-2">
@@ -88,11 +77,11 @@ export default function RecentNoticesWidget({ notices: allNotices, onNoticeClick
                     </span>
                   )}
                 </div>
-                <div
-                  className="text-sm line-clamp-2 text-gray-800"
-                  style={{ fontWeight: 500 }}
-                >
+                <div className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">
                   {notice.title}
+                </div>
+                <div className="text-xs text-gray-600 line-clamp-1">
+                  {notice.channel} • {formatRelativeTime(notice.createdAt)}
                 </div>
               </div>
             ))}

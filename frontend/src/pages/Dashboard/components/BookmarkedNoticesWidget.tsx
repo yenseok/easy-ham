@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Bookmark } from "lucide-react";
 import { BookmarksModal } from "@/components/modals/BookmarksModal";
+import { formatRelativeTime } from "@/utils/dateFormatter";
 import type { Notice } from "@/types/notice";
 
 interface BookmarkedNoticesWidgetProps {
@@ -83,7 +84,7 @@ export default function BookmarkedNoticesWidget({
             {notices.map((notice) => (
               <div
                 key={notice.id}
-                className="p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-gray-200"
+                className="p-3 border rounded-lg hover:shadow-md transition-shadow cursor-pointer hover:border-(--brand-orange)"
                 onClick={() => onNoticeClick?.(notice)}
               >
                 <div className="flex items-center gap-2 mb-2">
@@ -96,7 +97,7 @@ export default function BookmarkedNoticesWidget({
                   </Badge>
                   {notice.dday !== null && (
                     <span
-                      className={`text-white text-xs px-2 py-0.5 rounded ${getDdayColor(
+                      className={`text-white text-xs ${notice.dday === 0 ? 'px-1.5' : 'px-2'} py-0.5 rounded ${getDdayColor(
                         notice.dday
                       )}`}
                       style={{ fontWeight: 600 }}
@@ -105,11 +106,11 @@ export default function BookmarkedNoticesWidget({
                     </span>
                   )}
                 </div>
-                <div
-                  className="text-sm line-clamp-2 text-gray-800"
-                  style={{ fontWeight: 500 }}
-                >
+                <div className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">
                   {notice.title}
+                </div>
+                <div className="text-xs text-gray-600 line-clamp-1">
+                  {notice.channel} • {formatRelativeTime(notice.createdAt)}
                 </div>
               </div>
             ))}

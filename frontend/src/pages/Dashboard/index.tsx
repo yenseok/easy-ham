@@ -211,7 +211,7 @@ export default function DashboardPage() {
         const bDeadline = b.deadline ? (typeof b.deadline === 'string' ? new Date(b.deadline) : b.deadline) : new Date();
         return aDeadline.getTime() - bDeadline.getTime();
       })
-      .slice(0, 5);
+      .slice(0, 3);
   }, [allNotices, userCampus]);
 
   // 이번 주 일정 (deadline이 이번 주에 있는 것)
@@ -232,9 +232,9 @@ export default function DashboardPage() {
     });
   }, [allNotices]);
 
-  // 채용공고 (실제 API 데이터 사용, 최대 4개)
+  // 채용공고 (실제 API 데이터 사용, 최대 3개)
   const displayedJobs = useMemo(() => {
-    return jobPosts?.slice(0, 4) ?? [];
+    return jobPosts?.slice(0, 3) ?? [];
   }, [jobPosts]);
 
   /**
@@ -265,17 +265,17 @@ export default function DashboardPage() {
 
   return (
     <PageLayout>
-      <div className="px-8 py-6 bg-gray-50 min-h-screen">
+      <div className="px-8 pt-6 pb-0 bg-gray-50 h-full overflow-y-auto">
         {/* 페이지 제목 */}
         <h1 className="text-3xl mb-6 flex items-center gap-3" style={{ fontWeight: 700 }}>
           <LayoutDashboard className="w-8 h-8 text-(--brand-orange)" />
           Dashboard
         </h1>
 
-        {/* 상단 3개 위젯 (북마크 / 마감 임박 / 채용공고) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* 상단 4개 위젯 (북마크 / 마감 임박 / 채용공고 / 최근 공지) */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
           <BookmarkedNoticesWidget
-            notices={bookmarkedNotices.slice(0, 5)} // 위젯에서는 상위 5개만 표시
+            notices={bookmarkedNotices.slice(0, 3)} // 위젯에서는 상위 3개만 표시
             onRefresh={refreshBookmarks}
             onNoticeClick={handleNoticeClick}
           />
@@ -284,19 +284,15 @@ export default function DashboardPage() {
             onNoticeClick={handleNoticeClick}
           />
           <PersonalizedJobsWidget jobs={displayedJobs} />
-        </div>
-
-        {/* 주간 캘린더 */}
-        <div className="mb-6">
-          <WeeklyCalendarWidget events={weeklyEvents} />
-        </div>
-
-        {/* 최근 공지 (SSE 실시간 연동) */}
-        <div>
           <RecentNoticesWidget
             notices={allNotices}
             onNoticeClick={handleNoticeClick}
           />
+        </div>
+
+        {/* 주간 캘린더 */}
+        <div>
+          <WeeklyCalendarWidget events={weeklyEvents} />
         </div>
       </div>
 
