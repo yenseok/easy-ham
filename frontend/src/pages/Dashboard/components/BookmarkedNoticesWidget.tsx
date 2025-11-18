@@ -1,0 +1,156 @@
+import { useEffect, useState } from "react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Bookmark, ChevronDown } from "lucide-react";
+import { BookmarksModal } from "@/components/modals/BookmarksModal";
+import { formatRelativeTime } from "@/utils/dateFormatter";
+import type { Notice } from "@/types/notice";
+
+interface BookmarkedNoticesWidgetProps {
+  notices: Notice[];
+  onRefresh?: () => Promise<void>;
+  onNoticeClick?: (notice: Notice) => void;
+  isMobile?: boolean;
+}
+
+export default function BookmarkedNoticesWidget({
+  notices,
+  onRefresh,
+  onNoticeClick,
+  isMobile = false,
+}: BookmarkedNoticesWidgetProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setIsCollapsed(false);
+    }
+  }, [isMobile]);
+
+  // 모달 열기
+  const handleModalOpen = () => {
+    setIsModalOpen(true);
+  };
+
+  // 모달이 닫힐 때 북마크 데이터 갱신
+  const handleModalClose = async (open: boolean) => {
+    setIsModalOpen(open);
+    if (!open && onRefresh) {
+      await onRefresh();
+    }
+  };
+
+  const getCategoryColor = (subcategory: string) => {
+    switch (subcategory) {
+      case "할일":
+        return "bg-red-50 text-red-700 border-red-200";
+      case "특강":
+        return "bg-blue-50 text-blue-700 border-blue-200";
+      case "정보":
+        return "bg-green-50 text-green-700 border-green-200";
+      case "행사":
+        return "bg-purple-50 text-purple-700 border-purple-200";
+      default:
+        return "bg-gray-50 text-gray-700 border-gray-200";
+    }
+  };
+
+  const getDdayColor = (dday: number) => {
+    if (dday < 0) return "bg-gray-400"; // 마감 지난 경우 회색
+    if (dday <= 3) return "bg-red-500";
+    if (dday <= 7) return "bg-yellow-500";
+    return "bg-green-500";
+  };
+
+  const renderCollapseToggle = isMobile ? (
+    <button
+      type="button"
+      aria-expanded={!isCollapsed}
+      aria-label={isCollapsed ? "위젯 펼치기" : "위젯 접기"}
+      onClick={() => setIsCollapsed((prev) => !prev)}
+      className="md:hidden text-gray-500 hover:text-gray-900 transition-colors p-1"
+    >
+      <ChevronDown
+        className={`w-4 h-4 transition-transform ${isCollapsed ? "-rotate-180" : "rotate-0"}`}
+      />
+    </button>
+  ) : null;
+
+  return (
+    <>
+      <Card className="shadow-md">
+        <div className="h-16 px-6 flex items-center border-b gap-2">
+          <div className="flex items-center gap-2">
+            <Bookmark className="w-5 h-5 text-(--brand-orange)" />
+            <h2 className="text-lg" style={{ fontWeight: 700 }}>
+              북마크 공지
+            </h2>
+          </div>
+          <div className="ml-auto flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleModalOpen}
+              className="text-sm"
+            >
+              더보기
+            </Button>
+            {renderCollapseToggle}
+          </div>
+        </div>
+        {(!isMobile || !isCollapsed) && (
+          <div className="px-4 py-4">
+            {notices.length === 0 ? (
+              <div className="text-sm text-gray-500 text-center py-8">
+                북마크한 공지가 없습니다
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {notices.map((notice) => (
+                  <div
+                    key={notice.id}
+                    className="p-3 border rounded-lg hover:shadow-md transition-shadow cursor-pointer hover:border-(--brand-orange)"
+                    onClick={() => onNoticeClick?.(notice)}
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge
+                        className={`text-xs px-2 py-0.5 border ${getCategoryColor(
+                          notice.subcategory
+                        )}`}
+                      >
+                        {notice.subcategory}
+                      </Badge>
+                      {notice.dday !== null && (
+                        <span
+                          className={`text-white text-xs ${notice.dday === 0 ? 'px-1.5' : 'px-2'} py-0.5 rounded ${getDdayColor(
+                            notice.dday
+                          )}`}
+                          style={{ fontWeight: 600 }}
+                        >
+                          {notice.dday === 0 ? 'D-Day' : notice.dday > 0 ? `D-${notice.dday}` : `D+${Math.abs(notice.dday)}`}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">
+                      {notice.title}
+                    </div>
+                    <div className="text-xs text-gray-600 line-clamp-1">
+                      {notice.channel} • {formatRelativeTime(notice.createdAt)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </Card>
+
+    <BookmarksModal
+      open={isModalOpen}
+      onOpenChange={handleModalClose}
+    />
+    </>
+  );
+}
