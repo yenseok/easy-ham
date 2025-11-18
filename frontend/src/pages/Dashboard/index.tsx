@@ -265,7 +265,7 @@ export default function DashboardPage() {
 
   return (
     <PageLayout>
-      <div className="px-8 py-6 bg-gray-50 min-h-screen">
+      <div className="px-8 pt-6 pb-0 bg-gray-50 h-full overflow-y-auto">
         {/* 페이지 제목 */}
         <h1 className="text-3xl mb-6 flex items-center gap-3" style={{ fontWeight: 700 }}>
           <LayoutDashboard className="w-8 h-8 text-(--brand-orange)" />
@@ -291,7 +291,7 @@ export default function DashboardPage() {
         </div>
 
         {/* 주간 캘린더 */}
-        <div className="mb-6">
+        <div>
           <WeeklyCalendarWidget events={weeklyEvents} />
         </div>
       </div>
