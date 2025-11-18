@@ -314,6 +314,7 @@ export default function SearchPage() {
   /**
    * 브라우저 전역 스크롤 → NoticeList 스크롤 연동 (데스크톱 전용)
    * lg 이상에서만 wheel 이벤트를 가로채도록 해 모바일·태블릿에서 스크롤이 막히지 않게 한다.
+   * 모달이 열렸을 때는 wheel 리스너를 제거하여 모달 내부에서 정상적으로 스크롤할 수 있게 한다.
    */
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -343,15 +344,18 @@ export default function SearchPage() {
     };
 
     const handleMediaChange = (event: MediaQueryListEvent) => {
-      if (event.matches) {
+      if (event.matches && !isModalOpen) {
         addWheelListener();
       } else {
         removeWheelListener();
       }
     };
 
-    if (lgMediaQuery.matches) {
+    // 모달이 열려있지 않고 lg 이상일 때만 wheel 리스너 추가
+    if (lgMediaQuery.matches && !isModalOpen) {
       addWheelListener();
+    } else {
+      removeWheelListener();
     }
 
     lgMediaQuery.addEventListener('change', handleMediaChange);
@@ -360,7 +364,7 @@ export default function SearchPage() {
       lgMediaQuery.removeEventListener('change', handleMediaChange);
       removeWheelListener();
     };
-  }, []);
+  }, [isModalOpen]);
 
   /**
    * 북마크 토글 (낙관적 업데이트)
