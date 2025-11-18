@@ -5,7 +5,11 @@
 
 import { create } from "zustand";
 import type { ServerNotification, UINotification } from "@/types/notification";
-import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "@/services/api/notifications";
+import {
+  getNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+} from "@/services/api/notifications";
 import { calculateRemainingTime } from "@/utils/deadlineUtils";
 
 export interface Notification {
@@ -28,7 +32,11 @@ interface NotificationState {
   error: string | null;
   addNotification: (notification: Notification) => void;
   addSSENotification: (
-    notification: Omit<Notification, "time"> & { id: string; time?: string; relativeTime?: string }
+    notification: Omit<Notification, "time"> & {
+      id: string;
+      time?: string;
+      relativeTime?: string;
+    }
   ) => void;
   loadNotifications: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
@@ -39,7 +47,9 @@ interface NotificationState {
 /**
  * 서버 알림을 UI 포맷으로 변환
  */
-function convertServerNotificationToUI(notification: ServerNotification): Notification {
+function convertServerNotificationToUI(
+  notification: ServerNotification
+): Notification {
   const eventData = notification.eventData;
   let type: "info" | "danger" | "success" | "default" = "info";
   let badge: string | undefined;
@@ -76,7 +86,10 @@ function convertServerNotificationToUI(notification: ServerNotification): Notifi
     badge,
     relativeTime: "방금 전",
     notice_id,
-    deadline: notification.eventType === "deadline_approaching" ? (eventData as any)?.deadline : undefined,
+    deadline:
+      notification.eventType === "deadline_approaching"
+        ? (eventData as any)?.deadline
+        : undefined,
   };
 }
 
@@ -122,18 +135,26 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     try {
       const response = await getNotifications();
       if (response.data?.notificationList) {
-        const notifications = response.data.notificationList.map(convertServerNotificationToUI);
-        const unreadCount = notifications.filter(n => !n.read).length;
+        const notifications = response.data.notificationList
+          .map(convertServerNotificationToUI)
+          .reverse();
+        const unreadCount = notifications.filter((n) => !n.read).length;
 
         set({
           notifications,
           unreadCount,
           isLoading: false,
         });
-        console.log("[Notification Store] Loaded notifications:", notifications);
+        console.log(
+          "[Notification Store] Loaded notifications:",
+          notifications
+        );
       }
     } catch (error) {
-      console.error("[Notification Store] Failed to load notifications:", error);
+      console.error(
+        "[Notification Store] Failed to load notifications:",
+        error
+      );
       set({
         error: error instanceof Error ? error.message : "알림 로드 실패",
         isLoading: false,
@@ -192,7 +213,9 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       console.error("[Notification Store] Failed to mark all as read:", error);
       // 실패 시 복원
       const previousNotifications = get().notifications;
-      const previousUnreadCount = previousNotifications.filter(n => !n.read).length;
+      const previousUnreadCount = previousNotifications.filter(
+        (n) => !n.read
+      ).length;
       set({
         notifications: previousNotifications,
         unreadCount: previousUnreadCount,
