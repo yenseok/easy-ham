@@ -288,7 +288,7 @@ export function SearchFilterBar({
               {/* 개별 채널 버튼들 */}
               {availableChannels.map((channel) => {
                 const isSelected = selectedChannels.includes(channel.channelId);
-                const displayName = formatChannelDisplayName(channel.teamName, channel.channelName);
+                const displayName = formatChannelDisplayName(channel.displayName, channel.channelName);
 
                 return (
                   <Button

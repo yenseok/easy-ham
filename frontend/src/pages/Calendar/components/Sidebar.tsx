@@ -303,7 +303,7 @@ export function Sidebar({
             <div className="space-y-1.5">
               {availableChannels.map((channel) => {
                 const isSelected = selectedChannels.includes(channel.channelId);
-                const displayName = formatChannelDisplayName(channel.teamName, channel.channelName);
+                const displayName = formatChannelDisplayName(channel.displayName, channel.channelName);
 
                 return (
                   <button

@@ -39,8 +39,8 @@ export const formatChannelName = (channelName: string): string => {
 
 /**
  * 채널 디스플레이 이름 포맷팅
- * 예: ("13기 공지 전용", "5. [취업] 공지사항") → "13기 - [취업] 공지사항"
+ * 예: ("13기", "5. [취업] 공지사항") → "13기 - [취업] 공지사항"
  */
-export const formatChannelDisplayName = (teamName: string, channelName: string): string => {
-  return `${formatTeamName(teamName)} - ${formatChannelName(channelName)}`;
+export const formatChannelDisplayName = (displayName: string, channelName: string): string => {
+  return `${displayName} - ${formatChannelName(channelName)}`;
 };

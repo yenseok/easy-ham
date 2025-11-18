@@ -195,6 +195,7 @@ export interface UserChannel {
   channelName: string;
   teamId: string;
   teamName: string;
+  displayName: string;
   type: 'GLOBAL' | 'CLASS';
 }
 
