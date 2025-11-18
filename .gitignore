@@ -205,6 +205,7 @@ CLAUDE.md
 project_guide.md
 my_notes/
 
+<<<<<<< HEAD
 # Jenkins data (never commit)
 jenkins_data/
 jenkins_data_cp/
@@ -222,3 +223,6 @@ plugin/prham-spring-notifier-plugin/README.md
 plugin/prham-spring-notifier-plugin/assets/
 plugin/prham-spring-notifier-plugin/public/
 plugin/prham-spring-notifier-plugin.tar.gz
+=======
+docs/
+>>>>>>> client-dev
