@@ -49,7 +49,7 @@ export const MessageDetailModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto p-4 sm:p-6 md:p-8 w-[95vw] sm:w-[90vw] md:w-[80vw] lg:w-[70vw] xl:w-[60vw] max-w-4xl">
+      <DialogContent className="max-h-[85vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 w-[90vw] sm:w-[85vw] md:w-[70vw] lg:w-[65vw] xl:w-[55vw] sm:max-w-[85vw] md:max-w-[70vw] lg:max-w-[65vw] xl:max-w-[55vw] max-w-5xl">
         {/* 뒤로가기 버튼 (옵션) */}
         {showBackButton && onBack && (
           <Button
@@ -85,7 +85,7 @@ export const MessageDetailModal = ({
         {/* 메시지 본문 */}
         <div className="py-6">
           <h3 className="text-sm mb-4 text-gray-500 font-bold">메시지 내용</h3>
-          <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed">
+          <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed wrap-break-word">
             <ReactMarkdown
               components={{
                 h1: ({ node, ...props }) => (
