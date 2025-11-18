@@ -26,7 +26,8 @@ export default function PersonalizedJobsWidget({
     return daysLeft;
   };
 
-  const handleJobClick = (url: string) => {
+  const handleJobClick = (url: string | null) => {
+    if (!url) return;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
@@ -51,7 +52,9 @@ export default function PersonalizedJobsWidget({
                 <div
                   key={job.id}
                   onClick={() => handleJobClick(job.url)}
-                  className="p-3 border rounded-lg hover:shadow-md transition-shadow cursor-pointer hover:border-(--brand-orange)"
+                  className={`p-3 border rounded-lg hover:shadow-md transition-shadow hover:border-(--brand-orange) ${
+                    job.url ? 'cursor-pointer' : 'cursor-default'
+                  }`}
                 >
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2">
@@ -69,7 +72,7 @@ export default function PersonalizedJobsWidget({
                         </span>
                       )}
                     </div>
-                    <ExternalLink className="w-4 h-4 text-gray-400" />
+                    {job.url && <ExternalLink className="w-4 h-4 text-gray-400" />}
                   </div>
                   <div
                     className="text-sm font-semibold text-gray-900 mb-1"

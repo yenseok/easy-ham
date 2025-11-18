@@ -214,7 +214,7 @@ export interface JobPostItem {
   postId: string;
   company: string;
   position: string;
-  url: string;
+  url: string | null;
   positionId: number;
   positionName: string;
   deadline: string | null;

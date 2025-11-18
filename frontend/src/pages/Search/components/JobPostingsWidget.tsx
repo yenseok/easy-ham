@@ -59,8 +59,13 @@ export function JobPostingsWidget({
             return (
               <div
                 key={posting.id}
-                className="flex items-center justify-between p-2 bg-gray-50 rounded hover:bg-gray-100 transition-colors cursor-pointer"
-                onClick={() => window.open(posting.url, '_blank', 'noopener,noreferrer')}
+                className={`flex items-center justify-between p-2 bg-gray-50 rounded hover:bg-gray-100 transition-colors ${
+                  posting.url ? 'cursor-pointer' : 'cursor-default'
+                }`}
+                onClick={() => {
+                  if (!posting.url) return;
+                  window.open(posting.url, '_blank', 'noopener,noreferrer');
+                }}
               >
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm text-gray-900 truncate">
