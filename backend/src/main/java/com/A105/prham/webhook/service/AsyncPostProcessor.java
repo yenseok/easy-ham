@@ -85,26 +85,57 @@ public class AsyncPostProcessor {
 				if (parseResult != null && parseResult.getJobPostings() != null && !parseResult.getJobPostings().isEmpty()) {
 					List<JobPostingParseResponseDto.SingleJobPosting> jobPostings = parseResult.getJobPostings();
 
-					// 각 채용 공고 저장 및 일괄 전송 준비
+					// ✅ 개별 채용 공고 저장 및 일괄 전송 준비
 					List<Post> savedJobPosts = new ArrayList<>();
 					for (JobPostingParseResponseDto.SingleJobPosting jobPosting : jobPostings) {
-						Post savedPost = createAndSaveIndividualPost(post, jobPosting, result);
+						Post savedPost = createAndSaveIndividualJobPost(post, jobPosting, result);
 						if (savedPost != null) {
 							savedJobPosts.add(savedPost);
 						}
 					}
 
-					//비동기로 일괄 전송
+					// ✅ 비동기로 일괄 전송
 					if (!savedJobPosts.isEmpty()) {
 						CompletableFuture.runAsync(() -> {
 							log.info("📤 채용 공고 일괄 전송 시작 - 총 {}건", savedJobPosts.size());
+
+							int successCount = 0;
+							int failCount = 0;
+
 							for (Post savedPost : savedJobPosts) {
-								ssePostService.sendNewPost(savedPost);
-								notificationService.sendKeywordMatchingNotification(savedPost);
-								notificationService.scheduleDeadlineNotification(savedPost);
-								notificationService.sendJobMatchingNotification(savedPost);
+								try {
+									// SSE 전송
+									ssePostService.sendNewPost(savedPost);
+
+									// 알림 전송들 (각각 독립적으로 처리)
+									try {
+										notificationService.sendKeywordMatchingNotification(savedPost);
+									} catch (Exception e) {
+										log.warn("키워드 알림 실패: {}", savedPost.getTitle());
+									}
+
+									try {
+										notificationService.scheduleDeadlineNotification(savedPost);
+									} catch (Exception e) {
+										log.warn("마감일 알림 실패: {}", savedPost.getTitle());
+									}
+
+									try {
+										notificationService.sendJobMatchingNotification(savedPost);
+									} catch (Exception e) {
+										log.warn("채용 매칭 알림 실패: {}", savedPost.getTitle());
+									}
+
+									successCount++;
+									log.debug("✅ 채용 공고 전송 성공: {}", savedPost.getTitle());
+
+								} catch (Exception e) {
+									failCount++;
+									log.error("❌ 채용 공고 전송 실패: {} - {}", savedPost.getTitle(), e.getMessage());
+								}
 							}
-							log.info("✅ 채용 공고 일괄 전송 완료 - 총 {}건", savedJobPosts.size());
+
+							log.info("✅ 채용 공고 일괄 전송 완료 - 성공: {}건, 실패: {}건", successCount, failCount);
 						});
 					}
 
@@ -139,7 +170,7 @@ public class AsyncPostProcessor {
 	}
 
 	//개별 채용 공고를 개별 post로 생성하고 저장만 (전송은 나중에 한꺼번에)
-	private Post createAndSaveIndividualPost(Post originalPost, JobPostingParseResponseDto.SingleJobPosting jobPosting, LlmClassificationResult classificationResult) {
+	private Post createAndSaveIndividualJobPost(Post originalPost, JobPostingParseResponseDto.SingleJobPosting jobPosting, LlmClassificationResult classificationResult) {
 		try {
 			//position 매핑
 			Position position = findPositionByCategory(jobPosting.getPositionCategory());

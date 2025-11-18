@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SSE 채용공고 테스트</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .post { border: 1px solid #ddd; padding: 10px; margin: 10px 0; }
+        .success { background: #e8f5e9; }
+        .error { background: #ffebee; }
+        button { padding: 10px; margin: 5px; }
+        #log { background: #f5f5f5; padding: 10px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+        .status { font-weight: bold; padding: 5px 10px; border-radius: 5px; }
+        .connected { background: #4caf50; color: white; }
+        .disconnected { background: #f44336; color: white; }
+        .waiting { background: #ff9800; color: white; }
+    </style>
+</head>
+<body>
+<h1>SSE 채용공고 테스트 (userId: 2)</h1>
+
+<div>
+    <button onclick="connect()">연결</button>
+    <button onclick="disconnect()">연결 끊기</button>
+    <button onclick="clearLog()">로그 지우기</button>
+    <button onclick="testWebhook()">Webhook 테스트 전송</button>
+    <span id="status" class="status waiting">⚪ 연결 안됨</span>
+</div>
+
+<h2>받은 채용 공고: <span id="postCount">0</span>건</h2>
+<div id="posts"></div>
+
+<h2>로그:</h2>
+<div id="log"></div>
+
+<script>
+    let eventSource;
+    let postCount = 0;
+
+    function addLog(message, isError = false) {
+        const log = document.getElementById('log');
+        const time = new Date().toLocaleTimeString();
+        log.innerHTML += `<div style="color: ${isError ? 'red' : 'black'}">[${time}] ${message}</div>`;
+        log.scrollTop = log.scrollHeight;
+    }
+
+    function updateStatus(text, className) {
+        const status = document.getElementById('status');
+        status.textContent = text;
+        status.className = 'status ' + className;
+    }
+
+    function connect() {
+        if (eventSource) {
+            addLog('⚠️ 이미 연결되어 있습니다.');
+            return;
+        }
+
+        // ✅ 올바른 SSE 엔드포인트
+        const url = 'http://localhost:8080/api/v1/posts/stream?userId=2';
+        addLog('🔄 연결 시도: ' + url);
+        updateStatus('🔄 연결 중...', 'waiting');
+
+        eventSource = new EventSource(url);
+
+        eventSource.onopen = () => {
+            updateStatus('🟢 연결됨', 'connected');
+            addLog('✅ SSE 연결 성공!');
+        };
+
+        eventSource.addEventListener('connected', (e) => {
+            addLog('📡 서버 연결 확인: ' + e.data);
+        });
+
+        eventSource.addEventListener('newPost', (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                postCount++;
+                document.getElementById('postCount').textContent = postCount;
+
+                const postsDiv = document.getElementById('posts');
+                const postHtml = `
+                        <div class="post success">
+                            <strong>📬 공고 #${postCount}: ${data.title || 'N/A'}</strong><br>
+                            <small>PostId: ${data.id || 'N/A'}</small><br>
+                            카테고리: ${data.mainCategory || 'N/A'} > ${data.subCategory || 'N/A'}<br>
+                            채널: ${data.channelName || 'N/A'}<br>
+                            ${data.originalPostId ? `원본 Post ID: <a href="#" onclick="alert('원본 Post ID: ${data.originalPostId}'); return false;">${data.originalPostId}</a><br>` : ''}
+                            ${data.deadline ? `마감일: ${data.deadline}<br>` : ''}
+                            ${data.campusList ? `캠퍼스: ${data.campusList}<br>` : ''}
+                            내용: ${data.cleanedText ? data.cleanedText.substring(0, 150) + '...' : data.originalText ? data.originalText.substring(0, 150) + '...' : 'N/A'}
+                        </div>
+                    `;
+                postsDiv.innerHTML = postHtml + postsDiv.innerHTML;
+
+                addLog(`📬 새 공고 수신 (#${postCount}): ${data.title || 'N/A'}`);
+            } catch (err) {
+                addLog('❌ 데이터 파싱 실패: ' + err.message, true);
+                addLog('원본 데이터: ' + e.data);
+            }
+        });
+
+        eventSource.onerror = (error) => {
+            updateStatus('🔴 연결 끊김', 'disconnected');
+            addLog('❌ SSE 에러 발생', true);
+            console.error('SSE Error:', error);
+
+            // 연결 상태 확인
+            if (eventSource.readyState === EventSource.CONNECTING) {
+                addLog('⏳ 재연결 시도 중...', true);
+            } else if (eventSource.readyState === EventSource.CLOSED) {
+                addLog('❌ 연결이 서버에서 종료됨', true);
+                eventSource = null;
+            }
+        };
+    }
+
+    function disconnect() {
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+            updateStatus('⚪ 연결 안됨', 'waiting');
+            addLog('🔌 연결 종료');
+        } else {
+            addLog('⚠️ 연결되어 있지 않습니다.');
+        }
+    }
+
+    function clearLog() {
+        document.getElementById('log').innerHTML = '';
+        document.getElementById('posts').innerHTML = '';
+        postCount = 0;
+        document.getElementById('postCount').textContent = '0';
+        addLog('🧹 로그 및 공고 목록 초기화');
+    }
+
+    async function testWebhook() {
+        addLog('📤 테스트 Webhook 전송 중...');
+
+        const testData = {
+            post_id: 'test_' + Date.now(),
+            channel_id: 'test_channel',
+            channel_name: '6. [취업] 취업정보',
+            user_id: 'test_user',
+            user_name: '테스트유저',
+            text: `채용공고 테스트
+
+aaa컴퍼니 / 백엔드 개발자 / 12/31
+https://www.aaa.com
+
+bbb컴퍼니 / 프론트엔드 개발자 / 11/30
+https://www.bbb.com
+
+ccc컴퍼니 / 풀스택 개발자 / 12/15
+https://www.ccc.com`,
+            timestamp: Date.now().toString(),
+            team_id: 'test_team',
+            file_ids: ''
+        };
+
+        try {
+            const response = await fetch('http://localhost:8080/api/webhook/mattermost', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(testData)
+            });
+
+            if (response.ok) {
+                addLog('✅ Webhook 전송 성공! (3건의 채용공고 포함)');
+                addLog('⏳ 처리 완료까지 3-5초 대기...');
+            } else {
+                addLog(`❌ Webhook 전송 실패: ${response.status}`, true);
+            }
+        } catch (err) {
+            addLog('❌ Webhook 전송 에러: ' + err.message, true);
+        }
+    }
+
+    // 페이지 로드 시 안내
+    window.onload = () => {
+        addLog('✨ 테스트 준비 완료');
+        addLog('1️⃣ "연결" 버튼 클릭하여 SSE 연결');
+        addLog('2️⃣ "Webhook 테스트 전송" 버튼으로 채용공고 전송');
+        addLog('3️⃣ 또는 Postman으로 직접 Webhook 전송 가능');
+    };
+
+    // 페이지 떠날 때 연결 정리
+    window.onbeforeunload = () => {
+        if (eventSource) {
+            eventSource.close();
+        }
+    };
+</script>
+</body>
+</html>

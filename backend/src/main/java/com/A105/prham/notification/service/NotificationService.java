@@ -1,6 +1,5 @@
 package com.A105.prham.notification.service;
 
-
 import com.A105.prham.common.exception.CustomException;
 import com.A105.prham.common.response.ErrorCode;
 import com.A105.prham.keyword.Keyword;
@@ -13,7 +12,6 @@ import com.A105.prham.notification.dto.response.*;
 import com.A105.prham.notification.entity.Notification;
 import com.A105.prham.notification_setting.entity.NotificationSetting;
 import com.A105.prham.notification_setting.repository.NotificationSettingRepository;
-import com.A105.prham.position.entity.Position;
 import com.A105.prham.user.entity.User;
 import com.A105.prham.user.entity.UserPosition;
 import com.A105.prham.user.repository.UserRepository;
@@ -28,12 +26,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+
 import java.io.IOException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
@@ -44,12 +48,64 @@ public class NotificationService {
     private final NotificationSettingRepository notificationSettingRepository;
     private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
     private final Map<String, Notification> eventCache = new ConcurrentHashMap<>();
-    private final Long TIME_OUT = 60L * 60L * 1000L;
+    private final Long TIME_OUT = 60L * 60L * 1000L * 2L; // 2시간
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
     private final TaskScheduler taskScheduler;
     private final ApplicationEventPublisher eventPublisher;
 
+    // ✅ Heartbeat용 스케줄러 추가
+    private ScheduledExecutorService heartbeatScheduler;
+
+    @PostConstruct
+    public void init() {
+        // ✅ 30초마다 모든 연결에 heartbeat 전송
+        heartbeatScheduler = Executors.newSingleThreadScheduledExecutor();
+        heartbeatScheduler.scheduleAtFixedRate(() -> {
+            sendHeartbeatToAll();
+        }, 30, 30, TimeUnit.SECONDS);
+        log.info("✅ 알림 SSE Heartbeat 스케줄러 시작 (30초 간격)");
+    }
+
+    @PreDestroy
+    public void destroy() {
+        if (heartbeatScheduler != null) {
+            heartbeatScheduler.shutdown();
+            log.info("🛑 알림 SSE Heartbeat 스케줄러 종료");
+        }
+    }
+
+    // ✅ 모든 연결에 heartbeat 전송
+    private void sendHeartbeatToAll() {
+        if (emitters.isEmpty()) {
+            return;
+        }
+
+        log.debug("💓 알림 Heartbeat 전송 - 연결 수: {}", emitters.size());
+
+        List<String> deadEmitters = new ArrayList<>();
+
+        emitters.forEach((emitterId, emitter) -> {
+            try {
+                emitter.send(SseEmitter.event()
+                    .name("heartbeat")
+                    .data("ping"));
+            } catch (Exception e) {
+                log.debug("💔 알림 Heartbeat 실패 (연결 끊김): {}", emitterId);
+                deadEmitters.add(emitterId);
+            }
+        });
+
+        // 죽은 연결 정리
+        deadEmitters.forEach(emitterId -> {
+            emitters.remove(emitterId);
+            eventCache.entrySet().removeIf(entry -> entry.getKey().startsWith(emitterId));
+        });
+
+        if (!deadEmitters.isEmpty()) {
+            log.info("🧹 죽은 알림 연결 정리: {}개", deadEmitters.size());
+        }
+    }
 
     @Transactional
     public void addKeyword(User user, KeywordCreateRequest keywordCreateRequest) {
@@ -57,9 +113,9 @@ public class NotificationService {
             throw new CustomException(ErrorCode.DUPLICATED_KEYWORD);
         }
         Keyword keyword = Keyword.builder()
-                .word(keywordCreateRequest.word())
-                .user(user)
-                .build();
+            .word(keywordCreateRequest.word())
+            .user(user)
+            .build();
 
         keywordRepository.save(keyword);
     }
@@ -67,391 +123,292 @@ public class NotificationService {
     @Transactional
     public void deleteKeyword(User user, Long keywordId) {
         Keyword keyword = keywordRepository.findById(keywordId)
-                .orElseThrow(() -> new CustomException(ErrorCode.KEYWORD_NOT_FOUND));
+            .orElseThrow(() -> new CustomException(ErrorCode.KEYWORD_NOT_FOUND));
         keywordRepository.delete(keyword);
     }
 
-    // ✅ 읽기만 - readOnly
     @Transactional(readOnly = true)
     public KeywordListGetResponse getKeywordList(User user) {
         List<Keyword> keywordList = keywordRepository.findByUser(user);
         List<KeywordDto> keywordDtoList = keywordList.stream()
-                .map(keyword -> KeywordDto.builder()
-                        .keywordId(keyword.getId())
-                        .keyword(keyword.getWord())
-                        .build()).toList();
+            .map(keyword -> KeywordDto.builder()
+                .keywordId(keyword.getId())
+                .keyword(keyword.getWord())
+                .build()).toList();
         return KeywordListGetResponse.builder()
-                .keywordList(keywordDtoList)
-                .build();
+            .keywordList(keywordDtoList)
+            .build();
     }
 
     @Transactional
     public void createNotificationSetting(User user){
-        // 유효성 검사
         if(notificationSettingRepository.findByUser(user) != null){
             throw new CustomException(ErrorCode.DUPLICATED_NOTIFICATION_SETTING);
         }
 
         NotificationSetting notificationSetting = NotificationSetting.builder()
-                .deadlineAlertHours(6)
-                .jobAlertEnabled(true)
-                .keywordAlertEnabled(true)
-                .user(user)
-                .build();
+            .deadlineAlertHours(6)
+            .jobAlertEnabled(true)
+            .keywordAlertEnabled(true)
+            .user(user)
+            .build();
         notificationSettingRepository.save(notificationSetting);
     }
 
-    // ✅ 읽기만 - readOnly
     @Transactional(readOnly = true)
     public NotificationSettingGetResponse getNotificationSetting(User user){
         NotificationSetting notificationSetting = notificationSettingRepository.findByUser(user);
         return NotificationSettingGetResponse.builder()
-                .deadlineAlertHours(notificationSetting.getDeadlineAlertHours())
-                .jobAlertEnabled(notificationSetting.getJobAlertEnabled())
-                .keywordAlertEnabled(notificationSetting.getKeywordAlertEnabled())
-                .build();
+            .deadlineAlertHours(notificationSetting.getDeadlineAlertHours())
+            .jobAlertEnabled(notificationSetting.getJobAlertEnabled())
+            .keywordAlertEnabled(notificationSetting.getKeywordAlertEnabled())
+            .build();
     }
 
     @Transactional
     public void updateNotificationSetting(User user, NotificationSettingUpdateRequest notificationSettingUpdateRequest){
         NotificationSetting notificationSetting = notificationSettingRepository.findByUser(user);
         notificationSetting.updateNotificationSetting(
-                notificationSettingUpdateRequest.deadlineAlertHours(),
-                notificationSettingUpdateRequest.jobAlertEnabled(),
-                notificationSettingUpdateRequest.keywordAlertEnabled()
+            notificationSettingUpdateRequest.deadlineAlertHours(),
+            notificationSettingUpdateRequest.jobAlertEnabled(),
+            notificationSettingUpdateRequest.keywordAlertEnabled()
         );
         notificationSettingRepository.save(notificationSetting);
     }
 
-    // SSE 구독 - 트랜잭션 필요 없음!
-    // public SseEmitter subscribe(User user, String lastEventId) {
-    //     // 고유 생성 아이디 + emitter 저장
-    //     SseEmitter sseEmitter = new SseEmitter(TIME_OUT);
-    //     String emitterId = user.getId() + "_" + UUID.randomUUID().toString();
-    //     emitters.put(emitterId, sseEmitter);
-    //
-    //     // 시간 초과 or 비동기 요청 불가 시 해당 아이디의 emitter 삭제
-    //     sseEmitter.onCompletion(() -> emitters.remove(emitterId));
-    //     sseEmitter.onTimeout(() -> emitters.remove(emitterId));
-    //     sseEmitter.onError((e) -> emitters.remove(emitterId));
-    //
-    //     // 503 오류 방지용 더미 전송
-    //     try {
-    //         sseEmitter.send(SseEmitter.event()
-    //             .name("connected")
-    //             .data("Event sTream created. userId: " + user.getId()));
-    //     } catch (Exception e) {
-    //         emitters.remove(emitterId);
-    //         //예외 안던지고 제거
-    //         throw new RuntimeException("SSE connection failed", e);
-    //     }
-    //     // sentToClient(sseEmitter, emitterId, "connected","Event Stream Created. User Id : " + user.getId());
-    //
-    //     if(!lastEventId.isEmpty()){
-    //         Map<String, Notification> events = findAllEventCacheByUserId(user.getId().toString());
-    //         // events.entrySet().stream()
-    //         //         .filter(entry -> lastEventId.compareTo(entry.getKey()) < 0)
-    //         //         .forEach(entry -> {
-    //         //             Notification notification = entry.getValue();
-    //         //             sentToClient(sseEmitter, entry.getKey(), notification.getEventType() ,entry.getValue());
-    //         //         });
-    //         events.entrySet().stream()
-    //             .filter(entry -> lastEventId.compareTo(entry.getKey()) < 0)
-    //             .forEach(entry -> {
-    //                 Notification notification = entry.getValue();
-    //                 try {
-    //                     sseEmitter.send(SseEmitter.event()
-    //                         .id(entry.getKey())
-    //                         .name(notification.getEventType())
-    //                         .data(notification.getEventData()));
-    //                 } catch (Exception e) {
-    //                     log.error("notification sse 캐시 이벤트 전송 실패: {}", e.getMessage());
-    //                 }
-    //             });
-    //     }
-    //
-    //     return sseEmitter;
-    // }
-
-    // SSE 구독 - 트랜잭션 필요 없음!
+    // ✅ SSE 구독 활성화
     public SseEmitter subscribe(User user, String lastEventId) {
-        String userId = user.getId().toString();
-
-        // 기존 연결이 있으면 제거 (중복 연결 방지)
-        SseEmitter oldEmitter = emitters.remove(userId);
-        if (oldEmitter != null) {
-            try {
-                oldEmitter.complete();
-            } catch (Exception e) {
-                log.warn("기존 emitter 종료 중 오류 (무시 가능): {}", e.getMessage());
-            }
-        }
-
-        // 새 emitter 생성 및 저장
         SseEmitter sseEmitter = new SseEmitter(TIME_OUT);
-        emitters.put(userId, sseEmitter);
+        String emitterId = user.getId() + "_" + System.currentTimeMillis();
+        emitters.put(emitterId, sseEmitter);
 
-        // 콜백 핸들러 등록
+        log.info("✅ 알림 SSE 구독 시작 - User ID: {}, emitterId: {}", user.getId(), emitterId);
+
+        // 시간 초과 or 비동기 요청 불가 시 해당 아이디의 emitter 삭제
         sseEmitter.onCompletion(() -> {
-            log.info("🔌 SSE connection completed for userId: {}", userId);
-            emitters.remove(userId);
+            emitters.remove(emitterId);
+            log.info("알림 SSE 연결 정상 종료: {}", emitterId);
         });
 
         sseEmitter.onTimeout(() -> {
-            log.info(" SSE connection timeout for userId: {}", userId);
-            emitters.remove(userId);
-            try {
-                sseEmitter.complete();
-            } catch (Exception e) {
-                log.warn("Emitter 완료 처리 중 오류: {}", e.getMessage());
-            }
+            emitters.remove(emitterId);
+            log.warn("알림 SSE 연결 타임아웃: {}", emitterId);
+            sseEmitter.complete();
         });
 
         sseEmitter.onError((e) -> {
-            log.warn(" SSE connection error for userId: {}", userId, e);
-            emitters.remove(userId);
+            emitters.remove(emitterId);
+            log.debug("알림 SSE 연결 에러: {}", emitterId);
         });
 
         // 503 오류 방지용 더미 전송
         try {
             sseEmitter.send(SseEmitter.event()
                 .name("connected")
-                .data("Event Stream created. userId: " + userId));
-        } catch (IOException e) {
-            log.error(" Initial SSE event send failed for userId: {}", userId, e);
-            emitters.remove(userId);
-            throw new CustomException(ErrorCode.SSE_DATA_SEND_ERROR);
+                .data("Notification stream created. userId: " + user.getId()));
+        } catch (Exception e) {
+            log.warn("알림 SSE 초기 연결 메시지 전송 실패: {}", emitterId, e);
+            emitters.remove(emitterId);
+            throw new RuntimeException("SSE connection failed", e);
         }
 
-        // lastEventId가 있으면 미수신 이벤트 재전송
-        if (lastEventId != null && !lastEventId.isEmpty()) {
-            sendMissedEvents(sseEmitter, userId, lastEventId);
+        // lastEventId가 있으면 미전송 이벤트 재전송
+        if(lastEventId != null && !lastEventId.isEmpty()){
+            Map<String, Notification> events = findAllEventCacheByUserId(user.getId().toString());
+            events.entrySet().stream()
+                .filter(entry -> lastEventId.compareTo(entry.getKey()) < 0)
+                .forEach(entry -> {
+                    Notification notification = entry.getValue();
+                    try {
+                        sseEmitter.send(SseEmitter.event()
+                            .id(entry.getKey())
+                            .name(notification.getEventType())
+                            .data(notification.getEventData()));
+                    } catch (Exception e) {
+                        log.error("알림 SSE 캐시 이벤트 전송 실패: {}", e.getMessage());
+                    }
+                });
         }
 
         return sseEmitter;
     }
 
-    // 미수신 이벤트 재전송
-    private void sendMissedEvents(SseEmitter emitter, String userId, String lastEventId) {
+    // ✅ 핵심 send 메서드 - DB 저장 + SSE 전송
+    private void send(User user, Document data, String eventType) {
         try {
-            // MongoDB에서 직접 조회
-            List<Notification> missedNotifications = notificationRepository
-                .findByUserIdAndCreatedAtAfter(
-                    Long.parseLong(userId),
-                    parseEventIdToDateTime(lastEventId)
-                )
-                .stream()
-                .sorted((a, b) -> a.getCreatedAt().compareTo(b.getCreatedAt()))
-                .toList();
+            // 1️⃣ MongoDB에 알림 저장
+            Notification notification = Notification.builder()
+                .userId(user.getId())
+                .eventType(eventType)
+                .eventData(data)
+                .isRead(false)
+                .build();
 
-            for (Notification notification : missedNotifications) {
+            Notification savedNotification = notificationRepository.save(notification);
+            log.info("✅ 알림 DB 저장 완료 - User ID: {}, Type: {}, Notification ID: {}",
+                user.getId(), eventType, savedNotification.getId());
+
+            // 2️⃣ SSE로 실시간 전송
+            String userId = user.getId().toString();
+            emitters.entrySet().stream()
+                .filter(entry -> entry.getKey().startsWith(userId + "_"))
+                .forEach(entry -> {
+                    String emitterId = entry.getKey();
+                    SseEmitter emitter = entry.getValue();
+                    try {
+                        emitter.send(SseEmitter.event()
+                            .id(savedNotification.getId())
+                            .name(eventType)
+                            .data(data));
+                        log.info("✅ 알림 SSE 전송 성공 - User ID: {}, Type: {}", user.getId(), eventType);
+                    } catch (IOException e) {
+                        if (e.getMessage() != null && e.getMessage().contains("Broken pipe")) {
+                            log.debug("🔌 알림 클라이언트 연결 끊김 (Broken pipe) - emitterId: {}", emitterId);
+                        } else {
+                            log.warn("⚠️ 알림 SSE 전송 실패 - emitterId: {}: {}", emitterId, e.getMessage());
+                        }
+                        emitters.remove(emitterId);
+                    } catch (Exception e) {
+                        log.error("❌ 알림 SSE 예상치 못한 에러 - emitterId: {}: {}", emitterId, e.getMessage(), e);
+                        emitters.remove(emitterId);
+                    }
+                });
+
+            // 3️⃣ 캐시에 저장 (재전송용)
+            String cacheKey = userId + "_" + System.currentTimeMillis();
+            eventCache.put(cacheKey, savedNotification);
+
+        } catch (Exception e) {
+            log.error("❌ 알림 전송 실패 - User ID: {}, Type: {}, Error: {}",
+                user.getId(), eventType, e.getMessage(), e);
+        }
+    }
+
+    private Map<String, Notification> findAllEventCacheByUserId(String userId) {
+        return eventCache.entrySet().stream()
+            .filter(entry -> entry.getKey().startsWith(userId + "_"))
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    // 🎯 키워드 매칭 알림
+    @Async
+    public void sendKeywordMatchingNotification(Post post){
+        try {
+            if (post == null) {
+                log.warn("❌ Post가 null입니다");
+                return;
+            }
+
+            List<User> usersWithKeywords = fetchUsersWithKeywords();
+            log.info("📢 키워드 알림 대상 사용자 수: {}", usersWithKeywords.size());
+
+            int successCount = 0;
+
+            for(User user : usersWithKeywords){
                 try {
-                    emitter.send(SseEmitter.event()
-                        .id(notification.getId())
-                        .name(notification.getEventType())
-                        .data(notification.getEventData()));
-                } catch (IOException e) {
-                    log.error(" 미수신 이벤트 전송 실패 - userId: {}, notificationId: {}",
-                        userId, notification.getId(), e);
-                    throw new RuntimeException(e);
+                    NotificationSetting setting = user.getNotificationSetting();
+                    if(setting == null || !setting.getKeywordAlertEnabled()) {
+                        log.debug("키워드 알림 비활성화 - User ID: {}", user.getId());
+                        continue;
+                    }
+
+                    List<String> matchedKeywords = user.getKeywords().stream()
+                        .map(Keyword::getWord)
+                        .filter(keyword ->
+                            (post.getTitle() != null && post.getTitle().contains(keyword)) ||
+                                (post.getCleanedText() != null && post.getCleanedText().contains(keyword)))
+                        .collect(Collectors.toList());
+
+                    if(!matchedKeywords.isEmpty()){
+                        log.info("✅ 키워드 매칭 성공 - User ID: {}, 매칭된 키워드: {}, 제목: {}",
+                            user.getId(), matchedKeywords, post.getTitle());
+
+                        Document data = new Document()
+                            .append("notice_id", post.getId())
+                            .append("title", post.getTitle())
+                            .append("match_keyword", matchedKeywords)
+                            .append("created_at", LocalDateTime.now());
+                        send(user, data, NotificationType.KEYWORD_MATCHING.name().toLowerCase());
+                        successCount++;
+                    }
+                } catch (Exception e) {
+                    log.error("❌ 개별 사용자 키워드 알림 실패 - User ID: {}, Error: {}",
+                        user.getId(), e.getMessage());
                 }
             }
 
+            log.info("✅ 키워드 알림 완료 - 성공: {}명 / 전체: {}명", successCount, usersWithKeywords.size());
+
         } catch (Exception e) {
-            log.error(" 미수신 이벤트 재전송 중 오류 발생 for userId: {}", userId, e);
+            log.error("❌ 키워드 알림 전체 실패 - Post ID: {}, Error: {}",
+                post != null ? post.getId() : "null", e.getMessage(), e);
         }
     }
 
-    private LocalDateTime parseEventIdToDateTime(String eventId) {
-        try {
-            // MongoDB ObjectId에서 timestamp 추출
-            return LocalDateTime.ofInstant(
-                Instant.ofEpochMilli(Long.parseLong(eventId.substring(0, 8), 16) * 1000),
-                ZoneId.systemDefault()
-            );
-        } catch (Exception e) {
-            log.warn("EventId 파싱 실패, 1시간 전으로 대체: {}", eventId);
-            return LocalDateTime.now().minusHours(1);
-        }
-    }
-
-    // SSE 전송 - MongoDB만 저장,
-    public void send(User receiver, Document eventData, String type){
-        String userId = receiver.getId().toString();
-
-        try {
-            Notification notification = new Notification(
-                null, // MongoDB에서 자동 생성
-                receiver.getId(),
-                type,
-                eventData, // 자유구조 알림 데이터
-                LocalDateTime.now(),
-                false // isRead
-            );
-            notificationRepository.save(notification);
-
-            // Map<String,SseEmitter> sseEmitters = findAllEmitterByUserId(receiver.getId().toString());
-            //userId로 emitter 직접 조회
-            SseEmitter emitter = emitters.get(userId);
-            if (emitter == null) {
-                return;
-            }
-            // sseEmitters.forEach((key, emitter) -> {
-            //     eventCache.put(key, notification); // 캐시 저장 (복구용)
-            //     sentToClient(emitter, key, notification.getEventType(), notification.getEventData());
-            // });
-            //sendToClient 대신 직접 send
-            try {
-                emitter.send(SseEmitter.event()
-                    .id(notification.getId()) // MongoDB의 알림 ID 사용
-                    .name(notification.getEventType())
-                    .data(notification.getEventData()));
-                log.info("알림 정상 전송");
-            } catch (IOException e) {
-                emitters.remove(userId);
-                // Broken pipe는 정상적인 클라이언트 종료일 수 있으므로 예외 던지지 않음
-            }
-        } catch (Exception e) {
-            log.error("알림 전송 중 예외 발생 userId: {}, type:{}", receiver.getId(), type);
-        }
-
-    }
-
-    // private void sentToClient(SseEmitter sseEmitter, String emitterId, String eventType, Object data){
-    //     try {
-    //         sseEmitter.send(SseEmitter.event()
-    //                 .id(emitterId)
-    //                 .name(eventType)
-    //                 .data(data));
-    //     } catch (Exception e) {
-    //         emitters.remove(emitterId);
-    //         log.error(e.getMessage(), e);
-    //         throw new CustomException(ErrorCode.SSE_DATA_SEND_ERROR);
-    //     }
-    // }
-
-    private Map<String, Notification> findAllEventCacheByUserId(String userId){
-        return eventCache.entrySet().stream()
-                .filter(entry -> entry.getKey().startsWith(userId))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    private Map<String, SseEmitter> findAllEmitterByUserId(String userId){
-        return emitters.entrySet().stream()
-                .filter(entry -> entry.getKey().startsWith(userId))
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-    }
-
-    // 🎯 키워드 매칭 알림 - N+1 완전 해결!
-    // 한 번의 트랜잭션에서 필요한 데이터를 모두 조회하고, 비즈니스 로직은 밖에서 처리
-    @Async
-    public void sendKeywordMatchingNotification(Post post){
-        // 1️⃣ 짧은 트랜잭션으로 유저와 키워드를 한 번에 조회 (Fetch Join)
-        List<User> usersWithKeywords = fetchUsersWithKeywords();
-
-        // 2️⃣ 트랜잭션 밖에서 키워드 매칭 및 알림 전송
-        for(User user : usersWithKeywords){
-            // notification 설정 확인
-            NotificationSetting setting = user.getNotificationSetting();
-            if(setting == null || !setting.getKeywordAlertEnabled()) {
-                log.debug("키워드 알림 비활성화 - User ID: {}", user.getId());
-                continue;
-            }
-            // Fetch Join으로 이미 로드된 키워드 사용 (추가 쿼리 발생 안 함!)
-            List<String> matchedKeywords = user.getKeywords().stream()
-                    .map(Keyword::getWord)
-                    .filter(keyword ->
-                            post.getTitle().contains(keyword) ||
-                                    post.getCleanedText().contains(keyword))
-                    .collect(Collectors.toList());
-
-            if(!matchedKeywords.isEmpty()){
-                log.info("✅ 키워드 매칭 성공 - User ID: {}, 매칭된 키워드: {}", user.getId(), matchedKeywords);
-                Document data = new Document()
-                        .append("notice_id", post.getId())
-                        .append("title", post.getTitle())
-                        .append("match_keyword", matchedKeywords)
-                        .append("created_at", LocalDateTime.now());
-                send(user, data, NotificationType.KEYWORD_MATCHING.name().toLowerCase());
-            }
-        }
-    }
-
-    // 🎯 한 번의 쿼리로 유저와 키워드를 함께 조회 (N+1 해결)
     @Transactional(readOnly = true)
     protected List<User> fetchUsersWithKeywords() {
         return userRepository.findUsersWithKeywordsFetch();
     }
 
-    // 🎯 데드라인 알림 스케줄링 - N+1 완전 해결 + Null 체크
+    // 🎯 데드라인 알림 스케줄링
     public void scheduleDeadlineNotification(Post post){
-        // 데드라인 존재 여부 검사
-        if(post.getDeadline() == null) {
-            log.debug("Deadline이 없는 공지. Post Id : {}", post.getId());
-            return;
-        }
-    // 1️⃣ 짧은 트랜잭션으로 유저와 알림 설정을 한 번에 조회 (Fetch Join)
-    List<User> usersWithSettings = fetchUsersWithNotificationSettings();
-
-    // 2️⃣ 트랜잭션 밖에서 스케줄링
-    String deadline = post.getDeadline();
-    LocalDateTime parsedDeadline = LocalDateTime.parse(deadline);
-
-    for(User user : usersWithSettings){
         try {
-                // Fetch Join으로 이미 로드된 설정 사용 (추가 쿼리 발생 안 함!)
-            NotificationSetting setting = user.getNotificationSetting();
+            if(post == null || post.getDeadline() == null) {
+                log.debug("Deadline이 없는 공지. Post Id: {}", post != null ? post.getId() : "null");
+                return;
+            }
 
-                // Null 체크 추가 (부하 테스트 안정화)
-                Integer hoursBefore;
-                if (setting == null) {
-                    hoursBefore = 24;
-                } else {
-                    hoursBefore = setting.getDeadlineAlertHours();
+            List<User> usersWithSettings = fetchUsersWithNotificationSettings();
+            log.info("📢 데드라인 알림 대상 사용자 수: {}", usersWithSettings.size());
+
+            String deadline = post.getDeadline();
+            LocalDateTime parsedDeadline = LocalDateTime.parse(deadline);
+
+            int successCount = 0;
+
+            for(User user : usersWithSettings){
+                try {
+                    NotificationSetting setting = user.getNotificationSetting();
+
+                    Integer hoursBefore;
+                    if (setting == null) {
+                        hoursBefore = 24;
+                    } else {
+                        hoursBefore = setting.getDeadlineAlertHours();
+                    }
+
+                    LocalDateTime notificationTime = parsedDeadline.minusHours(hoursBefore);
+
+                    if(notificationTime.isBefore(LocalDateTime.now())) {
+                        log.debug("알림 시간이 이미 지났습니다. User: {}, Post: {}", user.getId(), post.getId());
+                        continue;
+                    }
+
+                    Instant instant = notificationTime.atZone(ZoneId.systemDefault()).toInstant();
+                    taskScheduler.schedule(() -> sendDeadlineNotification(user, post, hoursBefore), instant);
+                    log.info("✅ 알림 예약 완료. Post Id: {}, User Id: {}, 예약 시간: {}",
+                        post.getId(), user.getId(), instant);
+                    successCount++;
+
+                } catch (Exception e) {
+                    log.error("❌ 개별 사용자 데드라인 알림 스케줄링 실패 - User ID: {}, Error: {}",
+                        user != null ? user.getId() : "unknown", e.getMessage());
                 }
+            }
 
-                LocalDateTime notificationTime = parsedDeadline.minusHours(hoursBefore);
+            log.info("✅ 데드라인 알림 스케줄링 완료 - 성공: {}명 / 전체: {}명", successCount, usersWithSettings.size());
 
-                if(notificationTime.isBefore(LocalDateTime.now())) {
-                    log.debug("알림 시간이 이미 지났습니다. User: {}, Post: {}", user.getId(), post.getId());
-                    continue;
-                }
-
-                Instant instant = notificationTime.atZone(ZoneId.systemDefault()).toInstant();
-                taskScheduler.schedule(() -> sendDeadlineNotification(user, post, hoursBefore), instant);
-                log.info("✅ 알림 예약 완료. Post Id: {}, User Id: {}, 예약 시간: {}",
-                    post.getId(), user.getId(), instant);
-
-            } catch (Exception e) {
-            // 한 사용자 실패해도 다른 사용자는 계속 처리
-        }
+        } catch (Exception e) {
+            log.error("❌ 데드라인 알림 스케줄링 전체 실패 - Post ID: {}, Error: {}",
+                post != null ? post.getId() : "null", e.getMessage(), e);
         }
     }
 
-    public NotificationListGetResponse getNotificationList(User user){
-            List<Notification> notificationList = notificationRepository.findByUserIdAndIsReadFalse(user.getId(),  false);
-            List<NotificationDto> notificationDtoList = notificationList.stream()
-                    .map(notification -> NotificationDto.builder()
-                            .id(notification.getId())
-                            .eventType(notification.getEventType())
-                            .eventData(notification.getEventData())
-                            .createdAt(notification.getCreatedAt())
-                            .isRead(notification.getIsRead())
-                            .build())
-                    .toList();
-            return NotificationListGetResponse.builder()
-                    .notificationList(notificationDtoList)
-                    .build();
-    }
-    // 🎯 한 번의 쿼리로 유저와 알림 설정을 함께 조회 (N+1 해결)
     @Transactional(readOnly = true)
     protected List<User> fetchUsersWithNotificationSettings() {
         return userRepository.findAllWithNotificationSettings();
     }
 
-    // 🎯 스케줄된 알림 전송 - 트랜잭션 필요 없음
-    // private void sendDeadlineNotification(User user, Post post, Integer hoursLeft){
-    //     Document data = new Document()
     private void sendDeadlineNotification(User user, Post post, Integer hoursLeft){
         try {
             Document data = new Document()
@@ -459,54 +416,117 @@ public class NotificationService {
                 .append("title", post.getTitle())
                 .append("deadline", post.getDeadline())
                 .append("hours_left", hoursLeft)
-                // .append("hours_left", notificationSettingRepository.findByUser(user).getDeadlineAlertHours())
-                .append("hours_left", hoursLeft)
                 .append("created_at", LocalDateTime.now());
             send(user, data, NotificationType.DEADLINE_APPROACHING.name().toLowerCase());
 
-
-
-//            String message = String.format("[%s]\n이 공지사항이 곧 마감입니다 확인하세요! :ttabong_ham:\n[%s]", post.getTitle()
-//            ,post.getLink());
-//            AlarmEvent alarmEvent = new AlarmEvent(user.getEmail(), message);
-//            eventPublisher.publishEvent(alarmEvent);
+            log.info("✅ 데드라인 알림 전송 완료 - User ID: {}, Post ID: {}", user.getId(), post.getId());
 
         } catch (Exception e) {
-            //예외 안던짐
+            log.error("❌ 데드라인 알림 전송 실패 - User ID: {}, Post ID: {}, Error: {}",
+                user.getId(), post.getId(), e.getMessage());
         }
-
     }
 
+    // 🎯 채용 공고 매칭 알림
+    @Async
     public void sendJobMatchingNotification(Post post){
-        List<User> users = userRepository.findUsersWithJobAlertEnabled();
-        for(User user : users){
-            Set<UserPosition> userPositions = user.getUserPositions();
-            List<String> matchingPositions = new ArrayList<>();
-            for(UserPosition userPosition : userPositions){
-                if(userPosition.getPosition().getPositionName().equals(post.getPosition().getPositionName())){
-                    matchingPositions.add(userPosition.getPosition().getPositionName());
+        try {
+            if (post == null) {
+                log.warn("❌ Post가 null입니다");
+                return;
+            }
+
+            if (post.getPosition() == null) {
+                log.debug("Position이 없는 채용 공고. Post Id: {}", post.getId());
+                return;
+            }
+
+            if (post.getOriginalPostId() == null) {
+                log.warn("❌ originalPostId가 null입니다. Post Id: {}", post.getId());
+                return;
+            }
+
+            List<User> users = userRepository.findUsersWithJobAlertEnabled();
+            log.info("📢 채용 공고 알림 대상 사용자 수: {}", users.size());
+
+            String postPositionName = post.getPosition().getPositionName();
+            log.info("📋 채용 공고 포지션: {}", postPositionName);
+
+            int successCount = 0;
+
+            for(User user : users){
+                try {
+                    Set<UserPosition> userPositions = user.getUserPositions();
+
+                    if (userPositions == null || userPositions.isEmpty()) {
+                        log.debug("사용자 포지션 없음 - User ID: {}", user.getId());
+                        continue;
+                    }
+
+                    List<String> matchingPositions = new ArrayList<>();
+
+                    for(UserPosition userPosition : userPositions){
+                        if(userPosition.getPosition() != null &&
+                            userPosition.getPosition().getPositionName() != null &&
+                            userPosition.getPosition().getPositionName().equals(postPositionName)){
+                            matchingPositions.add(userPosition.getPosition().getPositionName());
+                        }
+                    }
+
+                    if(matchingPositions.isEmpty()){
+                        log.debug("포지션 매칭 안됨 - User ID: {}", user.getId());
+                        continue;
+                    }
+
+                    log.info("✅ 채용 공고 매칭 성공 - User ID: {}, 매칭된 포지션: {}, 회사: {}",
+                        user.getId(), matchingPositions, post.getTitle());
+
+                    Document data = new Document()
+                        .append("notice_id", post.getOriginalPostId())
+                        .append("company", post.getTitle())
+                        .append("matched_jobs", matchingPositions)
+                        .append("deadline", post.getDeadline())
+                        .append("created_at", LocalDateTime.now());
+
+                    send(user, data, NotificationType.JOB_RECOMMENDATION.name().toLowerCase());
+                    successCount++;
+
+                } catch (Exception e) {
+                    log.error("❌ 개별 사용자 채용 알림 실패 - User ID: {}, Error: {}",
+                        user.getId(), e.getMessage());
                 }
             }
-            log.info("position : {}", post.getPosition().getPositionName());
-            log.info("매칭된 포지션 갯수: {}", matchingPositions.size());
-            if(matchingPositions.isEmpty()){
-                continue;
-            }
-            Document data = new Document()
-                    .append("notice_id", post.getOriginalPostId())
-                    .append("company", post.getTitle())
-                    .append("matched_jobs", matchingPositions)
-                    .append("deadline", post.getDeadline())
-                    .append("created_at", LocalDateTime.now());
-            send(user, data, NotificationType.JOB_RECOMMENDATION.name().toLowerCase());
+
+            log.info("✅ 채용 공고 알림 완료 - 성공: {}명 / 전체: {}명", successCount, users.size());
+
+        } catch (Exception e) {
+            log.error("❌ 채용 공고 알림 전체 실패 - Post ID: {}, Error: {}",
+                post != null ? post.getId() : "null", e.getMessage(), e);
         }
+    }
+
+    public NotificationListGetResponse getNotificationList(User user){
+        List<Notification> notificationList = notificationRepository.findByUserIdAndIsReadFalse(user.getId(), false);
+        List<NotificationDto> notificationDtoList = notificationList.stream()
+            .map(notification -> NotificationDto.builder()
+                .id(notification.getId())
+                .eventType(notification.getEventType())
+                .eventData(notification.getEventData())
+                .createdAt(notification.getCreatedAt())
+                .isRead(notification.getIsRead())
+                .build())
+            .toList();
+        return NotificationListGetResponse.builder()
+            .notificationList(notificationDtoList)
+            .build();
     }
 
     public void updateNotificationIsReadStatus(User user, String notificationId){
         Notification notification = notificationRepository.findById(notificationId)
-                .orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
+            .orElseThrow(() -> new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND));
         if(!notification.getUserId().equals(user.getId())){
-            log.error("해당 유저의 공지가 아닙니당, userId : {}, notification.getUserId : {}", user.getId(), notification.getUserId());
+            log.error("해당 유저의 공지가 아닙니다, userId: {}, notification.getUserId: {}",
+                user.getId(), notification.getUserId());
             throw new CustomException(ErrorCode.NOTIFICATION_NOT_FOUND);
         }
         notification.updateStatus(true);
@@ -514,6 +534,6 @@ public class NotificationService {
     }
 
     public void updateAllNotificationIsReadStatus(User user){
-       notificationRepository.updateAllToRead(user.getId());
+        notificationRepository.updateAllToRead(user.getId());
     }
 }
