@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Download, FileText, Image as ImageIcon } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ImageWithFallback } from '@/components/common/ImageWithFallback';
-import { API_ENDPOINTS } from '@/constants/api';
-import type { Attachment } from '@/types/notice';
+import { useState, useEffect } from "react";
+import { Download, FileText, Image as ImageIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ImageWithFallback } from "@/components/common/ImageWithFallback";
+import { API_ENDPOINTS } from "@/constants/api";
+import type { Attachment } from "@/types/notice";
 
 interface AttachmentListProps {
   attachments: Attachment[];
@@ -26,14 +26,14 @@ export const AttachmentList = ({ attachments }: AttachmentListProps) => {
       const urls: Record<string, string> = {};
 
       for (const attachment of attachments) {
-        if (attachment.type === 'image') {
+        if (attachment.type === "image") {
           try {
             // 썸네일 엔드포인트 사용
             const thumbnailUrl = API_ENDPOINTS.files.thumbnail(attachment.id);
 
             const response = await fetch(thumbnailUrl, {
               headers: {
-                'Authorization': `Bearer ${token}`,
+                Authorization: `Bearer ${token}`,
               },
             });
 
@@ -55,17 +55,17 @@ export const AttachmentList = ({ attachments }: AttachmentListProps) => {
 
     // 클린업: Object URL 해제
     return () => {
-      Object.values(imageUrls).forEach(url => URL.revokeObjectURL(url));
+      Object.values(imageUrls).forEach((url) => URL.revokeObjectURL(url));
     };
   }, [attachments]);
 
   const getAttachmentIcon = (type: string) => {
     switch (type) {
-      case 'image':
+      case "image":
         return <ImageIcon className="w-4 h-4" />;
-      case 'pdf':
-      case 'excel':
-      case 'file':
+      case "pdf":
+      case "excel":
+      case "file":
         return <FileText className="w-4 h-4" />;
       default:
         return <FileText className="w-4 h-4" />;
@@ -81,17 +81,17 @@ export const AttachmentList = ({ attachments }: AttachmentListProps) => {
       const token = import.meta.env.VITE_MATTERMOST_FILE_TOKEN;
       const response = await fetch(url, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
       });
 
       if (!response.ok) {
-        throw new Error('파일 다운로드 실패');
+        throw new Error("파일 다운로드 실패");
       }
 
       const blob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = downloadUrl;
       link.download = filename;
       document.body.appendChild(link);
@@ -99,8 +99,8 @@ export const AttachmentList = ({ attachments }: AttachmentListProps) => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
-      console.error('파일 다운로드 에러:', error);
-      alert('파일 다운로드에 실패했습니다.');
+      console.error("파일 다운로드 에러:", error);
+      // alert("파일 다운로드에 실패했습니다.");
     }
   };
 
@@ -116,7 +116,7 @@ export const AttachmentList = ({ attachments }: AttachmentListProps) => {
       <div className="space-y-4">
         {attachments.map((attachment) => (
           <div key={attachment.id}>
-            {attachment.type === 'image' ? (
+            {attachment.type === "image" ? (
               /* 이미지 첨부파일 */
               <div className="rounded-lg border overflow-hidden">
                 <ImageWithFallback
@@ -125,12 +125,16 @@ export const AttachmentList = ({ attachments }: AttachmentListProps) => {
                   className="w-full h-auto max-h-96 object-contain"
                 />
                 <div className="bg-gray-50 px-3 py-2 border-t flex items-center justify-between">
-                  <span className="text-xs text-gray-600">{attachment.name}</span>
+                  <span className="text-xs text-gray-600">
+                    {attachment.name}
+                  </span>
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-7 px-2"
-                    onClick={() => downloadFile(attachment.url, attachment.name)}
+                    onClick={() =>
+                      downloadFile(attachment.url, attachment.name)
+                    }
                   >
                     <Download className="w-3 h-3 mr-1" />
                     다운로드
@@ -144,8 +148,12 @@ export const AttachmentList = ({ attachments }: AttachmentListProps) => {
                   {getAttachmentIcon(attachment.type)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm truncate font-medium">{attachment.name}</p>
-                  <p className="text-xs text-gray-500">{attachment.mimeType || '파일'}</p>
+                  <p className="text-sm truncate font-medium">
+                    {attachment.name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {attachment.mimeType || "파일"}
+                  </p>
                 </div>
                 <Button
                   variant="outline"
