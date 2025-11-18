@@ -272,8 +272,8 @@ export default function DashboardPage() {
           Dashboard
         </h1>
 
-        {/* 상단 3개 위젯 (북마크 / 마감 임박 / 채용공고) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* 상단 4개 위젯 (북마크 / 마감 임박 / 채용공고 / 최근 공지) */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
           <BookmarkedNoticesWidget
             notices={bookmarkedNotices.slice(0, 5)} // 위젯에서는 상위 5개만 표시
             onRefresh={refreshBookmarks}
@@ -284,19 +284,15 @@ export default function DashboardPage() {
             onNoticeClick={handleNoticeClick}
           />
           <PersonalizedJobsWidget jobs={displayedJobs} />
+          <RecentNoticesWidget
+            notices={allNotices}
+            onNoticeClick={handleNoticeClick}
+          />
         </div>
 
         {/* 주간 캘린더 */}
         <div className="mb-6">
           <WeeklyCalendarWidget events={weeklyEvents} />
-        </div>
-
-        {/* 최근 공지 (SSE 실시간 연동) */}
-        <div>
-          <RecentNoticesWidget
-            notices={allNotices}
-            onNoticeClick={handleNoticeClick}
-          />
         </div>
       </div>
 
