@@ -16,6 +16,9 @@ import com.A105.prham.user.entity.User;
 import com.A105.prham.user.entity.UserPosition;
 import com.A105.prham.user.repository.UserRepository;
 import com.A105.prham.webhook.entity.Post;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
@@ -428,8 +431,13 @@ public class NotificationService {
     }
 
     // 🎯 채용 공고 매칭 알림
+    // NotificationService.java
+
+    // 🎯 채용 공고 매칭 알림
     @Async
     public void sendJobMatchingNotification(Post post){
+        log.info("🎯 채용 공고 매칭 알림 시작 - Post ID: {}", post != null ? post.getId() : "null");
+
         try {
             if (post == null) {
                 log.warn("❌ Post가 null입니다");
@@ -446,45 +454,56 @@ public class NotificationService {
                 return;
             }
 
-            List<User> users = userRepository.findUsersWithJobAlertEnabled();
-            log.info("📢 채용 공고 알림 대상 사용자 수: {}", users.size());
+            // ✅ 트랜잭션 안에서 데이터 로드
+            List<UserWithPositions> usersWithPositions = fetchUsersWithPositionsForJob();
+
+            log.info("📢 채용 공고 알림 대상 사용자 수: {}", usersWithPositions.size());
+
+            if (usersWithPositions.isEmpty()) {
+                log.warn("⚠️ 채용 알림을 활성화한 사용자가 없습니다");
+                return;
+            }
 
             String postPositionName = post.getPosition().getPositionName();
             log.info("📋 채용 공고 포지션: {}", postPositionName);
 
             int successCount = 0;
+            int totalUsers = 0;
+            int noPositionUsers = 0;
+            int noMatchUsers = 0;
 
-            for(User user : users){
+            for(UserWithPositions userWithPos : usersWithPositions){
+                totalUsers++;
                 try {
-                    Set<UserPosition> userPositions = user.getUserPositions();
+                    User user = userWithPos.getUser();
+                    List<String> userPositionNames = userWithPos.getPositionNames();
 
-                    if (userPositions == null || userPositions.isEmpty()) {
-                        log.debug("사용자 포지션 없음 - User ID: {}", user.getId());
+                    log.debug("👤 사용자 체크 - User ID: {}, Positions: {}",
+                        user.getId(), userPositionNames);
+
+                    if (userPositionNames.isEmpty()) {
+                        log.debug("📍 사용자 포지션 없음 - User ID: {}", user.getId());
+                        noPositionUsers++;
                         continue;
                     }
 
-                    List<String> matchingPositions = new ArrayList<>();
+                    // 포지션 매칭
+                    boolean isMatched = userPositionNames.contains(postPositionName);
 
-                    for(UserPosition userPosition : userPositions){
-                        if(userPosition.getPosition() != null &&
-                            userPosition.getPosition().getPositionName() != null &&
-                            userPosition.getPosition().getPositionName().equals(postPositionName)){
-                            matchingPositions.add(userPosition.getPosition().getPositionName());
-                        }
-                    }
-
-                    if(matchingPositions.isEmpty()){
-                        log.debug("포지션 매칭 안됨 - User ID: {}", user.getId());
+                    if(!isMatched){
+                        log.debug("❌ 포지션 매칭 안됨 - User ID: {}, User Positions: {}, Post Position: {}",
+                            user.getId(), userPositionNames, postPositionName);
+                        noMatchUsers++;
                         continue;
                     }
 
-                    log.info("✅ 채용 공고 매칭 성공 - User ID: {}, 매칭된 포지션: {}, 회사: {}",
-                        user.getId(), matchingPositions, post.getTitle());
+                    log.info("✅ 채용 공고 매칭 성공! - User ID: {}, 매칭된 포지션: {}, 회사: {}",
+                        user.getId(), postPositionName, post.getTitle());
 
                     Document data = new Document()
                         .append("notice_id", post.getOriginalPostId())
                         .append("company", post.getTitle())
-                        .append("matched_jobs", matchingPositions)
+                        .append("matched_jobs", List.of(postPositionName))
                         .append("deadline", post.getDeadline())
                         .append("created_at", LocalDateTime.now());
 
@@ -492,17 +511,49 @@ public class NotificationService {
                     successCount++;
 
                 } catch (Exception e) {
-                    log.error("❌ 개별 사용자 채용 알림 실패 - User ID: {}, Error: {}",
-                        user.getId(), e.getMessage());
+                    log.error("❌ 개별 사용자 채용 알림 실패 - Error: {}", e.getMessage(), e);
                 }
             }
 
-            log.info("✅ 채용 공고 알림 완료 - 성공: {}명 / 전체: {}명", successCount, users.size());
+            log.info("✅ 채용 공고 알림 완료 - 성공: {}명, 포지션없음: {}명, 매칭안됨: {}명, 전체: {}명",
+                successCount, noPositionUsers, noMatchUsers, totalUsers);
 
         } catch (Exception e) {
             log.error("❌ 채용 공고 알림 전체 실패 - Post ID: {}, Error: {}",
                 post != null ? post.getId() : "null", e.getMessage(), e);
         }
+    }
+
+    // ✅ 트랜잭션 안에서 User와 Position을 함께 로드
+    @Transactional(readOnly = true)
+    protected List<UserWithPositions> fetchUsersWithPositionsForJob() {
+        List<User> users = userRepository.findUsersWithJobAlertEnabled();
+
+        return users.stream()
+            .map(user -> {
+                // 트랜잭션 안에서 Lazy Loading 강제 실행
+                Set<UserPosition> userPositions = user.getUserPositions();
+                List<String> positionNames = new ArrayList<>();
+
+                if (userPositions != null) {
+                    for (UserPosition up : userPositions) {
+                        if (up.getPosition() != null && up.getPosition().getPositionName() != null) {
+                            positionNames.add(up.getPosition().getPositionName());
+                        }
+                    }
+                }
+
+                return new UserWithPositions(user, positionNames);
+            })
+            .collect(Collectors.toList());
+    }
+
+    // ✅ DTO 클래스 추가 (NotificationService 안에 inner class로)
+    @Getter
+    @AllArgsConstructor
+    public static class UserWithPositions {
+        private User user;
+        private List<String> positionNames;
     }
 
     public NotificationListGetResponse getNotificationList(User user){
