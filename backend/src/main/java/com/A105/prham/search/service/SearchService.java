@@ -8,6 +8,7 @@ import com.A105.prham.search.dto.request.PostSearchRequest;
 import com.A105.prham.search.dto.response.PostSearchItem;
 import com.A105.prham.search.dto.response.PostSearchResponse;
 import com.A105.prham.search.dto.response.SearchMetadata;
+import com.A105.prham.user.entity.User;
 import com.A105.prham.user_notice_like.repository.UserNoticeLikeRepository;
 import com.A105.prham.webhook.entity.Post;
 import com.A105.prham.webhook.service.PostProcessorService;
@@ -52,7 +53,7 @@ public class SearchService {
     /**
      * 게시물 검색 (Post 기반)
      */
-    public PostSearchResponse searchPosts(PostSearchRequest request,Long userId) {
+    public PostSearchResponse searchPosts(PostSearchRequest request, User user) {
         try {
             // 1. 검색 모드 결정
             SearchMode mode = determineSearchMode(request);
@@ -64,7 +65,7 @@ public class SearchService {
             List<PostSearchItem> items = convertToSearchItems(meilisearchResult);
 
             // 4. 사용자별 데이터 추가 (isLiked, isCompleted)
-            items = enrichWithUserData(items, userId);
+            items = enrichWithUserData(items, user.getId());
 
             // 5. 좋아요 필터 적용 (후처리)
             if (Boolean.TRUE.equals(request.getIsLiked())) {
@@ -89,7 +90,21 @@ public class SearchService {
                 }
             }
 
-            // 6. 응답 생성
+            // 7. 캠퍼스 필터 적용 (후처리)
+
+            items = items.stream()
+                    .filter(item -> {
+                        String campusId = item.getCampusId();
+                        if (campusId == null) return true; // null이면 모든 캠퍼스 대상
+
+                        String userCampusName = user.getCampus().getName();
+                        if (userCampusName == null) return true;
+                        return Arrays.asList(campusId.split(","))
+                                .contains(userCampusName);
+                    })
+                    .collect(Collectors.toList());
+
+            // 8. 응답 생성
             return buildResponse(items, meilisearchResult, request, mode);
 
         } catch (Exception e) {

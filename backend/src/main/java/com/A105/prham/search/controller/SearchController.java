@@ -67,7 +67,7 @@ public class SearchController {
 
 
             // 검색 실행
-            PostSearchResponse result = searchService.searchPosts(request, user.getId());
+            PostSearchResponse result = searchService.searchPosts(request, user);
 
             return ApiResponseDto.success(SuccessCode.SUCCESS, result);
 
