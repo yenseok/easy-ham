@@ -7,17 +7,20 @@ pipeline {
 
     environment {
         PROJECT_DIR = '.'
+        FRONTEND_DIR = "${PROJECT_DIR}/frontend"
         BACKEND_DIR = "${PROJECT_DIR}/backend"
 
-        // Docker Hub 정보
+        // ✅ Docker Hub 정보
         DOCKER_HUB_CREDENTIAL_ID = 'dockerhub-jenkins'
         DOCKER_HUB_USER = 'bonghyerin'
 
-        // Backend만 사용
-        DOCKER_BACKEND_IMAGE = "${DOCKER_HUB_USER}/pyeonriham-be"
+        // ✅ 새 이미지명
+        DOCKER_FRONTEND_IMAGE = "${DOCKER_HUB_USER}/pyeonriham-fe"
+        DOCKER_BACKEND_IMAGE  = "${DOCKER_HUB_USER}/pyeonriham-be"
+
         IMAGE_TAG = "${BUILD_NUMBER}"
 
-        // 배포 서버 정보
+        // ✅ 배포 서버 정보
         EC2_USER = 'ubuntu'
         EC2_HOST = '3.39.246.235'
         EC2_PATH = '/home/ubuntu/deploy'
@@ -48,34 +51,56 @@ pipeline {
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Build Frontend') {
             steps {
-                echo '=== Building Backend Docker Image ==='
+                echo '=== Building Frontend (npm) ==='
+                dir(FRONTEND_DIR) {
+                    sh '''
+                        npm install
+                        npm run build
+                    '''
+                }
+                echo '✅ Frontend 빌드 완료!'
+            }
+        }
+
+        stage('Build Docker Images') {
+            steps {
+                echo '=== Building Docker Images ==='
                 script {
                     sh """
                         echo '🗑️  이전 이미지 삭제 중...'
                         docker rmi ${DOCKER_BACKEND_IMAGE}:latest || true
+                        docker rmi ${DOCKER_FRONTEND_IMAGE}:latest || true
                     """
-
+                    
                     dir(BACKEND_DIR) {
                         sh """
                             docker build -t ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} .
                             docker tag ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} ${DOCKER_BACKEND_IMAGE}:latest
                         """
                     }
+                    dir(FRONTEND_DIR) {
+                        sh """
+                            docker build -t ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} .
+                            docker tag ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} ${DOCKER_FRONTEND_IMAGE}:latest
+                        """
+                    }
                 }
-                echo '✅ Backend Docker 이미지 빌드 완료!'
+                echo '✅ Docker 이미지 빌드 완료!'
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                echo '=== Pushing Backend Image to Docker Hub ==='
+                echo '=== Pushing Images to Docker Hub ==='
                 withCredentials([usernamePassword(credentialsId: "${DOCKER_HUB_CREDENTIAL_ID}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh """
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                         docker push ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG}
                         docker push ${DOCKER_BACKEND_IMAGE}:latest
+                        docker push ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG}
+                        docker push ${DOCKER_FRONTEND_IMAGE}:latest
                         docker logout
                     """
                 }
@@ -88,6 +113,7 @@ pipeline {
                 echo '=== 🧹 Jenkins 서버 이미지 정리 ==='
                 sh """
                     docker rmi ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} || true
+                    docker rmi ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} || true
                     docker image prune -f
                     echo '✅ Jenkins 서버 이미지 정리 완료!'
                 """
@@ -96,7 +122,7 @@ pipeline {
 
         stage('Deploy to EC2 Server') {
             steps {
-                echo '=== 🚀 Deploying Backend on EC2 Server (3.39.246.235) ==='
+                echo '=== 🚀 Deploying on EC2 Server (3.39.246.235) ==='
                 script {
                     sshagent(credentials: ["${SSH_CREDENTIAL_ID}"]) {
                         sh """
@@ -108,7 +134,7 @@ pipeline {
                                 docker compose pull
                                 docker compose up -d
                                 docker image prune -f
-                                echo '✅ Backend 배포 완료! https://pyeonriham.site'
+                                echo '✅ 배포 완료! https://pyeonriham.site'
                             "
                         """
                     }
@@ -119,7 +145,7 @@ pipeline {
 
     post {
         success {
-            echo '🎉 전체 파이프라인 성공! Backend 배포 완료!'
+            echo '🎉 전체 파이프라인 성공! 서비스 배포 완료!'
         }
         failure {
             echo '❌ Pipeline 실패! 로그를 확인하세요.'
