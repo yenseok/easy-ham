@@ -1,7 +1,7 @@
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Clock, ExternalLink, ArrowLeft } from 'lucide-react';
+import { Clock, ExternalLink, ArrowLeft, Star, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { MessageHeader } from './components/MessageHeader';
 import { MessageMeta } from './components/MessageMeta';
@@ -14,6 +14,8 @@ export interface MessageDetailModalProps {
   onClose: () => void;
   showBackButton?: boolean;
   onBack?: () => void;
+  onBookmarkToggle?: (id: number) => void;
+  onCompleteToggle?: (id: number) => void;
 }
 
 export interface MessageDetail {
@@ -30,6 +32,8 @@ export interface MessageDetail {
   dday?: number | null;
   mattermostUrl?: string;
   attachments?: Attachment[];
+  bookmarked?: boolean;
+  completed?: boolean;
 }
 
 /**

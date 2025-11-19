@@ -247,6 +247,10 @@ export default function SearchPage() {
         // 새 검색: 기존 결과를 새 결과로 교체
         setNotices(newNotices);
         setCurrentPage(0);
+        // 스크롤을 최상단으로 이동
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
+        }
       } else {
         // 무한스크롤: 기존 결과에 추가
         setNotices((prev) => [...prev, ...newNotices]);
