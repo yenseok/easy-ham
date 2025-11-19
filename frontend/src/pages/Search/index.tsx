@@ -505,6 +505,21 @@ export default function SearchPage() {
     }
   };
 
+  /**
+   * 특정 날짜에 일정(deadline)이 있는지 확인
+   */
+  const hasEventsOnDate = (date: Date): boolean => {
+    return notices.some((notice) => {
+      if (!notice.deadline) return false;
+      const deadlineDate = typeof notice.deadline === 'string' ? new Date(notice.deadline) : notice.deadline;
+      return (
+        deadlineDate.getFullYear() === date.getFullYear() &&
+        deadlineDate.getMonth() === date.getMonth() &&
+        deadlineDate.getDate() === date.getDate()
+      );
+    });
+  };
+
   return (
     <PageLayout>
       <div className="max-w-[1920px] mx-auto px-4 md:px-8 py-4 lg:h-[calc(100vh-4rem)] lg:max-h-[calc(100vh-4rem)] lg:min-h-[calc(100vh-4rem)] lg:overflow-hidden flex flex-col">
@@ -568,7 +583,10 @@ export default function SearchPage() {
           <div className="hidden lg:flex lg:flex-col w-80 gap-4 shrink-0 max-h-full">
             {/* 미니 캘린더 */}
             <div className="shrink-0">
-              <MiniCalendar onNavigateToCalendar={() => navigate('/calendar')} />
+              <MiniCalendar
+                onNavigateToCalendar={() => navigate('/calendar')}
+                hasEventsOnDate={hasEventsOnDate}
+              />
             </div>
 
             {/* 채용 정보 위젯 */}
