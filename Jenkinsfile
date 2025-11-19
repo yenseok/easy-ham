@@ -70,30 +70,33 @@ pipeline {
             }
         }
 
-        stage('Build Docker Images') {
+        stage('Build Frontend') {
             steps {
-                echo '=== Building Docker Images ==='
                 script {
-                    sh """
-                        echo '🗑️  이전 이미지 삭제 중...'
-                        docker rmi ${DOCKER_BACKEND_IMAGE}:latest || true
-                        docker rmi ${DOCKER_FRONTEND_IMAGE}:latest || true
-                    """
+                    echo '=== Building Frontend (React + Vite) ==='
                     
-                    dir(BACKEND_DIR) {
-                        sh """
-                            docker build -t ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} .
-                            docker tag ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} ${DOCKER_BACKEND_IMAGE}:latest
-                        """
-                    }
-                    dir(FRONTEND_DIR) {
-                        sh """
-                            docker build -t ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} .
-                            docker tag ${DOCKER_FRONTEND_IMAGE}:${IMAGE_TAG} ${DOCKER_FRONTEND_IMAGE}:latest
-                        """
-                    }
+                    // .env.prod 파일을 직접 읽어서 환경 변수로 설정
+                    sh '''
+                        cd frontend
+                        
+                        # .env.prod에서 환경 변수 추출 (export 형태로 변환)
+                        if [ -f ../.env.prod ]; then
+                            export $(cat ../.env.prod | grep "^VITE_" | xargs)
+                        fi
+                        
+                        # Docker 빌드 시 build-arg로 전달
+                        docker build \
+                        --build-arg VITE_SSO_CLIENT_ID="${VITE_SSO_CLIENT_ID}" \
+                        --build-arg VITE_SSO_REDIRECT_URI="${VITE_SSO_REDIRECT_URI}" \
+                        --build-arg VITE_API_BASE_URL="${VITE_API_BASE_URL}" \
+                        --build-arg VITE_MATTERMOST_FILE_TOKEN="${VITE_MATTERMOST_FILE_TOKEN}" \
+                        --build-arg VITE_MATTERMOST_URL="${VITE_MATTERMOST_URL}" \
+                        -t bonghyerin/pyeonriham-fe:latest \
+                        .
+                    '''
+                    
+                    echo '✅ Frontend Docker 이미지 빌드 완료!'
                 }
-                echo '✅ Docker 이미지 빌드 완료!'
             }
         }
 
