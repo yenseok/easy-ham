@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNotificationStore } from "@/stores/useNotificationStore";
-import { useSSEStore } from "@/stores/useSSEStore";
 import { SubscriptionKeywordModal } from "@/components/modals/SubscriptionKeywordModal";
 import {
   MessageDetailModal,
@@ -29,7 +28,7 @@ export const NotificationDropdown = () => {
   const [, setRefreshTrigger] = useState(0);
   const { notifications, unreadCount, markAsRead, markAllAsRead } =
     useNotificationStore();
-  const { notificationStreamStatus } = useSSEStore();
+  // const { notificationStreamStatus } = useSSEStore(); // SSE 연결 상태 배지 주석 처리에 따라 비활성화
 
   // 드롭다운이 열려있을 때 30초마다 시간 재계산 (deadline 배지 갱신용)
   useEffect(() => {
@@ -142,7 +141,8 @@ export const NotificationDropdown = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h3 className="text-base font-bold">알림</h3>
-              <span
+              {/* SSE 연결 상태 배지 (디버그용 - 주석 처리됨) */}
+              {/* <span
                 className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full ${
                   notificationStreamStatus === "connected"
                     ? "bg-green-100 text-green-700"
@@ -171,7 +171,7 @@ export const NotificationDropdown = () => {
                   : notificationStreamStatus === "error"
                   ? "에러"
                   : "끊김"}
-              </span>
+              </span> */}
             </div>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
