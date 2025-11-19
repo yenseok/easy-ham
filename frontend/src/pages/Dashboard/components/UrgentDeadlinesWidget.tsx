@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { formatRelativeTime } from "@/utils/dateFormatter";
 import type { Notice } from "@/types/notice";
 import { ChevronDown, Clock } from "lucide-react";
+import { UrgentDeadlinesModal } from "@/components/modals/UrgentDeadlinesModal";
 
 interface UrgentDeadlinesWidgetProps {
   notices: Notice[];
@@ -17,6 +19,7 @@ export default function UrgentDeadlinesWidget({
   isMobile = false,
 }: UrgentDeadlinesWidgetProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (!isMobile) {
@@ -42,28 +45,37 @@ export default function UrgentDeadlinesWidget({
   };
 
   return (
-    <Card className="shadow-md">
-      <div className="h-16 px-6 flex items-center border-b gap-2">
-        <div className="flex items-center gap-2">
-          <Clock className="w-5 h-5 text-(--brand-orange)" />
-          <h2 className="text-lg" style={{ fontWeight: 700 }}>
-            마감 임박
-          </h2>
-        </div>
-        {isMobile && (
-          <button
-            type="button"
-            aria-expanded={!isCollapsed}
-            aria-label={isCollapsed ? "위젯 펼치기" : "위젯 접기"}
-            onClick={() => setIsCollapsed((prev) => !prev)}
-            className="ml-auto md:hidden text-gray-500 hover:text-gray-900 transition-colors p-1"
+    <>
+      <Card className="shadow-md">
+        <div className="h-16 px-6 flex items-center border-b gap-2">
+          <div className="flex items-center gap-2">
+            <Clock className="w-5 h-5 text-(--brand-orange)" />
+            <h2 className="text-lg" style={{ fontWeight: 700 }}>
+              마감 임박
+            </h2>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsModalOpen(true)}
+            className="ml-auto text-sm text-gray-600 hover:text-gray-900"
           >
-            <ChevronDown
-              className={`w-4 h-4 transition-transform ${isCollapsed ? "-rotate-180" : "rotate-0"}`}
-            />
-          </button>
-        )}
-      </div>
+            더보기
+          </Button>
+          {isMobile && (
+            <button
+              type="button"
+              aria-expanded={!isCollapsed}
+              aria-label={isCollapsed ? "위젯 펼치기" : "위젯 접기"}
+              onClick={() => setIsCollapsed((prev) => !prev)}
+              className="md:hidden text-gray-500 hover:text-gray-900 transition-colors p-1"
+            >
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${isCollapsed ? "-rotate-180" : "rotate-0"}`}
+              />
+            </button>
+          )}
+        </div>
       {(!isMobile || !isCollapsed) && (
         <div className="px-4 py-4">
           {notices.length === 0 ? (
@@ -108,6 +120,12 @@ export default function UrgentDeadlinesWidget({
           )}
         </div>
       )}
-    </Card>
+      </Card>
+
+      <UrgentDeadlinesModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+      />
+    </>
   );
 }
