@@ -225,7 +225,7 @@ export const NotificationDropdown = () => {
                   {/* 상대 시간 + 배지 */}
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs text-gray-500">
-                      {notif.relativeTime || formatRelativeTime(notif.time)}
+                      {formatRelativeTime(notif.time)}
                     </p>
                     {notif.badge && (
                       <span className="shrink-0 text-[11px] bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded whitespace-nowrap">

@@ -20,7 +20,6 @@ export interface Notification {
   read: boolean;
   content?: string;
   badge?: string; // 오른쪽에 표시할 배지 텍스트 (키워드, 마감시간, 직무 등)
-  relativeTime?: string; // 캐시된 상대 시간 문자열 (최적화용)
   notice_id?: number; // 공지사항 상세조회용 ID
   deadline?: string; // deadline_approaching 이벤트의 마감 시간 (ISO 8601 형식)
 }
@@ -35,7 +34,6 @@ interface NotificationState {
     notification: Omit<Notification, "time"> & {
       id: string;
       time?: string;
-      relativeTime?: string;
     }
   ) => void;
   loadNotifications: () => Promise<void>;
@@ -84,7 +82,6 @@ function convertServerNotificationToUI(
     time: notification.createdAt,
     read: notification.isRead,
     badge,
-    relativeTime: "방금 전",
     notice_id,
     deadline:
       notification.eventType === "deadline_approaching"
@@ -114,7 +111,6 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     const newNotification: Notification = {
       ...notification,
       time: notification.time || now.toISOString(),
-      relativeTime: notification.relativeTime || "방금 전",
     };
     console.log(
       "[Notification Store] Adding SSE notification:",
