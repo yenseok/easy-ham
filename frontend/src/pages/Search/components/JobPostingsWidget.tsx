@@ -38,17 +38,6 @@ export function JobPostingsWidget({
           <Briefcase className="w-5 h-5 text-black" />
           <h3 className="font-semibold text-gray-900 text-base">채용 정보</h3>
         </div>
-        {postings.length > 3 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onViewAll}
-            className="h-8 text-sm"
-          >
-            전체보기
-            <ArrowRight className="w-4 h-4 ml-1" />
-          </Button>
-        )}
       </div>
 
       {/* 채용공고 목록 */}
