@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import type { JobPostItem } from "@/types/api";
 import { Briefcase, ChevronDown, ExternalLink } from "lucide-react";
+import { PersonalizedJobsModal } from "@/components/modals/PersonalizedJobsModal";
 
 interface PersonalizedJobsWidgetProps {
   jobs: JobPostItem[];
@@ -14,6 +16,7 @@ export default function PersonalizedJobsWidget({
   isMobile = false,
 }: PersonalizedJobsWidgetProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (!isMobile) {
@@ -43,28 +46,37 @@ export default function PersonalizedJobsWidget({
   };
 
   return (
-    <Card className="shadow-md">
-      <div className="h-16 px-6 flex items-center border-b gap-2">
-        <div className="flex items-center gap-2">
-          <Briefcase className="w-5 h-5 text-(--brand-orange)" />
-          <h2 className="text-lg" style={{ fontWeight: 700 }}>
-            맞춤 채용
-          </h2>
-        </div>
-        {isMobile && (
-          <button
-            type="button"
-            aria-expanded={!isCollapsed}
-            aria-label={isCollapsed ? "위젯 펼치기" : "위젯 접기"}
-            onClick={() => setIsCollapsed((prev) => !prev)}
-            className="ml-auto md:hidden text-gray-500 hover:text-gray-900 transition-colors p-1"
+    <>
+      <Card className="shadow-md">
+        <div className="h-16 px-6 flex items-center border-b gap-2">
+          <div className="flex items-center gap-2">
+            <Briefcase className="w-5 h-5 text-(--brand-orange)" />
+            <h2 className="text-lg" style={{ fontWeight: 700 }}>
+              맞춤 채용
+            </h2>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsModalOpen(true)}
+            className="ml-auto text-sm text-gray-600 hover:text-gray-900"
           >
-            <ChevronDown
-              className={`w-4 h-4 transition-transform ${isCollapsed ? "-rotate-180" : "rotate-0"}`}
-            />
-          </button>
-        )}
-      </div>
+            더보기
+          </Button>
+          {isMobile && (
+            <button
+              type="button"
+              aria-expanded={!isCollapsed}
+              aria-label={isCollapsed ? "위젯 펼치기" : "위젯 접기"}
+              onClick={() => setIsCollapsed((prev) => !prev)}
+              className="md:hidden text-gray-500 hover:text-gray-900 transition-colors p-1"
+            >
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${isCollapsed ? "-rotate-180" : "rotate-0"}`}
+              />
+            </button>
+          )}
+        </div>
       {(!isMobile || !isCollapsed) && (
         <div className="px-4 py-4">
           {jobs.length === 0 ? (
@@ -118,6 +130,12 @@ export default function PersonalizedJobsWidget({
           )}
         </div>
       )}
-    </Card>
+      </Card>
+
+      <PersonalizedJobsModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+      />
+    </>
   );
 }

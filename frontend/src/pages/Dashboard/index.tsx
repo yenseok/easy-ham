@@ -1,10 +1,12 @@
 import { useEffect, useState, useMemo } from "react";
+import { toast } from "sonner";
 import { PageLayout } from "@/components/layouts/PageLayout";
 import { searchApi } from "@/services/api/search";
 import { jobsApi } from "@/services/api/jobs";
 import { sseManager } from "@/services/sse/sseManager";
 import { useSSEPostStore } from "@/stores/useSSEPostStore";
 import { bookmarksApi } from "@/services/api/bookmarks";
+import { completionsApi } from "@/services/api/completions";
 import { getUserProfile } from "@/services/api/auth";
 import { convertBookmarkItemToNotice } from "@/utils/bookmarkMapper";
 import { convertSSEEventToNotice } from "@/utils/sseMapper";
@@ -271,10 +273,95 @@ export default function DashboardPage() {
       dday: notice.dday,
       mattermostUrl,
       attachments: notice.attachments,
+      bookmarked: notice.bookmarked,
+      completed: notice.completed,
     };
 
     setSelectedMessage(messageDetail);
     setIsModalOpen(true);
+  };
+
+  /**
+   * 북마크 토글 (낙관적 업데이트)
+   */
+  const toggleBookmark = async (id: number) => {
+    const notice = allNotices.find((n) => n.id === id) || bookmarkedNotices.find((n) => n.id === id);
+    if (!notice) return;
+
+    const wasBookmarked = notice.bookmarked;
+
+    // 1. 즉시 UI 업데이트
+    const updateNotice = (n: Notice) => n.id === id ? { ...n, bookmarked: !n.bookmarked } : n;
+    setAllNotices((prev) => prev.map(updateNotice));
+    setBookmarkedNotices((prev) => prev.map(updateNotice));
+
+    try {
+      // 2. API 호출
+      await bookmarksApi.toggle(id, wasBookmarked);
+      toast.success(wasBookmarked ? '북마크가 해제되었습니다.' : '북마크에 추가되었습니다.');
+
+      // 3. 북마크 목록 갱신
+      await refreshBookmarks();
+    } catch (error) {
+      // 4. 실패 시 롤백
+      console.error('[북마크 API] 호출 실패:', error);
+      setAllNotices((prev) => prev.map(updateNotice));
+      setBookmarkedNotices((prev) => prev.map(updateNotice));
+      toast.error('북마크 처리에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  /**
+   * 완료 토글 (낙관적 업데이트)
+   */
+  const toggleComplete = async (id: number) => {
+    const notice = allNotices.find((n) => n.id === id) || bookmarkedNotices.find((n) => n.id === id);
+    if (!notice) return;
+
+    const wasCompleted = notice.completed;
+
+    // 1. 즉시 UI 업데이트
+    const updateNotice = (n: Notice) => n.id === id ? { ...n, completed: !n.completed } : n;
+    setAllNotices((prev) => prev.map(updateNotice));
+    setBookmarkedNotices((prev) => prev.map(updateNotice));
+
+    try {
+      // 2. API 호출
+      await completionsApi.toggle(id);
+      toast.success(wasCompleted ? '완료가 해제되었습니다.' : '완료 처리되었습니다.');
+    } catch (error) {
+      // 3. 실패 시 롤백
+      console.error('[완료 API] 호출 실패:', error);
+      setAllNotices((prev) => prev.map(updateNotice));
+      setBookmarkedNotices((prev) => prev.map(updateNotice));
+      toast.error('완료 처리에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  /**
+   * 모달 내 북마크 토글 핸들러
+   */
+  const handleModalBookmarkToggle = async (id: number) => {
+    await toggleBookmark(id);
+    if (selectedMessage && selectedMessage.id === id) {
+      setSelectedMessage({
+        ...selectedMessage,
+        bookmarked: !selectedMessage.bookmarked,
+      });
+    }
+  };
+
+  /**
+   * 모달 내 완료 토글 핸들러
+   */
+  const handleModalCompleteToggle = async (id: number) => {
+    await toggleComplete(id);
+    if (selectedMessage && selectedMessage.id === id) {
+      setSelectedMessage({
+        ...selectedMessage,
+        completed: !selectedMessage.completed,
+      });
+    }
   };
 
   return (
@@ -319,6 +406,8 @@ export default function DashboardPage() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           message={selectedMessage}
+          onBookmarkToggle={handleModalBookmarkToggle}
+          onCompleteToggle={handleModalCompleteToggle}
         />
       )}
     </PageLayout>

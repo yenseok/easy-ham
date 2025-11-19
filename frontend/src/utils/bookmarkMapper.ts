@@ -7,14 +7,33 @@ import type { NoticeApiResponse } from '@/types/api';
 
 /**
  * mainCategory 문자열을 통해 카테고리 추론
+ *
+ * 백엔드에서 제공하는 mainCategory 문자열을 기반으로 "학사" 또는 "취업" 판별
+ * - "공지사항", "학사", "EDU" 등 → 학사
+ * - "취업", "채용", "JOB" 등 → 취업
  */
 function mapMainCategory(mainCategory: string): "학사" | "취업" {
-  // "공지사항" → 학사, 그 외 → 취업
-  return mainCategory === "공지사항" ? "학사" : "취업";
+  const normalized = mainCategory.toLowerCase().trim();
+
+  // 취업 관련 키워드 체크
+  if (
+    normalized.includes("취업") ||
+    normalized.includes("채용") ||
+    normalized.includes("job") ||
+    normalized.includes("career") ||
+    normalized === "취업"
+  ) {
+    return "취업";
+  }
+
+  // 학사 관련 키워드 체크 (또는 기본값)
+  return "학사";
 }
 
 /**
  * subCategory 문자열을 Subcategory로 매핑
+ *
+ * 백엔드에서 제공하는 서브카테고리 문자열을 프론트엔드 타입으로 변환
  */
 function mapSubCategory(subCategory: string): Subcategory {
   const mapping: Record<string, Subcategory> = {
@@ -23,6 +42,7 @@ function mapSubCategory(subCategory: string): Subcategory {
     "특강": "특강",
     "정보": "정보",
     "행사": "행사",
+    "이벤트": "행사",  // 백엔드에서 "이벤트"로 주는 경우 "행사"로 변환
   };
 
   return mapping[subCategory] || "정보";

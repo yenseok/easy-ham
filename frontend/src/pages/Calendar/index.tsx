@@ -8,6 +8,8 @@ import { MonthView } from "./components/MonthView";
 import { MessageDetailModal, type MessageDetail } from "@/components/modals/MessageDetailModal";
 import { useCalendarStore } from "@/stores/useCalendarStore";
 import { getUserChannels } from "@/services/api/channels";
+import { bookmarksApi } from "@/services/api/bookmarks";
+import { completionsApi } from "@/services/api/completions";
 import type { Notice } from "@/types/notice";
 import type { UserChannel } from "@/types/api";
 
@@ -323,8 +325,76 @@ export default function CalendarPage() {
         type: att.type,
         mimeType: att.mimeType,
       })),
+      bookmarked: event.bookmarked,
+      completed: event.completed,
     });
     setIsModalOpen(true);
+  };
+
+  /**
+   * 북마크 토글
+   */
+  const toggleBookmark = async (id: number) => {
+    const event = events.find((e) => e.id === id);
+    if (!event) return;
+
+    const wasBookmarked = event.bookmarked;
+
+    try {
+      await bookmarksApi.toggle(id, wasBookmarked);
+      toast.success(wasBookmarked ? '북마크가 해제되었습니다.' : '북마크에 추가되었습니다.');
+      // 이벤트 목록 새로고침
+      loadEvents(currentDate);
+    } catch (error) {
+      console.error('[북마크 API] 호출 실패:', error);
+      toast.error('북마크 처리에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  /**
+   * 완료 토글
+   */
+  const toggleComplete = async (id: number) => {
+    const event = events.find((e) => e.id === id);
+    if (!event) return;
+
+    const wasCompleted = event.completed;
+
+    try {
+      await completionsApi.toggle(id);
+      toast.success(wasCompleted ? '완료가 해제되었습니다.' : '완료 처리되었습니다.');
+      // 이벤트 목록 새로고침
+      loadEvents(currentDate);
+    } catch (error) {
+      console.error('[완료 API] 호출 실패:', error);
+      toast.error('완료 처리에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  /**
+   * 모달 내 북마크 토글
+   */
+  const handleModalBookmarkToggle = async (id: number) => {
+    await toggleBookmark(id);
+    if (selectedMessage && selectedMessage.id === id) {
+      setSelectedMessage({
+        ...selectedMessage,
+        bookmarked: !selectedMessage.bookmarked,
+      });
+    }
+  };
+
+  /**
+   * 모달 내 완료 토글
+   */
+  const handleModalCompleteToggle = async (id: number) => {
+    await toggleComplete(id);
+    if (selectedMessage && selectedMessage.id === id) {
+      setSelectedMessage({
+        ...selectedMessage,
+        completed: !selectedMessage.completed,
+      });
+    }
   };
 
   const weekDays = viewMode === "week" ? getWeekDays(currentDate) : [];
@@ -431,6 +501,8 @@ export default function CalendarPage() {
           setIsModalOpen(false);
           setSelectedMessage(null);
         }}
+        onBookmarkToggle={handleModalBookmarkToggle}
+        onCompleteToggle={handleModalCompleteToggle}
       />
     </div>
   );

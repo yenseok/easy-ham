@@ -247,6 +247,10 @@ export default function SearchPage() {
         // 새 검색: 기존 결과를 새 결과로 교체
         setNotices(newNotices);
         setCurrentPage(0);
+        // 스크롤을 최상단으로 이동
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
+        }
       } else {
         // 무한스크롤: 기존 결과에 추가
         setNotices((prev) => [...prev, ...newNotices]);
@@ -463,10 +467,57 @@ export default function SearchPage() {
       dday: notice.dday,
       mattermostUrl,
       attachments: notice.attachments, // 검색 API에서 받은 첨부파일 그대로 사용
+      bookmarked: notice.bookmarked,
+      completed: notice.completed,
     };
 
     setSelectedMessage(messageDetail);
     setIsModalOpen(true);
+  };
+
+  /**
+   * 모달 내 북마크 토글 핸들러
+   * 모달과 리스트 모두 업데이트
+   */
+  const handleModalBookmarkToggle = async (id: number) => {
+    await toggleBookmark(id);
+    // 모달 메시지 상태도 업데이트
+    if (selectedMessage && selectedMessage.id === id) {
+      setSelectedMessage({
+        ...selectedMessage,
+        bookmarked: !selectedMessage.bookmarked,
+      });
+    }
+  };
+
+  /**
+   * 모달 내 완료 토글 핸들러
+   * 모달과 리스트 모두 업데이트
+   */
+  const handleModalCompleteToggle = async (id: number) => {
+    await toggleComplete(id);
+    // 모달 메시지 상태도 업데이트
+    if (selectedMessage && selectedMessage.id === id) {
+      setSelectedMessage({
+        ...selectedMessage,
+        completed: !selectedMessage.completed,
+      });
+    }
+  };
+
+  /**
+   * 특정 날짜에 일정(deadline)이 있는지 확인
+   */
+  const hasEventsOnDate = (date: Date): boolean => {
+    return notices.some((notice) => {
+      if (!notice.deadline) return false;
+      const deadlineDate = typeof notice.deadline === 'string' ? new Date(notice.deadline) : notice.deadline;
+      return (
+        deadlineDate.getFullYear() === date.getFullYear() &&
+        deadlineDate.getMonth() === date.getMonth() &&
+        deadlineDate.getDate() === date.getDate()
+      );
+    });
   };
 
   return (
@@ -532,7 +583,10 @@ export default function SearchPage() {
           <div className="hidden lg:flex lg:flex-col w-80 gap-4 shrink-0 max-h-full">
             {/* 미니 캘린더 */}
             <div className="shrink-0">
-              <MiniCalendar onNavigateToCalendar={() => navigate('/calendar')} />
+              <MiniCalendar
+                onNavigateToCalendar={() => navigate('/calendar')}
+                hasEventsOnDate={hasEventsOnDate}
+              />
             </div>
 
             {/* 채용 정보 위젯 */}
@@ -552,6 +606,8 @@ export default function SearchPage() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           message={selectedMessage}
+          onBookmarkToggle={handleModalBookmarkToggle}
+          onCompleteToggle={handleModalCompleteToggle}
         />
       )}
     </PageLayout>

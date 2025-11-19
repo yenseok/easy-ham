@@ -6,6 +6,7 @@ interface MiniCalendarProps {
   onDateSelect?: (date: Date) => void;
   highlightedDates?: number[];
   onNavigateToCalendar?: () => void;
+  hasEventsOnDate?: (date: Date) => boolean;
 }
 
 const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
@@ -15,6 +16,7 @@ export function MiniCalendar({
   onDateSelect,
   highlightedDates = [],
   onNavigateToCalendar,
+  hasEventsOnDate,
 }: MiniCalendarProps) {
   const currentDate = selectedDate;
 
@@ -76,32 +78,41 @@ export function MiniCalendar({
 
       {/* 날짜 그리드 */}
       <div className="grid grid-cols-7 gap-1">
-        {calendarDays.map((day, index) => (
-          <button
-            key={index}
-            onClick={() => handleDateClick(day)}
-            className={`
-              h-7 text-[11px] rounded
-              ${
-                day === null
-                  ? 'invisible'
-                  : 'hover:bg-gray-100 transition-colors'
-              }
-              ${
-                isCurrentMonth && day === today.getDate()
-                  ? 'bg-(--brand-orange) text-white font-semibold'
-                  : ''
-              }
-              ${
-                highlightedDates.includes(day || 0)
-                  ? 'border border-(--brand-orange)'
-                  : 'text-gray-700'
-              }
-            `}
-          >
-            {day}
-          </button>
-        ))}
+        {calendarDays.map((day, index) => {
+          const dateForDay = day ? new Date(year, month, day) : null;
+          const hasEvents = dateForDay && hasEventsOnDate ? hasEventsOnDate(dateForDay) : false;
+          const isToday = isCurrentMonth && day === today.getDate();
+
+          return (
+            <button
+              key={index}
+              onClick={() => handleDateClick(day)}
+              className={`
+                h-7 text-[11px] rounded relative flex flex-col items-center justify-center
+                ${
+                  day === null
+                    ? 'invisible'
+                    : 'hover:bg-gray-100 transition-colors'
+                }
+                ${
+                  isToday
+                    ? 'bg-(--brand-orange) text-white font-semibold'
+                    : ''
+                }
+                ${
+                  highlightedDates.includes(day || 0)
+                    ? 'border border-(--brand-orange)'
+                    : 'text-gray-700'
+                }
+              `}
+            >
+              {day}
+              {hasEvents && !isToday && (
+                <div className="absolute bottom-0.5 w-1 h-1 bg-(--brand-orange) rounded-full" />
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
