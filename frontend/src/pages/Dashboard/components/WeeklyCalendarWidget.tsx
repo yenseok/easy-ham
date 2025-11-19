@@ -68,13 +68,13 @@ export default function WeeklyCalendarWidget({
   const getBorderColor = (subcategory: string) => {
     switch (subcategory) {
       case "할일":
-        return "border-red-500";
+        return "border-red-300";
       case "특강":
-        return "border-blue-500";
+        return "border-blue-300";
       case "정보":
-        return "border-green-500";
+        return "border-green-300";
       case "행사":
-        return "border-purple-500";
+        return "border-purple-300";
       default:
         return "border-gray-400";
     }
