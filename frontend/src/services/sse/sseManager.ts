@@ -225,7 +225,6 @@ class SSEManager {
           content: undefined,
           badge: keywords,
           time: now.toISOString(),
-          relativeTime: formatRelativeTime(now.toISOString()),
           read: false,
           notice_id: keywordEvent.notice_id,
         });
@@ -251,7 +250,6 @@ class SSEManager {
           content: undefined,
           badge: calculateRemainingTime(deadlineEvent.deadline),
           time: now.toISOString(),
-          relativeTime: formatRelativeTime(now.toISOString()),
           read: false,
           notice_id: deadlineEvent.notice_id,
           deadline: deadlineEvent.deadline,
@@ -274,7 +272,6 @@ class SSEManager {
           content: undefined,
           badge: jobs,
           time: now.toISOString(),
-          relativeTime: formatRelativeTime(now.toISOString()),
           read: false,
           notice_id: jobEvent.notice_id,
         });
