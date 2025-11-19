@@ -53,14 +53,20 @@ pipeline {
 
         stage('Build Frontend') {
             steps {
-                echo '=== Building Frontend (npm) ==='
-                dir(FRONTEND_DIR) {
-                    sh '''
-                        npm install
-                        npm run build
-                    '''
+                script {
+                    // .env.prod에서 환경 변수 로드
+                    def props = readProperties file: '.env.prod'
+                    
+                    sh """
+                        docker build \
+                        --build-arg VITE_SSO_CLIENT_ID=${props.VITE_SSO_CLIENT_ID} \
+                        --build-arg VITE_SSO_REDIRECT_URI=${props.VITE_SSO_REDIRECT_URI} \
+                        --build-arg VITE_API_BASE_URL=${props.VITE_API_BASE_URL} \
+                        --build-arg VITE_MATTERMOST_URL=${props.VITE_MATTERMOST_URL} \
+                        -t bonghyerin/pyeonriham-fe:latest \
+                        ./frontend
+                    """
                 }
-                echo '✅ Frontend 빌드 완료!'
             }
         }
 
