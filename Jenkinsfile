@@ -54,49 +54,39 @@ pipeline {
         stage('Build Frontend') {
             steps {
                 script {
-                    // .env.prod에서 환경 변수 로드
-                    def props = readProperties file: '.env.prod'
+                    echo '=== Building Frontend (React + Vite) ==='
                     
-                    sh """
-                        docker build \
-                        --build-arg VITE_SSO_CLIENT_ID=${props.VITE_SSO_CLIENT_ID} \
-                        --build-arg VITE_SSO_REDIRECT_URI=${props.VITE_SSO_REDIRECT_URI} \
-                        --build-arg VITE_API_BASE_URL=${props.VITE_API_BASE_URL} \
-                        --build-arg VITE_MATTERMOST_URL=${props.VITE_MATTERMOST_URL} \
-                        -t bonghyerin/pyeonriham-fe:latest \
-                        ./frontend
-                    """
+                    dir('frontend') {
+                        sh """
+                            docker build \
+                              --build-arg VITE_SSO_CLIENT_ID=1292a035-be8b-4e8d-919c-0898c6b957c5 \
+                              --build-arg VITE_SSO_REDIRECT_URI=https://pyeonriham.site/callback \
+                              --build-arg VITE_API_BASE_URL=https://pyeonriham.site/api \
+                              --build-arg VITE_MATTERMOST_FILE_TOKEN=wq6fk8f7yp817nfzo5fiaraqph \
+                              --build-arg VITE_MATTERMOST_URL=http://pyeonriham.site:8065 \
+                              -t bonghyerin/pyeonriham-fe:latest \
+                              -t bonghyerin/pyeonriham-fe:${BUILD_NUMBER} \
+                              .
+                        """
+                    }
+                    
+                    echo '✅ Frontend Docker 이미지 빌드 완료!'
                 }
             }
         }
 
-        stage('Build Frontend') {
+        stage('Build Docker Images') {
             steps {
+                echo '=== Building Backend Docker Image ==='
                 script {
-                    echo '=== Building Frontend (React + Vite) ==='
-                    
-                    // .env.prod 파일을 직접 읽어서 환경 변수로 설정
-                    sh '''
-                        cd frontend
-                        
-                        # .env.prod에서 환경 변수 추출 (export 형태로 변환)
-                        if [ -f ../.env.prod ]; then
-                            export $(cat ../.env.prod | grep "^VITE_" | xargs)
-                        fi
-                        
-                        # Docker 빌드 시 build-arg로 전달
-                        docker build \
-                        --build-arg VITE_SSO_CLIENT_ID="${VITE_SSO_CLIENT_ID}" \
-                        --build-arg VITE_SSO_REDIRECT_URI="${VITE_SSO_REDIRECT_URI}" \
-                        --build-arg VITE_API_BASE_URL="${VITE_API_BASE_URL}" \
-                        --build-arg VITE_MATTERMOST_FILE_TOKEN="${VITE_MATTERMOST_FILE_TOKEN}" \
-                        --build-arg VITE_MATTERMOST_URL="${VITE_MATTERMOST_URL}" \
-                        -t bonghyerin/pyeonriham-fe:latest \
-                        .
-                    '''
-                    
-                    echo '✅ Frontend Docker 이미지 빌드 완료!'
+                    dir(BACKEND_DIR) {
+                        sh """
+                            docker build -t ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} .
+                            docker tag ${DOCKER_BACKEND_IMAGE}:${IMAGE_TAG} ${DOCKER_BACKEND_IMAGE}:latest
+                        """
+                    }
                 }
+                echo '✅ Docker 이미지 빌드 완료!'
             }
         }
 
