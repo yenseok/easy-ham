@@ -18,6 +18,8 @@ import {
 } from "@/components/modals/MessageDetailModal";
 import { getPostDetail } from "@/services/api/posts";
 import { convertSearchItemToNotice } from "@/utils/searchMapper";
+import { bookmarksApi } from "@/services/api/bookmarks";
+import { completionsApi } from "@/services/api/completions";
 
 export const NotificationDropdown = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -107,6 +109,8 @@ export const NotificationDropdown = () => {
           dday: notice.dday,
           mattermostUrl,
           attachments: notice.attachments,
+          bookmarked: notice.bookmarked,
+          completed: notice.completed,
         };
 
         setSelectedMessage(messageDetail);
@@ -118,6 +122,50 @@ export const NotificationDropdown = () => {
         error
       );
       toast.error("공지사항 상세 정보를 불러올 수 없습니다.");
+    }
+  };
+
+  /**
+   * 북마크 토글
+   */
+  const handleBookmarkToggle = async (id: number) => {
+    if (!selectedMessage) return;
+    const wasBookmarked = selectedMessage.bookmarked ?? false;
+
+    try {
+      await bookmarksApi.toggle(id, wasBookmarked);
+      toast.success(wasBookmarked ? '북마크가 해제되었습니다.' : '북마크에 추가되었습니다.');
+
+      // 모달 상태 업데이트
+      setSelectedMessage({
+        ...selectedMessage,
+        bookmarked: !wasBookmarked,
+      });
+    } catch (error) {
+      console.error('[북마크 API] 호출 실패:', error);
+      toast.error('북마크 처리에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  /**
+   * 완료 토글
+   */
+  const handleCompleteToggle = async (id: number) => {
+    if (!selectedMessage) return;
+    const wasCompleted = selectedMessage.completed ?? false;
+
+    try {
+      await completionsApi.toggle(id);
+      toast.success(wasCompleted ? '완료가 해제되었습니다.' : '완료 처리되었습니다.');
+
+      // 모달 상태 업데이트
+      setSelectedMessage({
+        ...selectedMessage,
+        completed: !wasCompleted,
+      });
+    } catch (error) {
+      console.error('[완료 API] 호출 실패:', error);
+      toast.error('완료 처리에 실패했습니다. 다시 시도해주세요.');
     }
   };
 
@@ -256,6 +304,8 @@ export const NotificationDropdown = () => {
         message={selectedMessage}
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
+        onBookmarkToggle={handleBookmarkToggle}
+        onCompleteToggle={handleCompleteToggle}
       />
     </DropdownMenu>
   );

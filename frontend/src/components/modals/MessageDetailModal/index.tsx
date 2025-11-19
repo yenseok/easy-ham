@@ -48,6 +48,8 @@ export const MessageDetailModal = ({
   onClose,
   showBackButton = false,
   onBack,
+  onBookmarkToggle,
+  onCompleteToggle,
 }: MessageDetailModalProps) => {
   if (!message) return null;
 
@@ -157,6 +159,42 @@ export const MessageDetailModal = ({
             <Separator />
             <AttachmentList attachments={message.attachments} />
           </>
+        )}
+
+        {/* 북마크 및 완료 체크 버튼 */}
+        {(onBookmarkToggle || onCompleteToggle) && (
+          <div className="flex gap-2 py-3">
+            {onBookmarkToggle && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onBookmarkToggle(message.id)}
+                className={`h-9 px-3 rounded-md text-sm transition-colors ${
+                  message.bookmarked
+                    ? 'bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Star className={`w-4 h-4 mr-1.5 ${message.bookmarked ? 'fill-current' : ''}`} />
+                {message.bookmarked ? '북마크 해제' : '북마크'}
+              </Button>
+            )}
+            {onCompleteToggle && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onCompleteToggle(message.id)}
+                className={`h-9 px-3 rounded-md text-sm transition-colors ${
+                  message.completed
+                    ? 'bg-green-100 text-green-700 border-green-300 hover:bg-green-200'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Check className={`w-4 h-4 mr-1.5 ${message.completed ? 'stroke-2' : ''}`} />
+                {message.completed ? '완료됨' : '완료 체크'}
+              </Button>
+            )}
+          </div>
         )}
 
         {/* 푸터 액션 */}

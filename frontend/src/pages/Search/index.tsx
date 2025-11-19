@@ -467,10 +467,42 @@ export default function SearchPage() {
       dday: notice.dday,
       mattermostUrl,
       attachments: notice.attachments, // 검색 API에서 받은 첨부파일 그대로 사용
+      bookmarked: notice.bookmarked,
+      completed: notice.completed,
     };
 
     setSelectedMessage(messageDetail);
     setIsModalOpen(true);
+  };
+
+  /**
+   * 모달 내 북마크 토글 핸들러
+   * 모달과 리스트 모두 업데이트
+   */
+  const handleModalBookmarkToggle = async (id: number) => {
+    await toggleBookmark(id);
+    // 모달 메시지 상태도 업데이트
+    if (selectedMessage && selectedMessage.id === id) {
+      setSelectedMessage({
+        ...selectedMessage,
+        bookmarked: !selectedMessage.bookmarked,
+      });
+    }
+  };
+
+  /**
+   * 모달 내 완료 토글 핸들러
+   * 모달과 리스트 모두 업데이트
+   */
+  const handleModalCompleteToggle = async (id: number) => {
+    await toggleComplete(id);
+    // 모달 메시지 상태도 업데이트
+    if (selectedMessage && selectedMessage.id === id) {
+      setSelectedMessage({
+        ...selectedMessage,
+        completed: !selectedMessage.completed,
+      });
+    }
   };
 
   return (
@@ -556,6 +588,8 @@ export default function SearchPage() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           message={selectedMessage}
+          onBookmarkToggle={handleModalBookmarkToggle}
+          onCompleteToggle={handleModalCompleteToggle}
         />
       )}
     </PageLayout>
