@@ -9,7 +9,7 @@ import { useSSEStore } from "@/stores/useSSEStore";
 import { useSSEPostStore } from "@/stores/useSSEPostStore";
 import { useNotificationStore } from "@/stores/useNotificationStore";
 import { API_ENDPOINTS } from "@/constants/api";
-import { formatRelativeTime } from "@/utils/timeUtils";
+
 import { calculateRemainingTime } from "@/utils/deadlineUtils";
 import type {
   SSEError,
