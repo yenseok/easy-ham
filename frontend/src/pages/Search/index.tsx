@@ -6,21 +6,14 @@ import { NoticeListContainer } from './components/NoticeListContainer';
 import { SearchFilterBar } from './components/SearchFilterBar';
 import { MiniCalendar } from './components/MiniCalendar';
 import { JobPostingsWidget } from './components/JobPostingsWidget';
-import {
-  MessageDetailModal,
-  type MessageDetail,
-} from '@/components/modals/MessageDetailModal';
+import { MessageDetailModal, type MessageDetail } from '@/components/modals/MessageDetailModal';
 import { Card } from '@/components/ui/card';
 import { useFilterStore } from '@/stores/useFilterStore';
 import { bookmarksApi } from '@/services/api/bookmarks';
 import { completionsApi } from '@/services/api/completions';
 import { searchApi } from '@/services/api/search';
 import { jobsApi } from '@/services/api/jobs';
-import {
-  getNoticeCategories,
-  mapCategoriesToIds,
-  type NoticeCategory,
-} from '@/services/api/codes';
+import { getNoticeCategories, mapCategoriesToIds, type NoticeCategory } from '@/services/api/codes';
 import { getUserChannels } from '@/services/api/channels';
 import { getPeriodRange } from '@/utils/dateUtils';
 import type { Notice } from '@/types';
@@ -72,9 +65,7 @@ export default function SearchPage() {
   const [isFilteredSearch, setIsFilteredSearch] = useState(false);
 
   // 모달 상태
-  const [selectedMessage, setSelectedMessage] = useState<MessageDetail | null>(
-    null
-  );
+  const [selectedMessage, setSelectedMessage] = useState<MessageDetail | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // 카테고리 데이터 (API에서 받아온 카테고리 목록)
@@ -152,11 +143,7 @@ export default function SearchPage() {
    * @param size - 페이지 크기
    * @param applyFilters - true면 필터 적용, false면 전체 검색
    */
-  const buildSearchParams = (
-    page: number,
-    size: number,
-    applyFilters: boolean
-  ): SearchParams => {
+  const buildSearchParams = (page: number, size: number, applyFilters: boolean): SearchParams => {
     // 전체 검색 (초기 로드): page, size만 전송
     if (!applyFilters) {
       return {
@@ -175,18 +162,13 @@ export default function SearchPage() {
     const currentState = useFilterStore.getState();
 
     // 1. 키워드 필터
-    if (
-      currentState.searchQuery &&
-      currentState.searchQuery.trim().length > 0
-    ) {
+    if (currentState.searchQuery && currentState.searchQuery.trim().length > 0) {
       params.keyword = currentState.searchQuery.trim();
     }
 
     // 2. 채널 필터
     // 모든 채널 선택 = 필터 없음
-    const isAllChannelsSelected =
-      currentState.selectedChannels.length ===
-      currentState.availableChannels.length;
+    const isAllChannelsSelected = currentState.selectedChannels.length === currentState.availableChannels.length;
     if (!isAllChannelsSelected && currentState.selectedChannels.length > 0) {
       params.channelIds = currentState.selectedChannels;
     }
@@ -194,18 +176,11 @@ export default function SearchPage() {
     // 3. 카테고리 필터
     // 학사 4개 + 취업 4개 = 총 8개
     const TOTAL_CATEGORIES = 8;
-    const totalSelectedCategories =
-      currentState.selectedAcademicCategories.length +
-      currentState.selectedCareerCategories.length;
-    const isAllCategoriesSelected =
-      totalSelectedCategories === TOTAL_CATEGORIES;
+    const totalSelectedCategories = currentState.selectedAcademicCategories.length + currentState.selectedCareerCategories.length;
+    const isAllCategoriesSelected = totalSelectedCategories === TOTAL_CATEGORIES;
 
     // 카테고리 데이터가 로드되었고, 모든 카테고리가 선택되지 않은 경우에만 파라미터 추가
-    if (
-      !isAllCategoriesSelected &&
-      totalSelectedCategories > 0 &&
-      categories.length > 0
-    ) {
+    if (!isAllCategoriesSelected && totalSelectedCategories > 0 && categories.length > 0) {
       const categoryIds = mapCategoriesToIds(
         currentState.selectedAcademicCategories,
         currentState.selectedCareerCategories,
@@ -250,10 +225,7 @@ export default function SearchPage() {
    * @param isNewSearch true면 새 검색 (기존 결과 초기화), false면 추가 로드 (무한스크롤)
    * @param applyFilters true면 필터 적용, false면 전체 검색 (기본값: isFilteredSearch 상태 사용)
    */
-  const handleSearch = async (
-    isNewSearch = true,
-    applyFilters = isFilteredSearch
-  ) => {
+  const handleSearch = async (isNewSearch = true, applyFilters = isFilteredSearch) => {
     if (isLoading) return;
 
     setIsLoading(true);
@@ -263,9 +235,7 @@ export default function SearchPage() {
       // applyFilters가 true면 현재 필터 상태를 API에 전송
       // false면 page, size만 전송 (전체 검색)
       const params = buildSearchParams(page, 15, applyFilters);
-      const { notices: newNotices, metadata } = await searchApi.searchPosts(
-        params
-      );
+      const { notices: newNotices, metadata } = await searchApi.searchPosts(params);
 
       // console.log('[검색 실행]', {
       //   필터적용: applyFilters,
@@ -330,6 +300,7 @@ export default function SearchPage() {
     },
     [isLoading, hasMore] // eslint-disable-line react-hooks/exhaustive-deps
   );
+
 
   /**
    * NoticeList 스크롤 핸들러
@@ -410,7 +381,9 @@ export default function SearchPage() {
 
     // 1. 즉시 UI 업데이트 (낙관적 업데이트)
     setNotices((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, bookmarked: !n.bookmarked } : n))
+      prev.map((n) =>
+        n.id === id ? { ...n, bookmarked: !n.bookmarked } : n
+      )
     );
 
     // console.log(`[북마크 토글] ID: ${id}, ${wasBookmarked ? '해제' : '추가'}`);
@@ -427,7 +400,9 @@ export default function SearchPage() {
       // 3. 실패 시 롤백
       console.error('[북마크 API] 호출 실패:', error);
       setNotices((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, bookmarked: !n.bookmarked } : n))
+        prev.map((n) =>
+          n.id === id ? { ...n, bookmarked: !n.bookmarked } : n
+        )
       );
       toast.error('북마크 처리에 실패했습니다. 다시 시도해주세요.');
     }
@@ -444,7 +419,9 @@ export default function SearchPage() {
 
     // 1. 즉시 UI 업데이트 (낙관적 업데이트)
     setNotices((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, completed: !n.completed } : n))
+      prev.map((n) =>
+        n.id === id ? { ...n, completed: !n.completed } : n
+      )
     );
 
     // console.log(`[완료 토글] ID: ${id}, ${wasCompleted ? '해제' : '완료'}`);
@@ -461,7 +438,9 @@ export default function SearchPage() {
       // 3. 실패 시 롤백
       console.error('[완료 API] 호출 실패:', error);
       setNotices((prev) =>
-        prev.map((n) => (n.id === id ? { ...n, completed: !n.completed } : n))
+        prev.map((n) =>
+          n.id === id ? { ...n, completed: !n.completed } : n
+        )
       );
       toast.error('완료 처리에 실패했습니다. 다시 시도해주세요.');
     }
@@ -472,9 +451,7 @@ export default function SearchPage() {
    * 검색 API에서 받은 첨부파일 정보를 그대로 사용
    */
   const handleNoticeClick = (notice: Notice) => {
-    const mattermostUrl =
-      notice.mattermostUrl ||
-      `https://mattermost.ssafy.com/ssafy/pl/message${notice.id}`;
+    const mattermostUrl = notice.mattermostUrl || `https://mattermost.ssafy.com/ssafy/pl/message${notice.id}`;
 
     const messageDetail: MessageDetail = {
       id: notice.id,
@@ -534,10 +511,7 @@ export default function SearchPage() {
   const hasEventsOnDate = (date: Date): boolean => {
     return notices.some((notice) => {
       if (!notice.deadline) return false;
-      const deadlineDate =
-        typeof notice.deadline === 'string'
-          ? new Date(notice.deadline)
-          : notice.deadline;
+      const deadlineDate = typeof notice.deadline === 'string' ? new Date(notice.deadline) : notice.deadline;
       return (
         deadlineDate.getFullYear() === date.getFullYear() &&
         deadlineDate.getMonth() === date.getMonth() &&
@@ -585,10 +559,7 @@ export default function SearchPage() {
             <Card className="shadow-md lg:flex-1 flex flex-col lg:min-h-0">
               {/* 리스트 헤더 */}
               <div className="h-14 px-4 md:px-6 flex items-center justify-between border-b shrink-0">
-                <h2
-                  className="text-base md:text-lg"
-                  style={{ fontWeight: 700 }}
-                >
+                <h2 className="text-base md:text-lg" style={{ fontWeight: 700 }}>
                   공지사항
                 </h2>
               </div>

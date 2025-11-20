@@ -15,7 +15,7 @@ export function calculateRemainingTime(deadline: string): string {
 
     // 마감 시간이 지남
     if (diffMs <= 0) {
-      return '마감';
+      return "마감";
     }
 
     // 시간과 분 계산
@@ -30,7 +30,7 @@ export function calculateRemainingTime(deadline: string): string {
     // 1시간 미만: 분 단위
     return `${diffMinutes}분`;
   } catch (error) {
-    console.error('[deadlineUtils] Failed to calculate remaining time:', error);
-    return '시간 오류';
+    console.error("[deadlineUtils] Failed to calculate remaining time:", error);
+    return "시간 오류";
   }
 }

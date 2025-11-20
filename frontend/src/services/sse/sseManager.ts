@@ -3,14 +3,14 @@
  * 재연결, 토큰 감시, 상태 관리 (고급 로직)
  */
 
-import { postStreamClient, notificationStreamClient } from "./sseClient";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { useSSEStore } from "@/stores/useSSEStore";
-import { useSSEPostStore } from "@/stores/useSSEPostStore";
-import { useNotificationStore } from "@/stores/useNotificationStore";
-import { API_ENDPOINTS } from "@/constants/api";
-
-import { calculateRemainingTime } from "@/utils/deadlineUtils";
+import { postStreamClient, notificationStreamClient } from './sseClient';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { useSSEStore } from '@/stores/useSSEStore';
+import { useSSEPostStore } from '@/stores/useSSEPostStore';
+import { useNotificationStore } from '@/stores/useNotificationStore';
+import { API_ENDPOINTS } from '@/constants/api';
+import { formatRelativeTime } from '@/utils/timeUtils';
+import { calculateRemainingTime } from '@/utils/deadlineUtils';
 import type {
   SSEError,
   NewPostEvent,
@@ -18,7 +18,7 @@ import type {
   KeywordMatchingEvent,
   DeadlineApproachingEvent,
   JobRecommendationEvent,
-} from "./types";
+} from './types';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
@@ -60,11 +60,11 @@ class SSEManager {
 
     // 보호된 라우트 목록
     const protectedRoutes = [
-      "/dashboard",
-      "/calendar",
-      "/search",
-      "/mypage",
-      "/overview",
+      '/dashboard',
+      '/calendar',
+      '/search',
+      '/mypage',
+      '/overview',
     ];
 
     // 토큰 변경 감시 - 전체 상태를 받아서 토큰만 확인
@@ -83,9 +83,9 @@ class SSEManager {
 
           // Dashboard에서는 posts/stream도 재연결
           // (DashboardPage의 useEffect는 의존성 배열이 비어 1번만 실행되므로)
-          if (currentPath === "/dashboard") {
+          if (currentPath === '/dashboard') {
             console.log(
-              "[SSE Manager] On dashboard, also reconnecting posts/stream..."
+              '[SSE Manager] On dashboard, also reconnecting posts/stream...'
             );
             this.reconnectPostStream();
           }
@@ -209,18 +209,18 @@ class SSEManager {
       const notificationData = data as NotificationEvent;
 
       // keyword_matching 이벤트 처리
-      if ("match_keyword" in notificationData) {
+      if ('match_keyword' in notificationData) {
         const keywordEvent = notificationData as KeywordMatchingEvent & {
           id?: string;
         };
         const keywords = Array.isArray(keywordEvent.match_keyword)
-          ? keywordEvent.match_keyword.join(", ")
-          : "Unknown keywords";
+          ? keywordEvent.match_keyword.join(', ')
+          : 'Unknown keywords';
         const now = new Date();
 
         useNotificationStore.getState().addSSENotification?.({
           id: keywordEvent.id || String(keywordEvent.notice_id), // SSE id 사용, 없으면 notice_id 사용
-          type: "info",
+          type: 'info',
           title: `구독 키워드: ${keywordEvent.title}`,
           content: undefined,
           badge: keywords,
@@ -230,15 +230,15 @@ class SSEManager {
         });
       }
       // deadline_approaching 이벤트 처리
-      else if ("hours_left" in notificationData) {
+      else if ('hours_left' in notificationData) {
         const deadlineEvent = notificationData as DeadlineApproachingEvent & {
           id?: string;
         };
 
         // hours_left 기반 긴급도 판단
-        let notificationType: "danger" | "info" = "danger";
+        let notificationType: 'danger' | 'info' = 'danger';
         if (deadlineEvent.hours_left > 24) {
-          notificationType = "info";
+          notificationType = 'info';
         }
 
         const now = new Date();
@@ -256,18 +256,18 @@ class SSEManager {
         });
       }
       // job_recommendation 이벤트 처리
-      else if ("matched_jobs" in notificationData) {
+      else if ('matched_jobs' in notificationData) {
         const jobEvent = notificationData as JobRecommendationEvent & {
           id?: string;
         };
         const jobs = Array.isArray(jobEvent.matched_jobs)
-          ? jobEvent.matched_jobs.join(", ")
-          : "Unknown jobs";
+          ? jobEvent.matched_jobs.join(', ')
+          : 'Unknown jobs';
         const now = new Date();
 
         useNotificationStore.getState().addSSENotification?.({
           id: jobEvent.id || String(jobEvent.notice_id), // SSE id 사용, 없으면 notice_id 사용
-          type: "success",
+          type: 'success',
           title: `관심 직무: ${jobEvent.company} 채용 공고`,
           content: undefined,
           badge: jobs,
@@ -288,13 +288,13 @@ class SSEManager {
     try {
       // notifications/stream: handshake 이벤트는 "connected"
       // 데이터 이벤트: "keyword_matching", "deadline_approaching", "job_recommendation"
-      notificationStreamClient.connect(url, "keyword_matching", "connected");
+      notificationStreamClient.connect(url, 'keyword_matching', 'connected');
 
       // 추가 이벤트 타입 리스닝 (같은 연결에서)
-      notificationStreamClient.addEventListenerForType("deadline_approaching");
-      notificationStreamClient.addEventListenerForType("job_recommendation");
+      notificationStreamClient.addEventListenerForType('deadline_approaching');
+      notificationStreamClient.addEventListenerForType('job_recommendation');
 
-      sseStore.setNotificationStreamStatus("connected");
+      sseStore.setNotificationStreamStatus('connected');
       this.notificationStreamRetries = 0;
     } catch (error) {
       console.error(
