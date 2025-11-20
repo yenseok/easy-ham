@@ -288,7 +288,7 @@ public class SearchService {
             String userName = mattermostService.getUserNameFromID((String) hitMap.get("userId"));
 
             return PostSearchItem.builder()
-                    .id(((Double) hitMap.get("postId")).longValue())
+                    .id(getLongValue(hitMap.get("postId")))
                     .mmMessageId((String) hitMap.get("mmPostId"))
                     .title((String) hitMap.get("title"))
                     .campusId((String) hitMap.get("campusList"))
