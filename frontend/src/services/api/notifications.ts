@@ -5,6 +5,7 @@
 import { apiClient } from './client';
 import { API_ENDPOINTS } from '@/constants/api';
 import type { ApiResponse, NotificationSettings, NotificationSettingsResponse, KeywordListResponse } from '@/types/api';
+import type { ServerNotificationListResponse } from '@/types/notification';
 
 // ===== 타입 정의 =====
 
@@ -92,5 +93,45 @@ export const deleteSubscriptionKeyword = async (
 ): Promise<ApiResponse<{ message: string }>> => {
   return apiClient.delete<{ message: string }>(
     API_ENDPOINTS.notifications.keywords.remove(keywordId)
+  );
+};
+
+// ===== 알림 관리 API =====
+
+/**
+ * 알림 목록 조회
+ * 사용자의 모든 알림 목록을 서버에서 조회하는 API
+ * @returns 알림 목록 (eventType별 이벤트 데이터 포함)
+ */
+export const getNotifications = async (): Promise<ApiResponse<ServerNotificationListResponse>> => {
+  return apiClient.get<ServerNotificationListResponse>(
+    API_ENDPOINTS.notifications.list
+  );
+};
+
+/**
+ * 단일 알림 읽음 처리
+ * 특정 알림을 읽음 상태로 변경하는 API
+ * @param notificationId - 읽음 처리할 알림 ID
+ * @returns 성공 메시지
+ */
+export const markNotificationAsRead = async (
+  notificationId: string
+): Promise<ApiResponse<{ message: string }>> => {
+  return apiClient.patch<{ message: string }>(
+    API_ENDPOINTS.notifications.markAsRead(notificationId),
+    {}
+  );
+};
+
+/**
+ * 전체 알림 읽음 처리
+ * 모든 알림을 읽음 상태로 변경하는 API
+ * @returns 성공 메시지
+ */
+export const markAllNotificationsAsRead = async (): Promise<ApiResponse<{ message: string }>> => {
+  return apiClient.patch<{ message: string }>(
+    API_ENDPOINTS.notifications.markAllAsRead,
+    {}
   );
 };

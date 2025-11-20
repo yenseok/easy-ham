@@ -1,18 +1,34 @@
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { formatRelativeTime } from "@/utils/dateFormatter";
 import type { Notice } from "@/types/notice";
-import { Clock } from "lucide-react";
+import { ChevronDown, Clock } from "lucide-react";
+import { UrgentDeadlinesModal } from "@/components/modals/UrgentDeadlinesModal";
 
 interface UrgentDeadlinesWidgetProps {
   notices: Notice[];
   onNoticeClick?: (notice: Notice) => void;
+  isMobile?: boolean;
 }
 
 export default function UrgentDeadlinesWidget({
   notices,
   onNoticeClick,
+  isMobile = false,
 }: UrgentDeadlinesWidgetProps) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setIsCollapsed(false);
+    }
+  }, [isMobile]);
+
   const getDdayColor = (daysLeft: number) => {
+    if (daysLeft < 0) return "bg-gray-400"; // 마감 지난 경우 회색
     if (daysLeft <= 3) return "bg-red-500";
     if (daysLeft <= 7) return "bg-yellow-500";
     return "bg-green-500";
@@ -29,55 +45,87 @@ export default function UrgentDeadlinesWidget({
   };
 
   return (
-    <Card className="shadow-md">
-      <div className="h-16 px-6 flex items-center gap-2 border-b">
-        <Clock className="w-5 h-5 text-(--brand-orange)" />
-        <h2 className="text-lg" style={{ fontWeight: 700 }}>
-          마감 임박
-        </h2>
-      </div>
-      <div className="px-4 py-4">
-        {notices.length === 0 ? (
-          <div className="text-sm text-gray-500 text-center py-8">
-            마감 임박 할일이 없습니다
+    <>
+      <Card className="shadow-md">
+        <div className="h-16 px-6 flex items-center border-b gap-2">
+          <div className="flex items-center gap-2">
+            <Clock className="w-5 h-5 text-(--brand-orange)" />
+            <h2 className="text-lg" style={{ fontWeight: 700 }}>
+              마감 임박
+            </h2>
           </div>
-        ) : (
-          <div className="space-y-2.5">
-            {notices.map((notice) => {
-              const dday = calculateDday(notice.deadline);
-              return (
-                <div
-                  key={notice.id}
-                  className="p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-gray-200"
-                  onClick={() => onNoticeClick?.(notice)}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Badge className="text-xs px-2 py-0.5 border bg-red-50 text-red-700 border-red-200">
-                      {notice.subcategory}
-                    </Badge>
-                    {dday !== null && (
-                      <span
-                        className={`text-white text-xs ${dday === 0 ? 'px-1.5' : 'px-2'} py-0.5 rounded ${getDdayColor(
-                          dday
-                        )}`}
-                        style={{ fontWeight: 600 }}
-                      >
-                        {dday === 0 ? 'D-Day' : `D-${dday}`}
-                      </span>
-                    )}
-                  </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsModalOpen(true)}
+            className="ml-auto text-sm text-gray-600 hover:text-gray-900"
+          >
+            더보기
+          </Button>
+          {isMobile && (
+            <button
+              type="button"
+              aria-expanded={!isCollapsed}
+              aria-label={isCollapsed ? "위젯 펼치기" : "위젯 접기"}
+              onClick={() => setIsCollapsed((prev) => !prev)}
+              className="md:hidden text-gray-500 hover:text-gray-900 transition-colors p-1"
+            >
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${isCollapsed ? "-rotate-180" : "rotate-0"}`}
+              />
+            </button>
+          )}
+        </div>
+      {(!isMobile || !isCollapsed) && (
+        <div className="px-4 py-4">
+          {notices.length === 0 ? (
+            <div className="text-sm text-gray-500 text-center py-8">
+              마감 임박 할일이 없습니다
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {notices.map((notice) => {
+                const dday = calculateDday(notice.deadline);
+                return (
                   <div
-                    className="text-sm line-clamp-2 text-gray-800"
-                    style={{ fontWeight: 500 }}
+                    key={notice.id}
+                    className="p-3 border rounded-lg hover:shadow-md transition-shadow cursor-pointer hover:border-(--brand-orange)"
+                    onClick={() => onNoticeClick?.(notice)}
                   >
-                    {notice.title}
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge className="text-xs px-2 py-0.5 border bg-red-50 text-red-700 border-red-200">
+                        {notice.subcategory}
+                      </Badge>
+                      {dday !== null && (
+                        <span
+                          className={`text-white text-xs ${dday === 0 ? 'px-1.5' : 'px-2'} py-0.5 rounded ${getDdayColor(
+                            dday
+                          )}`}
+                          style={{ fontWeight: 600 }}
+                        >
+                          {dday === 0 ? 'D-Day' : dday > 0 ? `D-${dday}` : `D+${Math.abs(dday)}`}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">
+                      {notice.title}
+                    </div>
+                    <div className="text-xs text-gray-600 line-clamp-1">
+                      {notice.channel} • {formatRelativeTime(notice.createdAt)}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+      </Card>
+
+      <UrgentDeadlinesModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+      />
+    </>
   );
 }

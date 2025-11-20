@@ -64,6 +64,15 @@ export const API_ENDPOINTS = {
       add: "/notifications/keywords",
       remove: (keywordId: number) => `/notifications/keywords/${keywordId}`,
     },
+    // 알림 관리 엔드포인트
+    list: "/notifications",
+    markAsRead: (notificationId: string) => `/notifications/${notificationId}`,
+    markAllAsRead: "/notifications",
+  },
+
+  // 게시물/공지사항 상세조회 엔드포인트
+  posts: {
+    getDetail: (noticeId: number) => `/search/posts/${noticeId}`,
   },
 
   // SSE 스트림 엔드포인트

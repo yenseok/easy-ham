@@ -90,7 +90,7 @@ export function WeekView({
                   일정 없음
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {dayEvents.map((event) => (
                     <Card
                       key={event.id}
@@ -98,7 +98,7 @@ export function WeekView({
                       onClick={() => onEventClick(event)}
                     >
                       {/* 카테고리 라벨 */}
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center justify-between gap-2 mb-2">
                         <div className="flex items-center gap-1">
                           <Badge
                             className={`text-[10px] px-1.5 py-0 border ${getCategoryColor(
@@ -128,7 +128,7 @@ export function WeekView({
                       {/* 시간 */}
                       {event.startTime && event.endTime && (
                         <div
-                          className="text-sm"
+                          className="text-sm mb-1"
                           style={{
                             fontWeight: 700,
                           }}
@@ -144,13 +144,6 @@ export function WeekView({
                       >
                         {event.title}
                       </div>
-
-                      {/* 설명 (content의 첫 줄 표시) */}
-                      {event.content && (
-                        <div className="text-xs text-gray-500 truncate">
-                          {event.content.split('\n')[0]}
-                        </div>
-                      )}
                     </Card>
                   ))}
                 </div>

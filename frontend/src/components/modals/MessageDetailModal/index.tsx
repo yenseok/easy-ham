@@ -1,7 +1,7 @@
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Clock, ExternalLink, ArrowLeft } from 'lucide-react';
+import { Clock, ExternalLink, ArrowLeft, Star, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { MessageHeader } from './components/MessageHeader';
 import { MessageMeta } from './components/MessageMeta';
@@ -14,6 +14,8 @@ export interface MessageDetailModalProps {
   onClose: () => void;
   showBackButton?: boolean;
   onBack?: () => void;
+  onBookmarkToggle?: (id: number) => void;
+  onCompleteToggle?: (id: number) => void;
 }
 
 export interface MessageDetail {
@@ -30,6 +32,8 @@ export interface MessageDetail {
   dday?: number | null;
   mattermostUrl?: string;
   attachments?: Attachment[];
+  bookmarked?: boolean;
+  completed?: boolean;
 }
 
 /**
@@ -44,12 +48,14 @@ export const MessageDetailModal = ({
   onClose,
   showBackButton = false,
   onBack,
+  onBookmarkToggle,
+  onCompleteToggle,
 }: MessageDetailModalProps) => {
   if (!message) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto p-8" style={{ maxWidth: '60vw' }}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 w-[92vw] sm:w-[70vw] md:w-[57vw] lg:w-[53vw] xl:w-[50vw] sm:max-w-[70vw] md:max-w-[57vw] lg:max-w-[53vw] xl:max-w-[50vw] max-w-4xl">
         {/* 뒤로가기 버튼 (옵션) */}
         {showBackButton && onBack && (
           <Button
@@ -85,7 +91,7 @@ export const MessageDetailModal = ({
         {/* 메시지 본문 */}
         <div className="py-6">
           <h3 className="text-sm mb-4 text-gray-500 font-bold">메시지 내용</h3>
-          <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed">
+          <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed wrap-break-word">
             <ReactMarkdown
               components={{
                 h1: ({ node, ...props }) => (
@@ -155,24 +161,60 @@ export const MessageDetailModal = ({
           </>
         )}
 
+        {/* 북마크 및 완료 체크 버튼 */}
+        {(onBookmarkToggle || onCompleteToggle) && (
+          <div className="flex gap-2 py-3">
+            {onBookmarkToggle && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onBookmarkToggle(message.id)}
+                className={`h-9 px-3 rounded-md text-sm transition-colors ${
+                  message.bookmarked
+                    ? 'bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Star className={`w-4 h-4 mr-1.5 ${message.bookmarked ? 'fill-current' : ''}`} />
+                {message.bookmarked ? '북마크 해제' : '북마크'}
+              </Button>
+            )}
+            {onCompleteToggle && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onCompleteToggle(message.id)}
+                className={`h-9 px-3 rounded-md text-sm transition-colors ${
+                  message.completed
+                    ? 'bg-green-100 text-green-700 border-green-300 hover:bg-green-200'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Check className={`w-4 h-4 mr-1.5 ${message.completed ? 'stroke-2' : ''}`} />
+                {message.completed ? '완료됨' : '완료 체크'}
+              </Button>
+            )}
+          </div>
+        )}
+
         {/* 푸터 액션 */}
         <Separator />
-        <div className="pt-4 flex items-center justify-between">
+        <div className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-gray-500">
             <Clock className="w-3.5 h-3.5" />
-            <span>메시지 ID: {message.id}</span>
+            <span className="break-all">메시지 ID: {message.id}</span>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             {message.mattermostUrl && (
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8"
+                className="h-8 w-full sm:w-auto"
                 onClick={() => window.open(message.mattermostUrl, '_blank')}
               >
                 <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                Mattermost에서 보기
+                <span className="truncate">Mattermost에서 보기</span>
               </Button>
             )}
           </div>

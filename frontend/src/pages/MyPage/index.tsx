@@ -6,7 +6,11 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Briefcase, Code, Save, X, LogOut } from "lucide-react";
 import { PageLayout } from "@/components/layouts/PageLayout";
-import { getUserProfile, updateUserProfile, deleteUser } from "@/services/api/auth";
+import {
+  getUserProfile,
+  updateUserProfile,
+  deleteUser,
+} from "@/services/api/auth";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { getPositions, getSkills } from "@/services/api/codes";
 import type { UserProfileResponse } from "@/services/api/auth";
@@ -164,12 +168,12 @@ export function MyPage() {
       setInitialPositionIds(selectedPositionIds);
       setInitialSkillIds(selectedSkillIds);
 
-      alert("프로필이 저장되었습니다!");
+      // alert("프로필이 저장되었습니다!");
       // 대시보드로 이동
       navigate("/dashboard");
     } catch (error) {
       console.error("저장 실패:", error);
-      alert("프로필 저장에 실패했습니다.");
+      // alert("프로필 저장에 실패했습니다.");
     } finally {
       setIsSaving(false);
     }
@@ -188,17 +192,17 @@ export function MyPage() {
     try {
       setIsDeleting(true);
       await deleteUser();
-      console.log("[MyPage] 회원탈퇴 성공");
+      // console.log("[MyPage] 회원탈퇴 성공");
 
       // 로그아웃 처리
       logout();
 
-      alert("회원탈퇴가 완료되었습니다.");
+      // alert("회원탈퇴가 완료되었습니다.");
       // 로그인 페이지로 이동
       navigate("/login");
     } catch (error) {
-      console.error("회원탈퇴 실패:", error);
-      alert("회원탈퇴에 실패했습니다.");
+      // console.error("회원탈퇴 실패:", error);
+      // alert("회원탈퇴에 실패했습니다.");
     } finally {
       setIsDeleting(false);
     }

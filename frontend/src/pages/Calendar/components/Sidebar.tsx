@@ -8,7 +8,10 @@ import {
   Hash,
   GraduationCap,
   Briefcase,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
+import { formatChannelDisplayName } from "@/utils/formatUtils";
 import type { UserChannel } from "@/types/api";
 
 interface SidebarProps {
@@ -20,6 +23,7 @@ interface SidebarProps {
   channelExpanded: boolean;
   selectedWeek: Date[];
   availableChannels: UserChannel[];
+  collapsed: boolean;
   getEventsForDate: (date: Date) => any[];
   formatMonthYear: (date: Date) => string;
   isSameDay: (date1: Date, date2: Date) => boolean;
@@ -32,6 +36,7 @@ interface SidebarProps {
   onMiniCalendarWeekClick: (week: Date[]) => void;
   onMiniCalendarDateClick: (date: Date) => void;
   onDateChange: (date: Date) => void;
+  onToggleCollapse: () => void;
 }
 
 // 요일 상수 정의 (한글 깨짐 방지)
@@ -46,6 +51,7 @@ export function Sidebar({
   channelExpanded,
   selectedWeek,
   availableChannels,
+  collapsed,
   getEventsForDate,
   formatMonthYear,
   isSameDay,
@@ -58,6 +64,7 @@ export function Sidebar({
   onMiniCalendarWeekClick,
   onMiniCalendarDateClick,
   onDateChange,
+  onToggleCollapse,
 }: SidebarProps) {
   // 미니 캘린더 독립적인 날짜 상태
   const [miniCalendarDate, setMiniCalendarDate] = useState(currentDate);
@@ -126,33 +133,48 @@ export function Sidebar({
   return (
     // 너비 조절 가능
     <div
-      className="bg-white border-r p-5 overflow-y-auto"
-      style={{ width: "16%", minWidth: "280px", maxWidth: "320px" }}
+      className={`bg-white border-r overflow-y-auto transition-all duration-300 ${
+        collapsed ? "w-16" : ""
+      }`}
+      style={collapsed ? {} : { width: "16%", minWidth: "280px", maxWidth: "320px" }}
     >
-      {/* 미니 달력 */}
-      <Card className="p-4 mb-6 shadow-sm">
-        {/* 헤더 */}
-        <div className="flex items-center justify-between mb-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="w-6 h-6"
-            onClick={() => handleMiniCalendarMonthChange(-1)}
+      {/* 접기 상태일 때 버튼만 표시 */}
+      {collapsed ? (
+        <div className="p-3 flex justify-center">
+          <button
+            onClick={onToggleCollapse}
+            className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+            title="사이드바 펼치기"
           >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <div className="text-base" style={{ fontWeight: 700 }}>
-            {formatMonthYear(miniCalendarDate)}
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="w-6 h-6"
-            onClick={() => handleMiniCalendarMonthChange(1)}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
+            <PanelLeftOpen className="w-5 h-5 text-gray-600" />
+          </button>
         </div>
+      ) : (
+        <div className="p-5">
+          {/* 미니 달력 */}
+          <Card className="p-4 mb-6 shadow-sm">
+            {/* 헤더 */}
+            <div className="flex items-center justify-between mb-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-6 h-6"
+                onClick={() => handleMiniCalendarMonthChange(-1)}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <div className="text-base" style={{ fontWeight: 700 }}>
+                {formatMonthYear(miniCalendarDate)}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="w-6 h-6"
+                onClick={() => handleMiniCalendarMonthChange(1)}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
 
         <div className="border-b mb-2" />
 
@@ -281,7 +303,7 @@ export function Sidebar({
             <div className="space-y-1.5">
               {availableChannels.map((channel) => {
                 const isSelected = selectedChannels.includes(channel.channelId);
-                const displayName = `${channel.teamName} - ${channel.channelName}`;
+                const displayName = formatChannelDisplayName(channel.displayName, channel.channelName);
 
                 return (
                   <button
@@ -377,17 +399,26 @@ export function Sidebar({
           </div>
         </div>
 
-        {/* 필터 초기화 */}
-        <div className="pt-2">
+        {/* 필터 초기화 & 사이드바 접기 */}
+        <div className="pt-2 border-t flex items-center justify-between gap-2">
           <button
             onClick={onResetFilters}
-            className="w-full text-xs text-gray-500 hover:text-gray-700 py-2"
+            className="flex-1 text-xs text-gray-500 hover:text-gray-700 py-2"
             style={{ fontWeight: 500 }}
           >
             필터 초기화
           </button>
+          <button
+            onClick={onToggleCollapse}
+            className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+            title="사이드바 접기"
+          >
+            <PanelLeftClose className="w-4 h-4 text-gray-500" />
+          </button>
         </div>
       </div>
+        </div>
+      )}
     </div>
   );
 }

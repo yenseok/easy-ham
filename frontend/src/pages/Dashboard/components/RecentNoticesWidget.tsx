@@ -1,31 +1,36 @@
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Bell } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { formatRelativeTime } from "@/utils/dateFormatter";
+import { Bell, ChevronDown } from "lucide-react";
 import type { Notice } from "@/types/notice";
+import { RecentNoticesModal } from "@/components/modals/RecentNoticesModal";
 
 interface RecentNoticesWidgetProps {
   notices: Notice[]; // 🔄 Dashboard의 allNotices를 props로 받음
   onNoticeClick?: (notice: Notice) => void;
+  isMobile?: boolean;
 }
 
-export default function RecentNoticesWidget({ notices: allNotices, onNoticeClick }: RecentNoticesWidgetProps) {
-  // 반응형: 모바일 감지
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== "undefined" && window.innerWidth < 768
-  );
+export default function RecentNoticesWidget({
+  notices: allNotices,
+  onNoticeClick,
+  isMobile = false,
+}: RecentNoticesWidgetProps) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+    if (!isMobile) {
+      setIsCollapsed(false);
+    }
+  }, [isMobile]);
 
-  // 🔄 allNotices에서 최신순으로 필요한 개수만 추출
+  // 🔄 allNotices에서 최신순으로 3개만 추출
   const notices = useMemo(() => {
-    const count = isMobile ? 3 : 5;
-    return allNotices.slice(0, count);
-  }, [allNotices, isMobile]);
+    return allNotices.slice(0, 3);
+  }, [allNotices]);
 
   const getCategoryColor = (subcategory: string) => {
     switch (subcategory) {
@@ -49,56 +54,88 @@ export default function RecentNoticesWidget({ notices: allNotices, onNoticeClick
   };
 
   return (
-    <Card className="shadow-md">
-      <div className="h-16 px-6 flex items-center gap-2 border-b">
-        <Bell className="w-5 h-5 text-(--brand-orange)" />
-        <h2 className="text-lg" style={{ fontWeight: 700 }}>
-          최근 공지
-        </h2>
-      </div>
-      <div className="px-4 py-4">
-        {notices.length === 0 ? (
-          <div className="text-sm text-gray-400 text-center py-8">
-            최근 공지가 없습니다
+    <>
+      <Card className="shadow-md">
+        <div className="h-16 px-6 flex items-center border-b gap-2">
+          <div className="flex items-center gap-2">
+            <Bell className="w-5 h-5 text-(--brand-orange)" />
+            <h2 className="text-lg" style={{ fontWeight: 700 }}>
+              최근 공지
+            </h2>
           </div>
-        ) : (
-          <div className="space-y-2.5">
-            {notices.map((notice) => (
-              <div
-                key={notice.id}
-                className="p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors border border-transparent hover:border-gray-200"
-                onClick={() => onNoticeClick?.(notice)}
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge
-                    className={`text-xs px-2 py-0.5 border ${getCategoryColor(
-                      notice.subcategory
-                    )}`}
-                  >
-                    {notice.subcategory}
-                  </Badge>
-                  {notice.dday !== null && (
-                    <span
-                      className={`text-white text-xs ${notice.dday === 0 ? 'px-1.5' : 'px-2'} py-0.5 rounded ${getDdayColor(
-                        notice.dday
-                      )}`}
-                      style={{ fontWeight: 600 }}
-                    >
-                      {notice.dday === 0 ? 'D-Day' : `D-${notice.dday}`}
-                    </span>
-                  )}
-                </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsModalOpen(true)}
+            className="ml-auto text-sm text-gray-600 hover:text-gray-900"
+          >
+            더보기
+          </Button>
+          {isMobile && (
+            <button
+              type="button"
+              aria-expanded={!isCollapsed}
+              aria-label={isCollapsed ? "위젯 펼치기" : "위젯 접기"}
+              onClick={() => setIsCollapsed((prev) => !prev)}
+              className="md:hidden text-gray-500 hover:text-gray-900 transition-colors p-1"
+            >
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${isCollapsed ? "-rotate-180" : "rotate-0"}`}
+              />
+            </button>
+          )}
+        </div>
+      {(!isMobile || !isCollapsed) && (
+        <div className="px-4 py-4">
+          {notices.length === 0 ? (
+            <div className="text-sm text-gray-400 text-center py-8">
+              최근 공지가 없습니다
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {notices.map((notice) => (
                 <div
-                  className="text-sm line-clamp-2 text-gray-800"
-                  style={{ fontWeight: 500 }}
+                  key={notice.id}
+                  className="p-3 border rounded-lg hover:shadow-md transition-shadow cursor-pointer hover:border-(--brand-orange)"
+                  onClick={() => onNoticeClick?.(notice)}
                 >
-                  {notice.title}
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge
+                      className={`text-xs px-2 py-0.5 border ${getCategoryColor(
+                        notice.subcategory
+                      )}`}
+                    >
+                      {notice.subcategory}
+                    </Badge>
+                    {notice.dday !== null && (
+                      <span
+                        className={`text-white text-xs ${notice.dday === 0 ? 'px-1.5' : 'px-2'} py-0.5 rounded ${getDdayColor(
+                          notice.dday
+                        )}`}
+                        style={{ fontWeight: 600 }}
+                      >
+                        {notice.dday === 0 ? 'D-Day' : `D-${notice.dday}`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2">
+                    {notice.title}
+                  </div>
+                  <div className="text-xs text-gray-600 line-clamp-1">
+                    {notice.channel} • {formatRelativeTime(notice.createdAt)}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      </Card>
+
+      <RecentNoticesModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+      />
+    </>
   );
 }
