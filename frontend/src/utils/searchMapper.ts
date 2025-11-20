@@ -142,6 +142,7 @@ export function convertSearchItemToNotice(item: SearchResultItem): Notice {
 
     // 채널 및 팀: channelName, teamName 사용 (API에서 제공)
     channel: item.channelName,
+    mmChannelId: item.mmChannelId, // Mattermost 채널 ID (채널 필터링에 사용)
     teamName: item.teamName,
 
     // 카테고리 변환
@@ -164,6 +165,9 @@ export function convertSearchItemToNotice(item: SearchResultItem): Notice {
     // D-day와 deadline (API에서 제공)
     dday: calculateDday(item.deadline),
     deadline: item.deadline || undefined,
+
+    // 캠퍼스 정보 (Search API의 campusId를 Notice의 campusId로 매핑)
+    campusId: item.campusId || null,
 
     // Mattermost 원문 링크 (백엔드에서 제공)
     mattermostUrl: item.originalLink || `https://mattermost.ssafy.com/message/${item.mmMessageId}`,

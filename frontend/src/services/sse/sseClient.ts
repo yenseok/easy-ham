@@ -48,8 +48,13 @@ class SSEClient {
         if (event instanceof MessageEvent) {
           try {
             const data = JSON.parse(event.data);
-            console.log(`[SSE] Received event: ${eventType}`, data);
-            this.messageCallback?.(data);
+            // SSE의 id 필드를 함께 전달 (lastEventId)
+            const messageWithId = {
+              id: event.lastEventId || undefined,
+              ...data,
+            };
+            console.log(`[SSE] Received event: ${eventType}`, messageWithId);
+            this.messageCallback?.(messageWithId);
           } catch (error) {
             console.error(`[SSE] Failed to parse message data:`, error);
             this.errorCallback?.({
@@ -101,6 +106,43 @@ class SSEClient {
       this.eventSource.close();
       this.eventSource = null;
     }
+  }
+
+  /**
+   * 추가 이벤트 타입 리스닝 (connect() 후 호출)
+   * 같은 EventSource 연결에서 여러 이벤트 타입을 수신하기 위함
+   * @param eventType 추가로 구독할 이벤트 타입
+   */
+  addEventListenerForType(eventType: string): void {
+    if (!this.eventSource) {
+      console.warn(
+        `[SSE] EventSource not connected, cannot add listener for ${eventType}`
+      );
+      return;
+    }
+
+    console.log(`[SSE] Adding listener for event type: ${eventType}`);
+
+    this.eventSource.addEventListener(eventType, (event: Event) => {
+      if (event instanceof MessageEvent) {
+        try {
+          const data = JSON.parse(event.data);
+          // SSE의 id 필드를 함께 전달 (lastEventId)
+          const messageWithId = {
+            id: event.lastEventId || undefined,
+            ...data,
+          };
+          console.log(`[SSE] Received event: ${eventType}`, messageWithId);
+          this.messageCallback?.(messageWithId);
+        } catch (error) {
+          console.error(`[SSE] Failed to parse message data:`, error);
+          this.errorCallback?.({
+            message: "Failed to parse SSE message",
+            timestamp: Date.now(),
+          });
+        }
+      }
+    });
   }
 
   /**

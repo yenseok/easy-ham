@@ -8,7 +8,7 @@ export const DdayBadge = ({ dday }: DdayBadgeProps) => {
   if (dday === null) return null;
 
   const color = getDdayBadgeColor(dday);
-  const text = dday === 0 ? 'D-Day' : dday > 0 ? `D-${dday}` : '마감';
+  const text = dday === 0 ? 'D-Day' : dday > 0 ? `D-${dday}` : `D+${Math.abs(dday)}`;
 
   return (
     <span

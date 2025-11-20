@@ -1,50 +1,53 @@
 /**
- * 북마크 목록 모달
- * - 목록 뷰: 북마크된 공지사항 리스트
+ * 최근 공지 목록 모달
+ * - 목록 뷰: 최근 공지사항 리스트
  * - 상세 뷰: 선택한 공지사항 상세 정보
  */
 
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { X, Star, ArrowLeft, ExternalLink, FileText, Users, Hash, User, Calendar, Edit3 } from 'lucide-react';
+import { X, Star, Check, ArrowLeft, ExternalLink, FileText, Users, Hash, User, Calendar, Edit3, Bell, Clock } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { searchApi } from '@/services/api/search';
 import { bookmarksApi } from '@/services/api/bookmarks';
+import { completionsApi } from '@/services/api/completions';
 import { getCategoryColor } from '@/utils/colorUtils';
-import { convertBookmarkItemToNotice } from '@/utils/bookmarkMapper';
-import { Bookmark } from "lucide-react";
 import type { Notice } from '@/types/notice';
 
-interface BookmarksModalProps {
+interface RecentNoticesModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
 type ModalView = 'list' | 'detail';
 
-export function BookmarksModal({ open, onOpenChange }: BookmarksModalProps) {
+export function RecentNoticesModal({ open, onOpenChange }: RecentNoticesModalProps) {
   const [view, setView] = useState<ModalView>('list');
   const [notices, setNotices] = useState<Notice[]>([]);
   const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 북마크 목록 조회 (북마크 전용 API 사용)
-  // 검색 API의 size 제한 문제를 해결: 북마크된 것만 정확하게 가져옴
-  const fetchBookmarks = async () => {
+  // 최근 공지 목록 조회
+  const fetchRecentNotices = async () => {
     try {
       setIsLoading(true);
-      const { notices: bookmarkItems } = await bookmarksApi.getList({
-        sort: 'recent', // 최신순 정렬
+      const { notices: allNotices } = await searchApi.searchPosts({
+        page: 0,
+        size: 50, // 충분한 개수 가져오기
       });
-      const notices = bookmarkItems.map(convertBookmarkItemToNotice);
-      // console.log('[북마크 모달] 조회된 북마크 개수:', notices.length);
-      // console.log('[북마크 모달] 북마크 ID 목록:', notices.map(n => n.id));
-      setNotices(notices);
+
+      // 최신순 정렬 (이미 서버에서 최신순으로 오지만 명시적으로 정렬)
+      const sortedNotices = [...allNotices].sort((a, b) => {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+
+      setNotices(sortedNotices);
     } catch (error) {
-      console.error('[북마크 모달] 로드 실패:', error);
-      // toast.error('북마크 목록을 불러오지 못했습니다.');
+      console.error('[최근 공지 모달] 로드 실패:', error);
+      toast.error('최근 공지 목록을 불러오지 못했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -53,8 +56,8 @@ export function BookmarksModal({ open, onOpenChange }: BookmarksModalProps) {
   // 모달 열림 시 데이터 로드
   useEffect(() => {
     if (open) {
-      fetchBookmarks();
-      setView('list'); // 모달 열 때 목록 뷰로 초기화
+      fetchRecentNotices();
+      setView('list');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -71,20 +74,49 @@ export function BookmarksModal({ open, onOpenChange }: BookmarksModalProps) {
     setSelectedNotice(null);
   };
 
-  // 북마크 해제 (항상 해제만 하므로 toggle의 두 번째 인자는 항상 true)
-  const handleBookmarkRemove = async (id: number) => {
-    try {
-      // 먼저 UI에서 제거 (낙관적 업데이트)
-      setNotices((prev) => prev.filter((n) => n.id !== id));
+  // 북마크 토글
+  const handleBookmarkToggle = async (id: number) => {
+    if (!selectedNotice || selectedNotice.id !== id) return;
 
-      // API 호출 - 북마크 해제 (currentBookmarked = true)
-      await bookmarksApi.toggle(id, true);
-      toast.success('북마크가 해제되었습니다.');
+    const currentBookmarked = selectedNotice.bookmarked;
+    try {
+      setSelectedNotice({
+        ...selectedNotice,
+        bookmarked: !currentBookmarked,
+      });
+
+      await bookmarksApi.toggle(id, currentBookmarked);
+      toast.success(currentBookmarked ? '북마크가 해제되었습니다.' : '북마크에 추가되었습니다.');
     } catch (error) {
-      console.error('[북마크 해제] 실패:', error);
-      // 실패 시 데이터 다시 로드
-      fetchBookmarks();
-      toast.error('북마크 해제에 실패했습니다.');
+      console.error('[북마크 토글] 실패:', error);
+      setSelectedNotice({
+        ...selectedNotice,
+        bookmarked: currentBookmarked,
+      });
+      toast.error('북마크 처리에 실패했습니다.');
+    }
+  };
+
+  // 완료 토글
+  const handleCompleteToggle = async (id: number) => {
+    if (!selectedNotice || selectedNotice.id !== id) return;
+
+    const currentCompleted = selectedNotice.completed;
+    try {
+      setSelectedNotice({
+        ...selectedNotice,
+        completed: !currentCompleted,
+      });
+
+      await completionsApi.toggle(id);
+      toast.success(currentCompleted ? '완료가 취소되었습니다.' : '완료 처리되었습니다.');
+    } catch (error) {
+      console.error('[완료 토글] 실패:', error);
+      setSelectedNotice({
+        ...selectedNotice,
+        completed: currentCompleted,
+      });
+      toast.error('완료 처리에 실패했습니다.');
     }
   };
 
@@ -98,9 +130,9 @@ export function BookmarksModal({ open, onOpenChange }: BookmarksModalProps) {
     });
   };
 
-  // D-day 색상 (Dashboard와 동일)
+  // D-day 색상
   const getDdayColor = (dday: number) => {
-    if (dday < 0) return 'bg-gray-400'; // 마감 지난 경우 회색
+    if (dday < 0) return 'bg-gray-400';
     if (dday <= 3) return 'bg-red-500';
     if (dday <= 7) return 'bg-yellow-500';
     return 'bg-green-500';
@@ -111,11 +143,11 @@ export function BookmarksModal({ open, onOpenChange }: BookmarksModalProps) {
       <DialogContent className="max-w-2xl h-[600px] flex flex-col p-0" hideCloseButton>
         {/* 접근성을 위한 숨겨진 제목 및 설명 */}
         <DialogTitle className="sr-only">
-          {view === 'list' ? '북마크 목록' : selectedNotice?.title || '공지사항 상세'}
+          {view === 'list' ? '최근 공지 목록' : selectedNotice?.title || '공지사항 상세'}
         </DialogTitle>
         <DialogDescription className="sr-only">
-          {view === 'list' 
-            ? '북마크한 공지사항 목록을 확인하고 관리할 수 있습니다.'
+          {view === 'list'
+            ? '최근 공지사항 목록을 확인할 수 있습니다.'
             : '공지사항의 상세 정보를 확인할 수 있습니다.'}
         </DialogDescription>
 
@@ -134,8 +166,8 @@ export function BookmarksModal({ open, onOpenChange }: BookmarksModalProps) {
           )}
           {view === 'list' && (
             <h2 className="text-xl font-bold flex items-center gap-2">
-              <Bookmark className="w-5 h-5 text-(--brand-orange)" />
-              북마크 목록
+              <Bell className="w-5 h-5 text-(--brand-orange)" />
+              최근 공지
             </h2>
           )}
           <Button
@@ -155,7 +187,7 @@ export function BookmarksModal({ open, onOpenChange }: BookmarksModalProps) {
               <div className="text-center py-8 text-gray-500">로딩 중...</div>
             ) : notices.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                북마크한 공지사항이 없습니다.
+                최근 공지가 없습니다.
               </div>
             ) : (
               notices.map((notice) => {
@@ -163,60 +195,42 @@ export function BookmarksModal({ open, onOpenChange }: BookmarksModalProps) {
                 return (
                   <div
                     key={notice.id}
-                    className="flex items-center gap-4 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                    className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => handleNoticeClick(notice)}
                   >
-                    {/* 왼쪽: 정보 (클릭 가능) */}
-                    <div
-                      className="flex-1 min-w-0"
-                      onClick={() => handleNoticeClick(notice)}
-                    >
-                      {/* 카테고리 배지 */}
-                      <div className="flex items-center gap-2 mb-2">
+                    {/* 카테고리 배지 */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <span
+                        className="text-xs px-2 py-0.5 rounded font-semibold"
+                        style={{
+                          backgroundColor: categoryColor.bg,
+                          color: categoryColor.text,
+                        }}
+                      >
+                        {notice.category}/{notice.subcategory}
+                      </span>
+                      {/* D-day */}
+                      {notice.dday !== null && notice.dday !== undefined && (
                         <span
-                          className="text-xs px-2 py-0.5 rounded font-semibold"
-                          style={{
-                            backgroundColor: categoryColor.bg,
-                            color: categoryColor.text,
-                          }}
+                          className={`text-white text-xs px-2 py-0.5 rounded ${getDdayColor(
+                            notice.dday
+                          )}`}
+                          style={{ fontWeight: 600 }}
                         >
-                          {notice.category}/{notice.subcategory}
+                          {notice.dday === 0 ? 'D-Day' : notice.dday > 0 ? `D-${notice.dday}` : `D+${Math.abs(notice.dday)}`}
                         </span>
-                        {/* D-day */}
-                        {notice.dday !== null && notice.dday !== undefined && (
-                          <span
-                            className={`text-white text-xs px-2 py-0.5 rounded ${getDdayColor(
-                              notice.dday
-                            )}`}
-                            style={{ fontWeight: 600 }}
-                          >
-                            {notice.dday === 0 ? 'D-Day' : notice.dday > 0 ? `D-${notice.dday}` : `D+${Math.abs(notice.dday)}`}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* 제목 */}
-                      <h3 className="font-semibold text-sm mb-1 truncate">
-                        {notice.title}
-                      </h3>
-
-                      {/* 작성자 & 날짜 */}
-                      <div className="text-xs text-gray-500">
-                        {notice.author} · {formatDate(notice.createdAt)}
-                      </div>
+                      )}
                     </div>
 
-                    {/* 오른쪽: 북마크 해제 버튼 */}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 shrink-0"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleBookmarkRemove(notice.id);
-                      }}
-                    >
-                      <Star className="w-5 h-5 text-yellow-500 fill-current" />
-                    </Button>
+                    {/* 제목 */}
+                    <h3 className="font-semibold text-sm mb-1 line-clamp-2">
+                      {notice.title}
+                    </h3>
+
+                    {/* 채널 & 날짜 */}
+                    <div className="text-xs text-gray-500">
+                      {notice.channel} · {formatDate(notice.createdAt)}
+                    </div>
                   </div>
                 );
               })
@@ -233,25 +247,23 @@ export function BookmarksModal({ open, onOpenChange }: BookmarksModalProps) {
                 <span
                   className="text-xs px-2 py-0.5 rounded font-semibold"
                   style={{
-                    backgroundColor: getCategoryColor(selectedNotice.subcategory)
-                      .bg,
+                    backgroundColor: getCategoryColor(selectedNotice.subcategory).bg,
                     color: getCategoryColor(selectedNotice.subcategory).text,
                   }}
                 >
                   {selectedNotice.category}/{selectedNotice.subcategory}
                 </span>
                 {/* D-day */}
-                {selectedNotice.dday !== null &&
-                  selectedNotice.dday !== undefined && (
-                    <span
-                      className={`text-white text-xs px-2 py-0.5 rounded ${getDdayColor(
-                        selectedNotice.dday
-                      )}`}
-                      style={{ fontWeight: 600 }}
-                    >
-                      {selectedNotice.dday === 0 ? 'D-Day' : selectedNotice.dday > 0 ? `D-${selectedNotice.dday}` : `D+${Math.abs(selectedNotice.dday)}`}
-                    </span>
-                  )}
+                {selectedNotice.dday !== null && selectedNotice.dday !== undefined && (
+                  <span
+                    className={`text-white text-xs px-2 py-0.5 rounded ${getDdayColor(
+                      selectedNotice.dday
+                    )}`}
+                    style={{ fontWeight: 600 }}
+                  >
+                    {selectedNotice.dday === 0 ? 'D-Day' : selectedNotice.dday > 0 ? `D-${selectedNotice.dday}` : `D+${Math.abs(selectedNotice.dday)}`}
+                  </span>
+                )}
               </div>
               <h2 className="text-2xl font-bold">{selectedNotice.title}</h2>
             </div>
@@ -330,20 +342,12 @@ export function BookmarksModal({ open, onOpenChange }: BookmarksModalProps) {
                       />
                     ),
                     ul: ({ node, ...props }) => (
-                      <ul
-                        className="list-disc pl-6 mb-3 space-y-1"
-                        {...props}
-                      />
+                      <ul className="list-disc pl-6 mb-3 space-y-1" {...props} />
                     ),
                     ol: ({ node, ...props }) => (
-                      <ol
-                        className="list-decimal pl-6 mb-3 space-y-1"
-                        {...props}
-                      />
+                      <ol className="list-decimal pl-6 mb-3 space-y-1" {...props} />
                     ),
-                    li: ({ node, ...props }) => (
-                      <li className="mb-1" {...props} />
-                    ),
+                    li: ({ node, ...props }) => <li className="mb-1" {...props} />,
                     strong: ({ node, ...props }) => (
                       <strong className="font-bold" {...props} />
                     ),
@@ -377,59 +381,90 @@ export function BookmarksModal({ open, onOpenChange }: BookmarksModalProps) {
             </div>
 
             {/* 첨부파일 */}
-            {selectedNotice.attachments &&
-              selectedNotice.attachments.length > 0 && (
-                <>
-                  <Separator className="my-4" />
-                  <div className="py-4">
-                    <h3 className="text-sm mb-4 text-gray-500 font-bold">
-                      첨부파일
-                    </h3>
-                    <div className="space-y-2">
-                      {selectedNotice.attachments.map((file) => (
-                        <a
-                          key={file.id}
-                          href={file.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                          <FileText className="w-5 h-5 text-gray-500 shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate">
-                              {file.name}
-                            </div>
-                            {file.size && (
-                              <div className="text-xs text-gray-500">
-                                {(file.size / 1024).toFixed(1)} KB
-                              </div>
-                            )}
+            {selectedNotice.attachments && selectedNotice.attachments.length > 0 && (
+              <>
+                <Separator className="my-4" />
+                <div className="py-4">
+                  <h3 className="text-sm mb-4 text-gray-500 font-bold">
+                    첨부파일
+                  </h3>
+                  <div className="space-y-2">
+                    {selectedNotice.attachments.map((file) => (
+                      <a
+                        key={file.id}
+                        href={file.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <FileText className="w-5 h-5 text-gray-500 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">
+                            {file.name}
                           </div>
-                        </a>
-                      ))}
-                    </div>
+                          {file.size && (
+                            <div className="text-xs text-gray-500">
+                              {(file.size / 1024).toFixed(1)} KB
+                            </div>
+                          )}
+                        </div>
+                      </a>
+                    ))}
                   </div>
-                </>
-              )}
+                </div>
+              </>
+            )}
+
+            {/* 북마크 및 완료 체크 버튼 */}
+            <div className="flex gap-2 py-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleBookmarkToggle(selectedNotice.id)}
+                className={`h-9 px-3 rounded-md text-sm transition-colors ${
+                  selectedNotice.bookmarked
+                    ? 'bg-yellow-100 text-yellow-700 border-yellow-300 hover:bg-yellow-200'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Star className={`w-4 h-4 mr-1.5 ${selectedNotice.bookmarked ? 'fill-current' : ''}`} />
+                {selectedNotice.bookmarked ? '북마크 해제' : '북마크'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleCompleteToggle(selectedNotice.id)}
+                className={`h-9 px-3 rounded-md text-sm transition-colors ${
+                  selectedNotice.completed
+                    ? 'bg-green-100 text-green-700 border-green-300 hover:bg-green-200'
+                    : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <Check className={`w-4 h-4 mr-1.5 ${selectedNotice.completed ? 'stroke-2' : ''}`} />
+                {selectedNotice.completed ? '완료됨' : '완료 체크'}
+              </Button>
+            </div>
 
             {/* 푸터 액션 */}
-            <Separator className="my-4" />
-            <div className="flex items-center justify-between pt-4">
-              <div className="text-xs text-gray-500">
-                메시지 ID: {selectedNotice.id}
+            <Separator />
+            <div className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <Clock className="w-3.5 h-3.5" />
+                <span className="break-all">메시지 ID: {selectedNotice.id}</span>
               </div>
-              {selectedNotice.mattermostUrl && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    window.open(selectedNotice.mattermostUrl, '_blank')
-                  }
-                >
-                  <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
-                  Mattermost에서 보기
-                </Button>
-              )}
+              <div className="flex gap-2 w-full sm:w-auto">
+                {selectedNotice.mattermostUrl && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-full sm:w-auto"
+                    onClick={() => window.open(selectedNotice.mattermostUrl, '_blank')}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 mr-1.5" />
+                    <span className="truncate">Mattermost에서 보기</span>
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}

@@ -14,6 +14,7 @@ import {
   mapCategoriesToIds,
   type NoticeCategory,
 } from "@/services/api/codes";
+import { getUserProfile } from "@/services/api/auth";
 import type { Notice, Subcategory } from "@/types/notice";
 import type { SearchParams } from "@/types/api";
 
@@ -118,6 +119,15 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
     try {
       const range = getOneYearRange(centerDate);
 
+      // 유저 캠퍼스 정보 조회
+      let userCampus: string | null = null;
+      try {
+        const userResponse = await getUserProfile();
+        userCampus = userResponse.data.campus;
+      } catch (error) {
+        console.error('[캘린더] 유저 정보 조회 실패:', error);
+      }
+
       // Search API 파라미터 구성
       // 캘린더는 "전체 데이터"가 필요하므로 필터는 적용 안 함
       const params: SearchParams = {
@@ -130,9 +140,26 @@ export const useCalendarStore = create<CalendarState>((set, get) => ({
       const { notices } = await searchApi.searchPosts(params);
 
       // deadline이 있는 이벤트만 캘린더에 표시 (필수 조건)
-      const calendarEvents = notices.filter(
-        (notice) => notice.deadline !== null && notice.deadline !== undefined
-      );
+      // + 캠퍼스 필터링 적용
+      const calendarEvents = notices.filter((notice) => {
+        // 1. deadline 확인
+        if (notice.deadline === null || notice.deadline === undefined) {
+          return false;
+        }
+
+        // 2. 캠퍼스 필터링
+        // - campusId가 null이면 전체 공지이므로 통과
+        // - campusId가 있고, userCampus가 그 안에 포함되면 통과
+        // - campusId가 있고, userCampus가 없으면 제외
+        if (notice.campusId) {
+          if (!userCampus) return false;
+          // campusId는 "서울,부울경" 형태의 문자열, 콤마로 분리해서 확인
+          const campusList = notice.campusId.split(',').map(c => c.trim());
+          if (!campusList.includes(userCampus)) return false;
+        }
+
+        return true;
+      });
 
       set({
         events: calendarEvents,

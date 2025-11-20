@@ -6,6 +6,7 @@ interface MiniCalendarProps {
   onDateSelect?: (date: Date) => void;
   highlightedDates?: number[];
   onNavigateToCalendar?: () => void;
+  hasEventsOnDate?: (date: Date) => boolean;
 }
 
 const DAYS_OF_WEEK = ['일', '월', '화', '수', '목', '금', '토'];
@@ -15,6 +16,7 @@ export function MiniCalendar({
   onDateSelect,
   highlightedDates = [],
   onNavigateToCalendar,
+  hasEventsOnDate,
 }: MiniCalendarProps) {
   const currentDate = selectedDate;
 
@@ -43,10 +45,10 @@ export function MiniCalendar({
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
+    <div className="bg-white border border-gray-200 rounded-lg p-3">
       {/* 헤더 */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-gray-900">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-semibold text-gray-900 text-sm">
           {year}년 {month + 1}월
         </h3>
         {onNavigateToCalendar && (
@@ -54,20 +56,20 @@ export function MiniCalendar({
             variant="ghost"
             size="sm"
             onClick={onNavigateToCalendar}
-            className="h-8 w-8 p-0 hover:bg-gray-100"
+            className="h-7 w-7 p-0 hover:bg-gray-100"
             title="캘린더 페이지로 이동"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
           </Button>
         )}
       </div>
 
       {/* 요일 헤더 */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="grid grid-cols-7 gap-1 mb-1.5">
         {DAYS_OF_WEEK.map((day) => (
           <div
             key={day}
-            className="text-center text-xs font-semibold text-gray-500 py-1"
+            className="text-center text-[10px] font-semibold text-gray-500 py-0.5"
           >
             {day}
           </div>
@@ -76,32 +78,41 @@ export function MiniCalendar({
 
       {/* 날짜 그리드 */}
       <div className="grid grid-cols-7 gap-1">
-        {calendarDays.map((day, index) => (
-          <button
-            key={index}
-            onClick={() => handleDateClick(day)}
-            className={`
-              h-8 text-xs rounded
-              ${
-                day === null
-                  ? 'invisible'
-                  : 'hover:bg-gray-100 transition-colors'
-              }
-              ${
-                isCurrentMonth && day === today.getDate()
-                  ? 'bg-[var(--brand-orange)] text-white font-semibold'
-                  : ''
-              }
-              ${
-                highlightedDates.includes(day || 0)
-                  ? 'border border-[var(--brand-orange)]'
-                  : 'text-gray-700'
-              }
-            `}
-          >
-            {day}
-          </button>
-        ))}
+        {calendarDays.map((day, index) => {
+          const dateForDay = day ? new Date(year, month, day) : null;
+          const hasEvents = dateForDay && hasEventsOnDate ? hasEventsOnDate(dateForDay) : false;
+          const isToday = isCurrentMonth && day === today.getDate();
+
+          return (
+            <button
+              key={index}
+              onClick={() => handleDateClick(day)}
+              className={`
+                h-7 text-[11px] rounded relative flex flex-col items-center justify-center
+                ${
+                  day === null
+                    ? 'invisible'
+                    : 'hover:bg-gray-100 transition-colors'
+                }
+                ${
+                  isToday
+                    ? 'bg-(--brand-orange) text-white font-semibold'
+                    : ''
+                }
+                ${
+                  highlightedDates.includes(day || 0)
+                    ? 'border border-(--brand-orange)'
+                    : 'text-gray-700'
+                }
+              `}
+            >
+              {day}
+              {hasEvents && !isToday && (
+                <div className="absolute bottom-0.5 w-1 h-1 bg-(--brand-orange) rounded-full" />
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );

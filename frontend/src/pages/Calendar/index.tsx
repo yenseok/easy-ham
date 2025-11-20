@@ -8,6 +8,8 @@ import { MonthView } from "./components/MonthView";
 import { MessageDetailModal, type MessageDetail } from "@/components/modals/MessageDetailModal";
 import { useCalendarStore } from "@/stores/useCalendarStore";
 import { getUserChannels } from "@/services/api/channels";
+import { bookmarksApi } from "@/services/api/bookmarks";
+import { completionsApi } from "@/services/api/completions";
 import type { Notice } from "@/types/notice";
 import type { UserChannel } from "@/types/api";
 
@@ -30,6 +32,9 @@ export default function CalendarPage() {
 
   // 채널 필터 접기/펴기 상태
   const [channelExpanded, setChannelExpanded] = useState(true);
+
+  // 사이드바 접기/펴기 상태
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // 모달 상태
   const [selectedMessage, setSelectedMessage] = useState<MessageDetail | null>(
@@ -150,14 +155,22 @@ export default function CalendarPage() {
         selectedChannels.includes(ch.channelId)
       );
 
-      // event.channel은 "팀명 - 채널명" 형식의 문자열
-      // availableChannels에서 매칭되는 channelId 찾기
-      const matchingChannel = availableChannels.find(
-        (ch) => `${ch.teamName} - ${ch.channelName}` === event.channel
-      );
-
-      if (!allChannelsSelected && matchingChannel && !selectedChannels.includes(matchingChannel.channelId)) {
-        return false;
+      if (!allChannelsSelected) {
+        // mmChannelId가 있으면 직접 비교, 없으면 문자열 매칭
+        if (event.mmChannelId) {
+          // mmChannelId로 직접 비교
+          if (!selectedChannels.includes(event.mmChannelId)) {
+            return false;
+          }
+        } else {
+          // fallback: 문자열 매칭 (레거시 데이터용)
+          const matchingChannel = availableChannels.find(
+            (ch) => `${ch.teamName} - ${ch.channelName}` === event.channel
+          );
+          if (matchingChannel && !selectedChannels.includes(matchingChannel.channelId)) {
+            return false;
+          }
+        }
       }
 
       // 카테고리 필터 - 모든 카테고리가 선택된 경우 필터링 안 함
@@ -312,8 +325,76 @@ export default function CalendarPage() {
         type: att.type,
         mimeType: att.mimeType,
       })),
+      bookmarked: event.bookmarked,
+      completed: event.completed,
     });
     setIsModalOpen(true);
+  };
+
+  /**
+   * 북마크 토글
+   */
+  const toggleBookmark = async (id: number) => {
+    const event = events.find((e) => e.id === id);
+    if (!event) return;
+
+    const wasBookmarked = event.bookmarked;
+
+    try {
+      await bookmarksApi.toggle(id, wasBookmarked);
+      toast.success(wasBookmarked ? '북마크가 해제되었습니다.' : '북마크에 추가되었습니다.');
+      // 이벤트 목록 새로고침
+      loadEvents(currentDate);
+    } catch (error) {
+      console.error('[북마크 API] 호출 실패:', error);
+      toast.error('북마크 처리에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  /**
+   * 완료 토글
+   */
+  const toggleComplete = async (id: number) => {
+    const event = events.find((e) => e.id === id);
+    if (!event) return;
+
+    const wasCompleted = event.completed;
+
+    try {
+      await completionsApi.toggle(id);
+      toast.success(wasCompleted ? '완료가 해제되었습니다.' : '완료 처리되었습니다.');
+      // 이벤트 목록 새로고침
+      loadEvents(currentDate);
+    } catch (error) {
+      console.error('[완료 API] 호출 실패:', error);
+      toast.error('완료 처리에 실패했습니다. 다시 시도해주세요.');
+    }
+  };
+
+  /**
+   * 모달 내 북마크 토글
+   */
+  const handleModalBookmarkToggle = async (id: number) => {
+    await toggleBookmark(id);
+    if (selectedMessage && selectedMessage.id === id) {
+      setSelectedMessage({
+        ...selectedMessage,
+        bookmarked: !selectedMessage.bookmarked,
+      });
+    }
+  };
+
+  /**
+   * 모달 내 완료 토글
+   */
+  const handleModalCompleteToggle = async (id: number) => {
+    await toggleComplete(id);
+    if (selectedMessage && selectedMessage.id === id) {
+      setSelectedMessage({
+        ...selectedMessage,
+        completed: !selectedMessage.completed,
+      });
+    }
   };
 
   const weekDays = viewMode === "week" ? getWeekDays(currentDate) : [];
@@ -355,6 +436,7 @@ export default function CalendarPage() {
           channelExpanded={channelExpanded}
           selectedWeek={selectedWeek}
           availableChannels={availableChannels}
+          collapsed={sidebarCollapsed}
           getEventsForDate={getEventsForDate}
           formatMonthYear={formatMonthYear}
           isSameDay={isSameDay}
@@ -367,6 +449,7 @@ export default function CalendarPage() {
           onMiniCalendarWeekClick={handleMiniCalendarWeekClick}
           onMiniCalendarDateClick={handleMiniCalendarDateClick}
           onDateChange={setCurrentDate}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
 
         {/* 메인 캘린더 영역 (75%) */}
@@ -418,6 +501,8 @@ export default function CalendarPage() {
           setIsModalOpen(false);
           setSelectedMessage(null);
         }}
+        onBookmarkToggle={handleModalBookmarkToggle}
+        onCompleteToggle={handleModalCompleteToggle}
       />
     </div>
   );

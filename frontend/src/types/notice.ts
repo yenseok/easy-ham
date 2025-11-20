@@ -21,6 +21,7 @@ export interface Notice {
   content: string;
   author: string;
   channel: string;
+  mmChannelId?: string; // Mattermost 채널 ID (채널 필터링에 사용)
   teamName?: string;
   category: Category;
   subcategory: Subcategory;
@@ -32,6 +33,7 @@ export interface Notice {
   mattermostUrl?: string;
   createdAt: string;
   updatedAt: string;
+  campusId?: string | null; // 캠퍼스 정보 (예: "서울,부울경" 또는 null)
 
   // 캘린더 필드
   startDate?: string | Date; // 이벤트/공지 시작일

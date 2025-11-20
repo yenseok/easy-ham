@@ -1,16 +1,26 @@
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { Calendar } from "lucide-react";
+import { Calendar, ChevronDown } from "lucide-react";
 import type { Notice } from "@/types/notice";
 
 interface WeeklyCalendarWidgetProps {
   events: Notice[];
+  isMobile?: boolean;
 }
 
 export default function WeeklyCalendarWidget({
   events,
+  isMobile = false,
 }: WeeklyCalendarWidgetProps) {
   const navigate = useNavigate();
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setIsCollapsed(false);
+    }
+  }, [isMobile]);
 
   // 현재 주의 일~토 7일 계산
   const getWeekDays = (): Date[] => {
@@ -58,13 +68,13 @@ export default function WeeklyCalendarWidget({
   const getBorderColor = (subcategory: string) => {
     switch (subcategory) {
       case "할일":
-        return "border-red-500";
+        return "border-red-300";
       case "특강":
-        return "border-blue-500";
+        return "border-blue-300";
       case "정보":
-        return "border-green-500";
+        return "border-green-300";
       case "행사":
-        return "border-purple-500";
+        return "border-purple-300";
       default:
         return "border-gray-400";
     }
@@ -77,94 +87,111 @@ export default function WeeklyCalendarWidget({
 
   return (
     <Card className="shadow-md">
-      <div className="h-16 px-6 flex items-center gap-2 border-b">
-        <Calendar className="w-5 h-5 text-(--brand-orange)" />
-        <h2 className="text-lg" style={{ fontWeight: 700 }}>
-          이번 주 일정
-        </h2>
+      <div className="h-16 px-6 flex items-center border-b gap-2">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-5 h-5 text-(--brand-orange)" />
+          <h2 className="text-lg" style={{ fontWeight: 700 }}>
+            이번 주 일정
+          </h2>
+        </div>
+        {isMobile && (
+          <button
+            type="button"
+            aria-expanded={!isCollapsed}
+            aria-label={isCollapsed ? "위젯 펼치기" : "위젯 접기"}
+            onClick={() => setIsCollapsed((prev) => !prev)}
+            className="ml-auto md:hidden text-gray-500 hover:text-gray-900 transition-colors p-1"
+          >
+            <ChevronDown
+              className={`w-4 h-4 transition-transform ${isCollapsed ? "-rotate-180" : "rotate-0"}`}
+            />
+          </button>
+        )}
       </div>
-      <div className="px-4 py-4">
-        <div className="bg-white rounded-lg border overflow-hidden">
-          {/* 요일 헤더 */}
-          <div className="grid grid-cols-7 border-b bg-gray-50">
-            {["일", "월", "화", "수", "목", "금", "토"].map((day, idx) => (
-              <div
-                key={day}
-                className="text-center py-3 text-sm border-r last:border-r-0"
-                style={{
-                  fontWeight: 600,
-                  color:
-                    idx === 0 ? "#ef4444" : idx === 6 ? "#3b82f6" : "#374151",
-                }}
-              >
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* 날짜 셀 (한 주) */}
-          <div className="grid grid-cols-7 h-36">
-            {weekDays.map((date, dayIdx) => {
-              const dayEvents = getEventsForDate(date);
-              const today = isToday(date);
-
-              return (
+      {(!isMobile || !isCollapsed) && (
+        <div className="px-4 py-4">
+          <div className="bg-white rounded-lg border overflow-hidden">
+            {/* 요일 헤더 */}
+            <div className="grid grid-cols-7 border-b bg-gray-50">
+              {["일", "월", "화", "수", "목", "금", "토"].map((day, idx) => (
                 <div
-                  key={dayIdx}
-                  className="border-r last:border-r-0 p-3 cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden"
-                  onClick={handleDateClick}
+                  key={day}
+                  className="text-center py-3 text-sm border-r last:border-r-0"
+                  style={{
+                    fontWeight: 600,
+                    color:
+                      idx === 0 ? "#ef4444" : idx === 6 ? "#3b82f6" : "#374151",
+                  }}
                 >
-                  {/* 날짜 */}
-                  <div className="flex items-start justify-between mb-2">
-                    <span
-                      className={`flex items-center justify-center w-7 h-7 text-sm rounded-full ${
-                        today
-                          ? "bg-(--brand-orange) text-white"
-                          : "text-gray-700"
-                      }`}
-                      style={{
-                        fontWeight: today ? 700 : 500,
-                        aspectRatio: '1',
-                        minWidth: '1.75rem',
-                        minHeight: '1.75rem',
-                      }}
-                    >
-                      {date.getDate()}
-                    </span>
-                    {dayEvents.length > 2 && (
+                  {day}
+                </div>
+              ))}
+            </div>
+
+            {/* 날짜 셀 (한 주) */}
+            <div className="grid grid-cols-7 h-36">
+              {weekDays.map((date, dayIdx) => {
+                const dayEvents = getEventsForDate(date);
+                const today = isToday(date);
+
+                return (
+                  <div
+                    key={dayIdx}
+                    className="border-r last:border-r-0 p-3 cursor-pointer hover:bg-gray-50 transition-colors overflow-hidden"
+                    onClick={handleDateClick}
+                  >
+                    {/* 날짜 */}
+                    <div className="flex items-start justify-between mb-2">
                       <span
-                        className="text-xs text-gray-500"
-                        style={{ fontWeight: 500 }}
+                        className={`flex items-center justify-center w-7 h-7 text-sm rounded-full ${
+                          today
+                            ? "bg-(--brand-orange) text-white"
+                            : "text-gray-700"
+                        }`}
+                        style={{
+                          fontWeight: today ? 700 : 500,
+                          aspectRatio: '1',
+                          minWidth: '1.75rem',
+                          minHeight: '1.75rem',
+                        }}
                       >
-                        +{dayEvents.length - 2}
+                        {date.getDate()}
                       </span>
+                      {dayEvents.length > 2 && (
+                        <span
+                          className="text-xs text-gray-500"
+                          style={{ fontWeight: 500 }}
+                        >
+                          +{dayEvents.length - 2}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 이벤트 제목 표시 (최대 2개) */}
+                    {dayEvents.length > 0 && (
+                      <div className="space-y-1">
+                        {dayEvents.slice(0, 2).map((event) => (
+                          <div
+                            key={event.id}
+                            className={`text-xs truncate pl-2 py-0.5 border-l-[3px] ${getBorderColor(
+                              event.subcategory
+                            )}`}
+                            style={{
+                              fontWeight: 500,
+                            }}
+                          >
+                            {event.title}
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
-
-                  {/* 이벤트 제목 표시 (최대 2개) */}
-                  {dayEvents.length > 0 && (
-                    <div className="space-y-1">
-                      {dayEvents.slice(0, 2).map((event) => (
-                        <div
-                          key={event.id}
-                          className={`text-xs truncate pl-2 py-0.5 border-l-[3px] ${getBorderColor(
-                            event.subcategory
-                          )}`}
-                          style={{
-                            fontWeight: 500,
-                          }}
-                        >
-                          {event.title}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </Card>
   );
 }

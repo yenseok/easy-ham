@@ -95,19 +95,19 @@ export function MonthView({
                     {dayEvents.length > 0 && (
                       <div className="space-y-0.5">
                         {dayEvents.slice(0, 3).map((event) => {
-                          // 서브카테고리별 세로선 색상
+                          // 서브카테고리별 세로선 색상 (Sidebar 버튼 색상과 일체화)
                           const getBorderColor = () => {
                             switch (event.subcategory) {
                               case "할일":
-                                return "border-red-500";
+                                return "border-red-300";
                               case "특강":
-                                return "border-blue-500";
+                                return "border-blue-300";
                               case "정보":
-                                return "border-green-500";
+                                return "border-green-300";
                               case "행사":
-                                return "border-purple-500";
+                                return "border-purple-300";
                               default:
-                                return "border-gray-400";
+                                return "border-gray-300";
                             }
                           };
 

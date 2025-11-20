@@ -6,21 +6,21 @@ import { NoticeListContainer } from './components/NoticeListContainer';
 import { SearchFilterBar } from './components/SearchFilterBar';
 import { MiniCalendar } from './components/MiniCalendar';
 import { JobPostingsWidget } from './components/JobPostingsWidget';
-import { MessageDetailModal, type MessageDetail } from '@/components/modals/MessageDetailModal';
-import { Card } from '@/components/ui/card';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  MessageDetailModal,
+  type MessageDetail,
+} from '@/components/modals/MessageDetailModal';
+import { Card } from '@/components/ui/card';
 import { useFilterStore } from '@/stores/useFilterStore';
 import { bookmarksApi } from '@/services/api/bookmarks';
 import { completionsApi } from '@/services/api/completions';
 import { searchApi } from '@/services/api/search';
 import { jobsApi } from '@/services/api/jobs';
-import { getNoticeCategories, mapCategoriesToIds, type NoticeCategory } from '@/services/api/codes';
+import {
+  getNoticeCategories,
+  mapCategoriesToIds,
+  type NoticeCategory,
+} from '@/services/api/codes';
 import { getUserChannels } from '@/services/api/channels';
 import { getPeriodRange } from '@/utils/dateUtils';
 import type { Notice } from '@/types';
@@ -28,6 +28,12 @@ import type { SearchParams, JobPostItem } from '@/types/api';
 
 export default function SearchPage() {
   const navigate = useNavigate();
+
+  // FilterBar 축소/확장 상태
+  const [isFilterCollapsed, setIsFilterCollapsed] = useState(false);
+  const [filterCollapseSignal, setFilterCollapseSignal] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const wheelListenerRef = useRef<((e: WheelEvent) => void) | null>(null);
 
   // Zustand 필터 스토어
   const filterStore = useFilterStore();
@@ -40,7 +46,6 @@ export default function SearchPage() {
     periodFilter,
     customStartDate,
     customEndDate,
-    sortBy,
     showBookmarkedOnly,
     showCompletedOnly,
     setAvailableChannels,
@@ -50,7 +55,6 @@ export default function SearchPage() {
     setSearchQuery,
     setPeriodFilter,
     setCustomDateRange,
-    setSortBy,
     toggleBookmarkFilter,
     toggleCompletedFilter,
     resetFilters,
@@ -68,7 +72,9 @@ export default function SearchPage() {
   const [isFilteredSearch, setIsFilteredSearch] = useState(false);
 
   // 모달 상태
-  const [selectedMessage, setSelectedMessage] = useState<MessageDetail | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<MessageDetail | null>(
+    null
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // 카테고리 데이터 (API에서 받아온 카테고리 목록)
@@ -146,7 +152,11 @@ export default function SearchPage() {
    * @param size - 페이지 크기
    * @param applyFilters - true면 필터 적용, false면 전체 검색
    */
-  const buildSearchParams = (page: number, size: number, applyFilters: boolean): SearchParams => {
+  const buildSearchParams = (
+    page: number,
+    size: number,
+    applyFilters: boolean
+  ): SearchParams => {
     // 전체 검색 (초기 로드): page, size만 전송
     if (!applyFilters) {
       return {
@@ -165,13 +175,18 @@ export default function SearchPage() {
     const currentState = useFilterStore.getState();
 
     // 1. 키워드 필터
-    if (currentState.searchQuery && currentState.searchQuery.trim().length > 0) {
+    if (
+      currentState.searchQuery &&
+      currentState.searchQuery.trim().length > 0
+    ) {
       params.keyword = currentState.searchQuery.trim();
     }
 
     // 2. 채널 필터
     // 모든 채널 선택 = 필터 없음
-    const isAllChannelsSelected = currentState.selectedChannels.length === currentState.availableChannels.length;
+    const isAllChannelsSelected =
+      currentState.selectedChannels.length ===
+      currentState.availableChannels.length;
     if (!isAllChannelsSelected && currentState.selectedChannels.length > 0) {
       params.channelIds = currentState.selectedChannels;
     }
@@ -179,11 +194,18 @@ export default function SearchPage() {
     // 3. 카테고리 필터
     // 학사 4개 + 취업 4개 = 총 8개
     const TOTAL_CATEGORIES = 8;
-    const totalSelectedCategories = currentState.selectedAcademicCategories.length + currentState.selectedCareerCategories.length;
-    const isAllCategoriesSelected = totalSelectedCategories === TOTAL_CATEGORIES;
+    const totalSelectedCategories =
+      currentState.selectedAcademicCategories.length +
+      currentState.selectedCareerCategories.length;
+    const isAllCategoriesSelected =
+      totalSelectedCategories === TOTAL_CATEGORIES;
 
     // 카테고리 데이터가 로드되었고, 모든 카테고리가 선택되지 않은 경우에만 파라미터 추가
-    if (!isAllCategoriesSelected && totalSelectedCategories > 0 && categories.length > 0) {
+    if (
+      !isAllCategoriesSelected &&
+      totalSelectedCategories > 0 &&
+      categories.length > 0
+    ) {
       const categoryIds = mapCategoriesToIds(
         currentState.selectedAcademicCategories,
         currentState.selectedCareerCategories,
@@ -228,7 +250,10 @@ export default function SearchPage() {
    * @param isNewSearch true면 새 검색 (기존 결과 초기화), false면 추가 로드 (무한스크롤)
    * @param applyFilters true면 필터 적용, false면 전체 검색 (기본값: isFilteredSearch 상태 사용)
    */
-  const handleSearch = async (isNewSearch = true, applyFilters = isFilteredSearch) => {
+  const handleSearch = async (
+    isNewSearch = true,
+    applyFilters = isFilteredSearch
+  ) => {
     if (isLoading) return;
 
     setIsLoading(true);
@@ -238,7 +263,9 @@ export default function SearchPage() {
       // applyFilters가 true면 현재 필터 상태를 API에 전송
       // false면 page, size만 전송 (전체 검색)
       const params = buildSearchParams(page, 15, applyFilters);
-      const { notices: newNotices, metadata } = await searchApi.searchPosts(params);
+      const { notices: newNotices, metadata } = await searchApi.searchPosts(
+        params
+      );
 
       // console.log('[검색 실행]', {
       //   필터적용: applyFilters,
@@ -250,6 +277,10 @@ export default function SearchPage() {
         // 새 검색: 기존 결과를 새 결과로 교체
         setNotices(newNotices);
         setCurrentPage(0);
+        // 스크롤을 최상단으로 이동
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
+        }
       } else {
         // 무한스크롤: 기존 결과에 추가
         setNotices((prev) => [...prev, ...newNotices]);
@@ -300,6 +331,73 @@ export default function SearchPage() {
     [isLoading, hasMore] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
+  /**
+   * NoticeList 스크롤 핸들러
+   * 스크롤 위치에 따라 FilterBar 축소/확장
+   */
+  const handleNoticeScroll = (scrollTop: number) => {
+    if (scrollTop > 50) {
+      setIsFilterCollapsed(true);
+      setFilterCollapseSignal((prev) => prev + 1);
+    } else {
+      setIsFilterCollapsed(false);
+    }
+  };
+
+  /**
+   * 브라우저 전역 스크롤 → NoticeList 스크롤 연동 (데스크톱 전용)
+   * lg 이상에서만 wheel 이벤트를 가로채도록 해 모바일·태블릿에서 스크롤이 막히지 않게 한다.
+   * 모달이 열렸을 때는 wheel 리스너를 제거하여 모달 내부에서 정상적으로 스크롤할 수 있게 한다.
+   */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const prefersFinePointer = window.matchMedia('(pointer: fine)').matches;
+    if (!prefersFinePointer) return;
+
+    const lgMediaQuery = window.matchMedia('(min-width: 1024px)');
+
+    const removeWheelListener = () => {
+      if (wheelListenerRef.current) {
+        window.removeEventListener('wheel', wheelListenerRef.current);
+        wheelListenerRef.current = null;
+      }
+    };
+
+    const addWheelListener = () => {
+      if (wheelListenerRef.current) return;
+      const handleWheel = (e: WheelEvent) => {
+        if (scrollContainerRef.current) {
+          e.preventDefault();
+          scrollContainerRef.current.scrollTop += e.deltaY;
+        }
+      };
+      wheelListenerRef.current = handleWheel;
+      window.addEventListener('wheel', handleWheel, { passive: false });
+    };
+
+    const handleMediaChange = (event: MediaQueryListEvent) => {
+      if (event.matches && !isModalOpen) {
+        addWheelListener();
+      } else {
+        removeWheelListener();
+      }
+    };
+
+    // 모달이 열려있지 않고 lg 이상일 때만 wheel 리스너 추가
+    if (lgMediaQuery.matches && !isModalOpen) {
+      addWheelListener();
+    } else {
+      removeWheelListener();
+    }
+
+    lgMediaQuery.addEventListener('change', handleMediaChange);
+
+    return () => {
+      lgMediaQuery.removeEventListener('change', handleMediaChange);
+      removeWheelListener();
+    };
+  }, [isModalOpen]);
 
   /**
    * 북마크 토글 (낙관적 업데이트)
@@ -312,9 +410,7 @@ export default function SearchPage() {
 
     // 1. 즉시 UI 업데이트 (낙관적 업데이트)
     setNotices((prev) =>
-      prev.map((n) =>
-        n.id === id ? { ...n, bookmarked: !n.bookmarked } : n
-      )
+      prev.map((n) => (n.id === id ? { ...n, bookmarked: !n.bookmarked } : n))
     );
 
     // console.log(`[북마크 토글] ID: ${id}, ${wasBookmarked ? '해제' : '추가'}`);
@@ -331,9 +427,7 @@ export default function SearchPage() {
       // 3. 실패 시 롤백
       console.error('[북마크 API] 호출 실패:', error);
       setNotices((prev) =>
-        prev.map((n) =>
-          n.id === id ? { ...n, bookmarked: !n.bookmarked } : n
-        )
+        prev.map((n) => (n.id === id ? { ...n, bookmarked: !n.bookmarked } : n))
       );
       toast.error('북마크 처리에 실패했습니다. 다시 시도해주세요.');
     }
@@ -350,9 +444,7 @@ export default function SearchPage() {
 
     // 1. 즉시 UI 업데이트 (낙관적 업데이트)
     setNotices((prev) =>
-      prev.map((n) =>
-        n.id === id ? { ...n, completed: !n.completed } : n
-      )
+      prev.map((n) => (n.id === id ? { ...n, completed: !n.completed } : n))
     );
 
     // console.log(`[완료 토글] ID: ${id}, ${wasCompleted ? '해제' : '완료'}`);
@@ -369,9 +461,7 @@ export default function SearchPage() {
       // 3. 실패 시 롤백
       console.error('[완료 API] 호출 실패:', error);
       setNotices((prev) =>
-        prev.map((n) =>
-          n.id === id ? { ...n, completed: !n.completed } : n
-        )
+        prev.map((n) => (n.id === id ? { ...n, completed: !n.completed } : n))
       );
       toast.error('완료 처리에 실패했습니다. 다시 시도해주세요.');
     }
@@ -382,7 +472,9 @@ export default function SearchPage() {
    * 검색 API에서 받은 첨부파일 정보를 그대로 사용
    */
   const handleNoticeClick = (notice: Notice) => {
-    const mattermostUrl = notice.mattermostUrl || `https://mattermost.ssafy.com/ssafy/pl/message${notice.id}`;
+    const mattermostUrl =
+      notice.mattermostUrl ||
+      `https://mattermost.ssafy.com/ssafy/pl/message${notice.id}`;
 
     const messageDetail: MessageDetail = {
       id: notice.id,
@@ -398,86 +490,142 @@ export default function SearchPage() {
       dday: notice.dday,
       mattermostUrl,
       attachments: notice.attachments, // 검색 API에서 받은 첨부파일 그대로 사용
+      bookmarked: notice.bookmarked,
+      completed: notice.completed,
     };
 
     setSelectedMessage(messageDetail);
     setIsModalOpen(true);
   };
 
+  /**
+   * 모달 내 북마크 토글 핸들러
+   * 모달과 리스트 모두 업데이트
+   */
+  const handleModalBookmarkToggle = async (id: number) => {
+    await toggleBookmark(id);
+    // 모달 메시지 상태도 업데이트
+    if (selectedMessage && selectedMessage.id === id) {
+      setSelectedMessage({
+        ...selectedMessage,
+        bookmarked: !selectedMessage.bookmarked,
+      });
+    }
+  };
+
+  /**
+   * 모달 내 완료 토글 핸들러
+   * 모달과 리스트 모두 업데이트
+   */
+  const handleModalCompleteToggle = async (id: number) => {
+    await toggleComplete(id);
+    // 모달 메시지 상태도 업데이트
+    if (selectedMessage && selectedMessage.id === id) {
+      setSelectedMessage({
+        ...selectedMessage,
+        completed: !selectedMessage.completed,
+      });
+    }
+  };
+
+  /**
+   * 특정 날짜에 일정(deadline)이 있는지 확인
+   */
+  const hasEventsOnDate = (date: Date): boolean => {
+    return notices.some((notice) => {
+      if (!notice.deadline) return false;
+      const deadlineDate =
+        typeof notice.deadline === 'string'
+          ? new Date(notice.deadline)
+          : notice.deadline;
+      return (
+        deadlineDate.getFullYear() === date.getFullYear() &&
+        deadlineDate.getMonth() === date.getMonth() &&
+        deadlineDate.getDate() === date.getDate()
+      );
+    });
+  };
+
   return (
     <PageLayout>
-      <div className="flex-1 flex gap-6 px-8 py-6">
-        {/* 메인 콘텐츠 */}
-        <div className="flex-1 space-y-6">
-          {/* 검색 및 필터 섹션 */}
-          <SearchFilterBar
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            availableChannels={availableChannels}
-            selectedChannels={selectedChannels}
-            onChannelToggle={toggleChannel}
-            selectedAcademicCategories={selectedAcademicCategories}
-            onAcademicCategoryToggle={toggleAcademicCategory}
-            selectedCareerCategories={selectedCareerCategories}
-            onCareerCategoryToggle={toggleCareerCategory}
-            periodFilter={periodFilter}
-            onPeriodChange={setPeriodFilter}
-            customStartDate={customStartDate}
-            customEndDate={customEndDate}
-            onCustomDateRangeChange={setCustomDateRange}
-            showBookmarkedOnly={showBookmarkedOnly}
-            onBookmarkFilterToggle={toggleBookmarkFilter}
-            showCompletedOnly={showCompletedOnly}
-            onCompletedFilterToggle={toggleCompletedFilter}
-            onReset={resetFilters}
-            onSearch={() => {
-              setIsFilteredSearch(true); // 필터 적용 상태로 변경
-              handleSearch(true, true); // 새 검색, 필터 적용
-            }}
-          />
+      <div className="max-w-[1920px] mx-auto px-4 md:px-8 py-4 lg:h-[calc(100vh-4rem)] lg:max-h-[calc(100vh-4rem)] lg:min-h-[calc(100vh-4rem)] lg:overflow-hidden flex flex-col">
+        <div className="flex flex-col lg:flex-row gap-4 lg:flex-1 lg:min-h-0">
+          {/* 메인 콘텐츠 */}
+          <div className="lg:flex-1 min-w-0 flex flex-col gap-4">
+            {/* 검색 및 필터 섹션 */}
+            <SearchFilterBar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              availableChannels={availableChannels}
+              selectedChannels={selectedChannels}
+              onChannelToggle={toggleChannel}
+              selectedAcademicCategories={selectedAcademicCategories}
+              onAcademicCategoryToggle={toggleAcademicCategory}
+              selectedCareerCategories={selectedCareerCategories}
+              onCareerCategoryToggle={toggleCareerCategory}
+              periodFilter={periodFilter}
+              onPeriodChange={setPeriodFilter}
+              customStartDate={customStartDate}
+              customEndDate={customEndDate}
+              onCustomDateRangeChange={setCustomDateRange}
+              showBookmarkedOnly={showBookmarkedOnly}
+              onBookmarkFilterToggle={toggleBookmarkFilter}
+              showCompletedOnly={showCompletedOnly}
+              onCompletedFilterToggle={toggleCompletedFilter}
+              onReset={resetFilters}
+              onSearch={() => {
+                setIsFilteredSearch(true); // 필터 적용 상태로 변경
+                handleSearch(true, true); // 새 검색, 필터 적용
+              }}
+              isCollapsed={isFilterCollapsed}
+              collapseSignal={filterCollapseSignal}
+            />
 
-          {/* 공지사항 리스트 */}
-          <Card className="shadow-md">
-            {/* 리스트 헤더 */}
-            <div className="h-16 px-6 flex items-center justify-between border-b">
-              <h2 className="text-lg" style={{ fontWeight: 700 }}>
-                공지사항
-              </h2>
-              <Select value={sortBy} onValueChange={setSortBy as any}>
-                <SelectTrigger className="w-[160px] h-10 text-base">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="latest">정렬: 최신순</SelectItem>
-                  <SelectItem value="deadline">정렬: 마감일순</SelectItem>
-                  <SelectItem value="title">정렬: 제목순</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* 공지사항 리스트 */}
+            <Card className="shadow-md lg:flex-1 flex flex-col lg:min-h-0">
+              {/* 리스트 헤더 */}
+              <div className="h-14 px-4 md:px-6 flex items-center justify-between border-b shrink-0">
+                <h2
+                  className="text-base md:text-lg"
+                  style={{ fontWeight: 700 }}
+                >
+                  공지사항
+                </h2>
+              </div>
+
+              {/* 리스트 */}
+              <NoticeListContainer
+                notices={notices}
+                onBookmarkToggle={toggleBookmark}
+                onCompleteToggle={toggleComplete}
+                onNoticeClick={handleNoticeClick}
+                lastNoticeRef={lastNoticeElementRef}
+                isLoading={isLoading}
+                hasMore={hasMore}
+                onScroll={handleNoticeScroll}
+                scrollContainerRef={scrollContainerRef}
+              />
+            </Card>
+          </div>
+
+          {/* 우측 사이드바 (1024px 이상에서만 표시) */}
+          <div className="hidden lg:flex lg:flex-col w-80 gap-4 shrink-0 max-h-full">
+            {/* 미니 캘린더 */}
+            <div className="shrink-0">
+              <MiniCalendar
+                onNavigateToCalendar={() => navigate('/calendar')}
+                hasEventsOnDate={hasEventsOnDate}
+              />
             </div>
 
-            {/* 리스트 */}
-            <NoticeListContainer
-              notices={notices}
-              onBookmarkToggle={toggleBookmark}
-              onCompleteToggle={toggleComplete}
-              onNoticeClick={handleNoticeClick}
-              lastNoticeRef={lastNoticeElementRef}
-              isLoading={isLoading}
-              hasMore={hasMore}
-            />
-          </Card>
-        </div>
-
-        {/* 우측 사이드바 */}
-        <div className="w-80 space-y-6 sticky top-6 self-start">
-          {/* 미니 캘린더 */}
-          <MiniCalendar onNavigateToCalendar={() => navigate('/calendar')} />
-
-          {/* 채용 정보 위젯 */}
-          <JobPostingsWidget
-            postings={jobPostings}
-            onViewAll={() => navigate('/jobs')}
-          />
+            {/* 채용 정보 위젯 */}
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <JobPostingsWidget
+                postings={jobPostings}
+                onViewAll={() => navigate('/jobs')}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -487,6 +635,8 @@ export default function SearchPage() {
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           message={selectedMessage}
+          onBookmarkToggle={handleModalBookmarkToggle}
+          onCompleteToggle={handleModalCompleteToggle}
         />
       )}
     </PageLayout>
