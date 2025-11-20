@@ -1,41 +1,38 @@
-# **1. 개요 (Overview)**
+# 📘 **편리햄 Porting Manual**
+
+## **1. 개요 (Overview)**
 
 편리햄(Pyeonriham)은 **Mattermost 기반 공지 수집·요약·검색·대시보드화 서비스**로, 단일 AWS EC2 환경에서 **Docker Compose 기반**으로 운영된다.
-
-CI/CD는 Jenkins를 이용하여 구축했으며, 본 문서는 서비스 운영을 위한 서버 구성, 환경 변수, 배포 절차, CI/CD 파이프라인을 기술하며, **모든 민감 정보는 {MASKED} 처리**하였다.
+CI/CD는 Jenkins를 사용해 자동화했으며, 본 문서는 서버 구성, 환경 변수, 배포 절차, CI/CD 파이프라인을 기술한다.
+모든 민감 정보는 `{MASKED}` 처리하였다.
 
 ---
 
-# **2. 시스템 아키텍처 (System Architecture)**
+## **2. 시스템 아키텍처 (System Architecture)**
 
-- **AWS EC2 (Ubuntu 24.04 LTS)**
-- **Nginx Reverse Proxy (SSL/TLS Termination)**
-- **Frontend (React + Vite, Docker Image)**
-- **Backend (Spring Boot, Docker Image)**
-- **MySQL 8.x**
-- **Redis 7.x**
-- **MongoDB 7.x**
-- **Meilisearch 1.x**
-- **Jenkins (CI/CD)**
-- **LLM API 기반 텍스트 요약 및 메타데이터 추출**
+* AWS EC2 (Ubuntu 24.04 LTS)
+* Nginx Reverse Proxy
+* React/Vite Frontend
+* Spring Boot Backend
+* MySQL / Redis / MongoDB / Meilisearch
+* Jenkins CI/CD
+* LLM 기반 텍스트 요약·메타데이터 추출
 
-전체 구성은 다음과 같이 이루어진다:
+구성 흐름:
 
 ```
 Client → HTTPS → Nginx → (Frontend / Backend)
                      ↓
                 Docker Compose
       (MySQL, Redis, MongoDB, Meilisearch, Jenkins)
-
 ```
 
-Blue/Green 구조를 통해 서비스 중단 없이 교체 배포가 가능하다.
 
 ---
 
-# **3. 서버 초기 설정 (Server Initialization)**
+## **3. 서버 초기 설정 (Server Initialization)**
 
-## 3.1. 기본 패키지 업데이트
+### 3.1. 패키지 업데이트
 
 ```bash
 sudo timedatectl set-timezone Asia/Seoul
@@ -43,7 +40,7 @@ sudo apt update -y
 sudo apt upgrade -y
 ```
 
-## 3.2. Swap 비활성화
+### 3.2. Swap 비활성화
 
 ```bash
 sudo swapoff -a
@@ -52,9 +49,9 @@ sudo sed -i '/ swap / s/^/#/' /etc/fstab
 
 ---
 
-# **4. Docker 및 Docker Compose 설치**
+## **4. Docker 및 Docker Compose 설치**
 
-## 4.1. Docker 설치
+### 4.1. Docker 설치
 
 ```bash
 curl -fsSL https://get.docker.com | sudo sh
@@ -62,7 +59,7 @@ sudo usermod -aG docker ubuntu
 sudo systemctl restart docker
 ```
 
-## 4.2. Docker Compose 설치
+### 4.2. Docker Compose 설치
 
 ```bash
 sudo curl -L \
@@ -73,50 +70,62 @@ sudo chmod +x /usr/local/bin/docker-compose
 
 ---
 
-# **5. Nginx Reverse Proxy & SSL 설정**
+## **5. Nginx Reverse Proxy & HTTPS 구성**
 
-## 5.1. Nginx 설치
+### 5.1. Nginx 설치
 
 ```bash
 sudo apt install nginx -y
 ```
 
-## 5.2. HTTPS 인증서 발급 (Let’s Encrypt)
+### 5.2. 인증서 발급
 
 ```bash
 sudo apt install certbot python3-certbot-nginx -y
-sudo certbot --nginx \
-  -d pyeonriham.site \
-  -d www.pyeonriham.site
+sudo certbot --nginx -d pyeonriham.site -d www.pyeonriham.site
 ```
 
-## 5.3. Nginx 설정 파일 (요약)
+### 5.3. Nginx 설정 요약
 
-```
-server {
-    listen 443 ssl;
-    server_name pyeonriham.site www.pyeonriham.site;
+#### (1) HTTPS 기본 설정
 
-    ssl_certificate /etc/letsencrypt/live/pyeonriham.site/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/pyeonriham.site/privkey.pem;
+* Let’s Encrypt SSL 적용
+* TLS 1.2/1.3 + HTTP/2 활성화
+* access/error 로그 분리
 
-    location / {
-        proxy_pass http://frontend-blue;
-    }
+#### (2) SSE(Server-Sent Events) 전용 Proxy 설정
 
-    location /api/ {
-        proxy_pass http://backend-blue;
-    }
-}
-```
+* `/api/notifications/stream`, `/api/v1/notifications/stream`
+* proxy_buffering off
+* proxy_cache off
+* proxy_read_timeout 86400s
 
-※ Blue/Green 교체는 upstream 블록의 service name 변경으로 수행한다.
+#### (3) 인증 URL 리라이트
+
+* `/api/auth/* → /api/v1/auth/*`
+* 인증 API 라우팅 통일
+
+#### (4) `/api/v1` 전체 백엔드 프록시
+
+* 모든 API → `pyeonriham-backend:8080` 전달
+* 타임아웃 및 버퍼링 off
+
+#### (5) React SPA 정적 파일 + 캐싱
+
+* `try_files ... /index.html`
+* 정적 파일 1년 캐싱
+* index.html만 캐시 No
+
+#### (6) HTTP → HTTPS 리다이렉트
+
+* ACME challenge 예외 처리
+* 모든 요청을 HTTPS로 강제
 
 ---
 
-# **6. Docker Compose 구성**
+## **6. Docker Compose 구성**
 
-## 6.1. 프로젝트 구조
+### 6.1. 디렉토리 구조
 
 ```
 /deploy
@@ -128,7 +137,7 @@ server {
  └── Dockerfile.jenkins
 ```
 
-## 6.2. docker-compose.yml (민감정보 마스킹)
+### 6.2. docker-compose.yml 요약
 
 ```yaml
 services:
@@ -147,52 +156,70 @@ services:
 
 ---
 
-# **7. Backend 환경 변수 (.env.prod)**
-
+## **7. Backend 환경 변수 (.env.prod)**
 ```
 SERVER_PORT=8080
 SPRING_APPLICATION_NAME=prham
 
+# ======================
 # MySQL Database
+# ======================
 SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
 SPRING_DATASOURCE_URL=jdbc:mysql://pyeonriham-mysql:3306/pyeonriham_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useUnicode=true
 SPRING_DATASOURCE_USERNAME={MASKED}
 SPRING_DATASOURCE_PASSWORD={MASKED}
 
-# Connection Pool
+# ======================
+# Connection Pool (HikariCP)
+# ======================
 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=10
 SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE=5
 SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=30000
 SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT=600000
 SPRING_DATASOURCE_HIKARI_MAX_LIFETIME=1800000
 
+# ======================
 # Redis
+# ======================
 SPRING_DATA_REDIS_HOST=pyeonriham-redis
 SPRING_DATA_REDIS_PORT=6379
 
+# ======================
 # MongoDB
+# ======================
 SPRING_DATA_MONGODB_URI=mongodb://pyeonriham-mongo:27017/pyeonriham_db
 
+# ======================
 # Meilisearch
+# ======================
 MEILISEARCH_HOST=http://meilisearch:7700
 MEILISEARCH_API_KEY={MASKED}
+
+# ======================
+# LLM (Notice Summarization)
+# ======================
 LLM_API_KEY={MASKED}
-SPRING_JPA_HIBERNATE_DDL_AUTO: update
-SPRING_SQL_INIT_MODE: always
-MATTERMOST_WEBHOOK_CHANNEL: notice,announcement
-MATTERMOST_WEBHOOK_URL: https://pyeonriham.site/api/v1/mattermost/webhook
-MATTERMOST_API_URL: http://pyeonriham.site:8065
-MATTERMOST_API_BASE_URL: http://pyeonriham.site:8065
-MATTERMOST_WEBHOOK_TOKEN: {MASKED}
+
+# ======================
+# JPA
+# ======================
+SPRING_JPA_HIBERNATE_DDL_AUTO=update
+SPRING_SQL_INIT_MODE=always
+
+# ======================
+# Mattermost Integration
+# ======================
+MATTERMOST_WEBHOOK_CHANNEL=notice,announcement
+MATTERMOST_WEBHOOK_URL=https://pyeonriham.site/api/v1/mattermost/webhook
+MATTERMOST_API_URL=http://pyeonriham.site:8065
+MATTERMOST_API_BASE_URL=http://pyeonriham.site:8065
+MATTERMOST_WEBHOOK_TOKEN={MASKED}
 ```
-
-모든 인증 키는 Jenkins Credential Store에서 관리한다.
-
 ---
 
-# **8. Jenkins CI/CD 파이프라인**
+## **8. Jenkins CI/CD 파이프라인**
 
-## 8.1. Jenkins 컨테이너 실행
+### 8.1. Jenkins 컨테이너 실행
 
 ```bash
 docker run -d --restart always \
@@ -201,12 +228,11 @@ docker run -d --restart always \
   -v /jenkins:/var/jenkins_home \
   --name pyeonriham-jenkins \
   jenkins/jenkins:jdk17
-
 ```
 
-## 8.2. Pipeline Script
+### 8.2. Jenkins Pipeline Script
 
-```groovy
+```
 pipeline {
     agent any
 
@@ -264,7 +290,7 @@ pipeline {
             steps {
                 script {
                     echo '=== Building Frontend (React + Vite) ==='
-
+                    
                     dir('frontend') {
                         sh """
                             docker build \
@@ -278,7 +304,7 @@ pipeline {
                               .
                         """
                     }
-
+                    
                     echo '✅ Frontend Docker 이미지 빌드 완료!'
                 }
             }
@@ -361,26 +387,24 @@ pipeline {
     }
 }
 ```
-
 ---
 
-# **10. 데이터베이스 초기 세팅**
+## **9. 데이터베이스 초기 세팅**
 
-## 10.1. MySQL
+### 9.1. MySQL
 
 ```bash
-docker exec -it pyeonriham-mysql mysql -u root -p
 CREATE USER 'pyeonriham_user'@'%' IDENTIFIED BY '{MASKED}';
 GRANT ALL PRIVILEGES ON pyeonriham_db.* TO 'pyeonriham_user'@'%';
 ```
 
-## 10.2. MongoDB
+### 9.2. MongoDB
 
 ```bash
 docker exec -it mongo mongosh -u root -p {MASKED}
 ```
 
-## 10.3. Redis
+### 9.3. Redis
 
 ```bash
 docker exec -it redis redis-cli -a {MASKED}
@@ -388,39 +412,32 @@ docker exec -it redis redis-cli -a {MASKED}
 
 ---
 
-# **11. Meilisearch 실행**
+## **10. Meilisearch 실행**
 
-마스터 키는 전부 `{MASKED}` 처리하며 Jenkins Credential Store 또는 EC2 환경변수로 관리한다.
-
----
-
-# **12. 보안 정책**
-
-- 모든 민감 정보는 문서 내 `{MASKED}` 처리
-- Jenkins Credential Store 이용
-- EC2 보안그룹
-  - 80/443만 외부 오픈
-  - DB/Mongo/Redis는 모두 내부 통신 전용
-- HTTPS 강제 적용
-- SSH 접근은 key 기반 + IPv4 제한
+Master Key 및 ENV는 전부 `{MASKED}` 처리.
+Credential Store 또는 EC2 환경변수에서 관리.
 
 ---
 
-# **13. Troubleshooting**
+## **11. 보안 정책**
 
-| 문제                         | 원인                  | 해결                                  |
-| ---------------------------- | --------------------- | ------------------------------------- |
-| Jenkins에서 Docker 권한 오류 | docker.sock 권한 문제 | `sudo chmod 666 /var/run/docker.sock` |
-| Blue/Green 전환 안됨         | upstream 변경 누락    | `nginx -s reload` 수행                |
-| 프론트 화면 X                | 이미지 태그 미반영    | Jenkins sed 적용 확인                 |
-| 공지 수집 안됨               | SSE Webhook 인증 문제 | 백엔드 환경변수 재확인                |
+* 모든 민감 정보 `{MASKED}`
+* Jenkins Credential Store 활용
+* EC2 보안 그룹 최소 오픈
+
+  * 443 / 80 외 전부 내부 통신
+* HTTPS 강제
+* SSH key + IP 제한
+
+---
+
+## **12. Troubleshooting**
+
+| 문제                   | 원인                           | 해결                               |
+| -------------------- | ---------------------------- | -------------------------------- |
+| Jenkins Docker 권한 오류 | `/var/run/docker.sock` 권한 문제 | `chmod 666 /var/run/docker.sock` |
+| 프론트 화면 X             | 최신 이미지 반영 X                  | Jenkins 이미지 태그 확인                |
+| 공지 수집 실패             | SSE 인증/토큰 오류                 | Backend ENV 재확인                  |
 
 ---
 
-# **14. 부록 (Appendix)**
-
-- 전체 폴더 구조
-- 주요 스크립트 (apply.sh 등)
-- env 예시 파일 (마스킹 버전)
-
----
