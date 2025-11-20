@@ -59,14 +59,14 @@ pipeline {
                     dir('frontend') {
                         sh """
                             docker build \
-                              --build-arg VITE_SSO_CLIENT_ID=1292a035-be8b-4e8d-919c-0898c6b957c5 \
-                              --build-arg VITE_SSO_REDIRECT_URI=https://pyeonriham.site/callback \
-                              --build-arg VITE_API_BASE_URL=https://pyeonriham.site/api \
-                              --build-arg VITE_MATTERMOST_FILE_TOKEN=wq6fk8f7yp817nfzo5fiaraqph \
-                              --build-arg VITE_MATTERMOST_URL=http://pyeonriham.site:8065 \
-                              -t bonghyerin/pyeonriham-fe:latest \
-                              -t bonghyerin/pyeonriham-fe:${BUILD_NUMBER} \
-                              .
+                            --build-arg VITE_SSO_CLIENT_ID=1292a035-be8b-4e8d-919c-0898c6b957c5 \
+                            --build-arg VITE_SSO_REDIRECT_URI=https://pyeonriham.site/callback \
+                            --build-arg VITE_API_BASE_URL=https://pyeonriham.site/api/v1 \
+                            --build-arg VITE_MATTERMOST_FILE_TOKEN=wq6fk8f7yp817nfzo5fiaraqph \
+                            --build-arg VITE_MATTERMOST_URL=http://pyeonriham.site:8065 \
+                            -t bonghyerin/pyeonriham-fe:latest \
+                            -t bonghyerin/pyeonriham-fe:${BUILD_NUMBER} \
+                            .
                         """
                     }
                     
@@ -74,6 +74,7 @@ pipeline {
                 }
             }
         }
+
 
         stage('Build Docker Images') {
             steps {

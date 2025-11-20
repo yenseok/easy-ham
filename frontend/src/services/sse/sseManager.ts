@@ -3,15 +3,15 @@
  * 재연결, 토큰 감시, 상태 관리 (고급 로직)
  */
 
-import { postStreamClient, notificationStreamClient } from "./sseClient";
-import { useAuthStore } from "@/stores/useAuthStore";
-import { useSSEStore } from "@/stores/useSSEStore";
-import { useSSEPostStore } from "@/stores/useSSEPostStore";
-import { useNotificationStore } from "@/stores/useNotificationStore";
-import { API_ENDPOINTS } from "@/constants/api";
-import type { SSEError, NewPostEvent, NotificationEvent } from "./types";
+import { postStreamClient, notificationStreamClient } from './sseClient';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { useSSEStore } from '@/stores/useSSEStore';
+import { useSSEPostStore } from '@/stores/useSSEPostStore';
+import { useNotificationStore } from '@/stores/useNotificationStore';
+import { API_ENDPOINTS } from '@/constants/api';
+import type { SSEError, NewPostEvent, NotificationEvent } from './types';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 /**
  * SSE 재연결 설정
@@ -67,17 +67,23 @@ class SSEManager {
 
         // 보호된 라우트에서만 notifications/stream 재연결
         if (protectedRoutes.includes(currentPath)) {
-          console.log(`[SSE Manager] Access token changed on ${currentPath}, reconnecting notifications/stream...`);
+          console.log(
+            `[SSE Manager] Access token changed on ${currentPath}, reconnecting notifications/stream...`
+          );
           this.reconnectNotificationStream();
 
           // Dashboard에서는 posts/stream도 재연결
           // (DashboardPage의 useEffect는 의존성 배열이 비어 1번만 실행되므로)
           if (currentPath === '/dashboard') {
-            console.log('[SSE Manager] On dashboard, also reconnecting posts/stream...');
+            console.log(
+              '[SSE Manager] On dashboard, also reconnecting posts/stream...'
+            );
             this.reconnectPostStream();
           }
         } else {
-          console.log(`[SSE Manager] Token changed on ${currentPath}, skipping SSE reconnect`);
+          console.log(
+            `[SSE Manager] Token changed on ${currentPath}, skipping SSE reconnect`
+          );
         }
       }
       this.previousAccessToken = currentToken;
@@ -89,14 +95,14 @@ class SSEManager {
    * online/offline 이벤트로 재연결 트리거
    */
   private setupNetworkListener(): void {
-    window.addEventListener("online", () => {
-      console.log("[SSE Manager] Network restored, reconnecting SSE...");
+    window.addEventListener('online', () => {
+      console.log('[SSE Manager] Network restored, reconnecting SSE...');
       this.reconnectPostStream();
       this.reconnectNotificationStream();
     });
 
-    window.addEventListener("offline", () => {
-      console.log("[SSE Manager] Network lost");
+    window.addEventListener('offline', () => {
+      console.log('[SSE Manager] Network lost');
       this.closePostStream();
       this.closeNotificationStream();
     });
@@ -110,7 +116,7 @@ class SSEManager {
     const state = useAuthStore.getState();
     if (!state.isAuthenticated || !state.accessToken) {
       console.warn(
-        "[SSE Manager] Not authenticated, skipping posts/stream connection"
+        '[SSE Manager] Not authenticated, skipping posts/stream connection'
       );
       return;
     }
@@ -120,41 +126,41 @@ class SSEManager {
 
     // 이미 연결 중이거나 연결되어 있으면 무시
     if (
-      sseStore.postStreamStatus === "connecting" ||
-      sseStore.postStreamStatus === "connected"
+      sseStore.postStreamStatus === 'connecting' ||
+      sseStore.postStreamStatus === 'connected'
     ) {
-      console.log("[SSE Manager] posts/stream already connecting or connected");
+      console.log('[SSE Manager] posts/stream already connecting or connected');
       return;
     }
 
-    sseStore.setPostStreamStatus("connecting");
+    sseStore.setPostStreamStatus('connecting');
     this.postStreamRetries = 0;
 
     postStreamClient.onMessage((data) => {
-      console.log("[SSE Manager] Received post:", data);
+      console.log('[SSE Manager] Received post:', data);
       const postData = data as NewPostEvent;
       useSSEPostStore.getState().addPost(postData);
     });
 
     postStreamClient.onError((error: SSEError) => {
-      console.error("[SSE Manager] posts/stream error:", error);
+      console.error('[SSE Manager] posts/stream error:', error);
       sseStore.setLastError(error);
-      sseStore.setPostStreamStatus("error");
+      sseStore.setPostStreamStatus('error');
       this.schedulePostStreamReconnect();
     });
 
     try {
       // posts/stream: handshake 이벤트는 "connected", 데이터 이벤트는 "newPost"
-      postStreamClient.connect(url, "newPost", "connected");
-      sseStore.setPostStreamStatus("connected");
+      postStreamClient.connect(url, 'newPost', 'connected');
+      sseStore.setPostStreamStatus('connected');
       this.postStreamRetries = 0;
     } catch (error) {
-      console.error("[SSE Manager] Failed to connect posts/stream:", error);
+      console.error('[SSE Manager] Failed to connect posts/stream:', error);
       sseStore.setLastError({
-        message: "Failed to connect posts/stream",
+        message: 'Failed to connect posts/stream',
         timestamp: Date.now(),
       });
-      sseStore.setPostStreamStatus("error");
+      sseStore.setPostStreamStatus('error');
       this.schedulePostStreamReconnect();
     }
   }
@@ -167,7 +173,7 @@ class SSEManager {
     const state = useAuthStore.getState();
     if (!state.isAuthenticated || !state.accessToken) {
       console.warn(
-        "[SSE Manager] Not authenticated, skipping notifications/stream connection"
+        '[SSE Manager] Not authenticated, skipping notifications/stream connection'
       );
       return;
     }
@@ -177,29 +183,29 @@ class SSEManager {
 
     // 이미 연결 중이거나 연결되어 있으면 무시
     if (
-      sseStore.notificationStreamStatus === "connecting" ||
-      sseStore.notificationStreamStatus === "connected"
+      sseStore.notificationStreamStatus === 'connecting' ||
+      sseStore.notificationStreamStatus === 'connected'
     ) {
       console.log(
-        "[SSE Manager] notifications/stream already connecting or connected"
+        '[SSE Manager] notifications/stream already connecting or connected'
       );
       return;
     }
 
-    sseStore.setNotificationStreamStatus("connecting");
+    sseStore.setNotificationStreamStatus('connecting');
     this.notificationStreamRetries = 0;
 
     notificationStreamClient.onMessage((data) => {
-      console.log("[SSE Manager] Received notification:", data);
+      console.log('[SSE Manager] Received notification:', data);
       const notificationData = data as NotificationEvent;
       // notification store에 추가 (이미 unreadCount 증가 로직 포함)
       const keywords = Array.isArray(notificationData.match_keyword)
-        ? notificationData.match_keyword.join(", ")
-        : "Unknown keywords";
+        ? notificationData.match_keyword.join(', ')
+        : 'Unknown keywords';
 
       useNotificationStore.getState().addSSENotification?.({
         id: notificationData.notice_id,
-        type: "info",
+        type: 'info',
         title: notificationData.title,
         content: `Matched keywords: ${keywords}`,
         read: false,
@@ -207,27 +213,27 @@ class SSEManager {
     });
 
     notificationStreamClient.onError((error: SSEError) => {
-      console.error("[SSE Manager] notifications/stream error:", error);
+      console.error('[SSE Manager] notifications/stream error:', error);
       sseStore.setLastError(error);
-      sseStore.setNotificationStreamStatus("error");
+      sseStore.setNotificationStreamStatus('error');
       this.scheduleNotificationStreamReconnect();
     });
 
     try {
       // notifications/stream: handshake 이벤트는 "connected", 데이터 이벤트는 "keyword_matching"
-      notificationStreamClient.connect(url, "keyword_matching", "connected");
-      sseStore.setNotificationStreamStatus("connected");
+      notificationStreamClient.connect(url, 'keyword_matching', 'connected');
+      sseStore.setNotificationStreamStatus('connected');
       this.notificationStreamRetries = 0;
     } catch (error) {
       console.error(
-        "[SSE Manager] Failed to connect notifications/stream:",
+        '[SSE Manager] Failed to connect notifications/stream:',
         error
       );
       sseStore.setLastError({
-        message: "Failed to connect notifications/stream",
+        message: 'Failed to connect notifications/stream',
         timestamp: Date.now(),
       });
-      sseStore.setNotificationStreamStatus("error");
+      sseStore.setNotificationStreamStatus('error');
       this.scheduleNotificationStreamReconnect();
     }
   }
@@ -236,33 +242,33 @@ class SSEManager {
    * posts/stream 연결 종료
    */
   closePostStream(): void {
-    console.log("[SSE Manager] Closing posts/stream");
+    console.log('[SSE Manager] Closing posts/stream');
     if (this.postStreamReconnectTimer) {
       clearTimeout(this.postStreamReconnectTimer);
       this.postStreamReconnectTimer = null;
     }
     postStreamClient.disconnect();
-    useSSEStore.getState().setPostStreamStatus("disconnected");
+    useSSEStore.getState().setPostStreamStatus('disconnected');
   }
 
   /**
    * notifications/stream 연결 종료
    */
   closeNotificationStream(): void {
-    console.log("[SSE Manager] Closing notifications/stream");
+    console.log('[SSE Manager] Closing notifications/stream');
     if (this.notificationStreamReconnectTimer) {
       clearTimeout(this.notificationStreamReconnectTimer);
       this.notificationStreamReconnectTimer = null;
     }
     notificationStreamClient.disconnect();
-    useSSEStore.getState().setNotificationStreamStatus("disconnected");
+    useSSEStore.getState().setNotificationStreamStatus('disconnected');
   }
 
   /**
    * 모든 SSE 연결 종료
    */
   closeAll(): void {
-    console.log("[SSE Manager] Closing all SSE connections");
+    console.log('[SSE Manager] Closing all SSE connections');
     this.closePostStream();
     this.closeNotificationStream();
     if (this.authUnsubscribe) {
@@ -277,7 +283,7 @@ class SSEManager {
    */
   private schedulePostStreamReconnect(): void {
     if (this.postStreamRetries >= RECONNECT_CONFIG.maxRetries) {
-      console.error("[SSE Manager] Max retries reached for posts/stream");
+      console.error('[SSE Manager] Max retries reached for posts/stream');
       return;
     }
 
@@ -310,7 +316,7 @@ class SSEManager {
   private scheduleNotificationStreamReconnect(): void {
     if (this.notificationStreamRetries >= RECONNECT_CONFIG.maxRetries) {
       console.error(
-        "[SSE Manager] Max retries reached for notifications/stream"
+        '[SSE Manager] Max retries reached for notifications/stream'
       );
       return;
     }
@@ -344,7 +350,7 @@ class SSEManager {
    * posts/stream 강제 재연결
    */
   private reconnectPostStream(): void {
-    console.log("[SSE Manager] Attempting to reconnect posts/stream");
+    console.log('[SSE Manager] Attempting to reconnect posts/stream');
     this.closePostStream();
     this.connectPostStream();
   }
@@ -353,7 +359,7 @@ class SSEManager {
    * notifications/stream 강제 재연결
    */
   private reconnectNotificationStream(): void {
-    console.log("[SSE Manager] Attempting to reconnect notifications/stream");
+    console.log('[SSE Manager] Attempting to reconnect notifications/stream');
     this.closeNotificationStream();
     this.connectNotificationStream();
   }
