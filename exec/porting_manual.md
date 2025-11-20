@@ -157,7 +157,64 @@ services:
 ---
 
 ## **7. Backend 환경 변수 (.env.prod)**
+```
+SERVER_PORT=8080
+SPRING_APPLICATION_NAME=prham
 
+# ======================
+# MySQL Database
+# ======================
+SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+SPRING_DATASOURCE_URL=jdbc:mysql://pyeonriham-mysql:3306/pyeonriham_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useUnicode=true
+SPRING_DATASOURCE_USERNAME={MASKED}
+SPRING_DATASOURCE_PASSWORD={MASKED}
+
+# ======================
+# Connection Pool (HikariCP)
+# ======================
+SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=10
+SPRING_DATASOURCE_HIKARI_MINIMUM_IDLE=5
+SPRING_DATASOURCE_HIKARI_CONNECTION_TIMEOUT=30000
+SPRING_DATASOURCE_HIKARI_IDLE_TIMEOUT=600000
+SPRING_DATASOURCE_HIKARI_MAX_LIFETIME=1800000
+
+# ======================
+# Redis
+# ======================
+SPRING_DATA_REDIS_HOST=pyeonriham-redis
+SPRING_DATA_REDIS_PORT=6379
+
+# ======================
+# MongoDB
+# ======================
+SPRING_DATA_MONGODB_URI=mongodb://pyeonriham-mongo:27017/pyeonriham_db
+
+# ======================
+# Meilisearch
+# ======================
+MEILISEARCH_HOST=http://meilisearch:7700
+MEILISEARCH_API_KEY={MASKED}
+
+# ======================
+# LLM (Notice Summarization)
+# ======================
+LLM_API_KEY={MASKED}
+
+# ======================
+# JPA
+# ======================
+SPRING_JPA_HIBERNATE_DDL_AUTO=update
+SPRING_SQL_INIT_MODE=always
+
+# ======================
+# Mattermost Integration
+# ======================
+MATTERMOST_WEBHOOK_CHANNEL=notice,announcement
+MATTERMOST_WEBHOOK_URL=https://pyeonriham.site/api/v1/mattermost/webhook
+MATTERMOST_API_URL=http://pyeonriham.site:8065
+MATTERMOST_API_BASE_URL=http://pyeonriham.site:8065
+MATTERMOST_WEBHOOK_TOKEN={MASKED}
+```
 ---
 
 ## **8. Jenkins CI/CD 파이프라인**
