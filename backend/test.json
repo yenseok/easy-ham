@@ -1,0 +1,11 @@
+{
+  "post_id": "test-curl-001",
+  "channel_id": "channel123",
+  "channel_name": "13기 공지사항",
+  "user_id": "user123",
+  "user_name": "테스터",
+  "text": "curl 테스트",
+  "timestamp": "2025-11-26T13:00:00",
+  "file_ids": "",
+  "team_id": "team-13"
+}

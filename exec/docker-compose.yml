@@ -1,0 +1,214 @@
+version: "3.8"
+
+services:
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+    networks:
+      - prham-network
+  
+  jenkins:
+     build: ./jenkins
+     container_name: jenkins
+     user: root
+     ports:
+       - "8081:8080"
+       - "50000:50000"
+     environment:
+       - JENKINS_OPTS=--prefix=/jenkins
+     volumes:
+       - /home/ubuntu/app:/home/ubuntu/app
+       - /var/run/docker.sock:/var/run/docker.sock
+     restart: unless-stopped
+     networks:
+       - prham-network
+
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    container_name: postgre
+    environment:
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - TZ=Asia/Seoul
+      - POSTGRES_USER=mmuser
+      - POSTGRES_PASSWORD=mmuser_password
+      - POSTGRES_DB=mattermost
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mmuser -d mattermost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - prham-network
+
+  app:
+    image: mattermost/mattermost-team-edition:latest
+    restart: unless-stopped
+    container_name: mattermost
+#    entrypoint: ["/mattermost/fix-permissions.sh"]
+    environment:
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - TZ=Asia/Seoul
+      - MM_SQLSETTINGS_DRIVERNAME=postgres
+      - MM_SQLSETTINGS_DATASOURCE=postgres://mmuser:mmuser_password@db:5432/mattermost?sslmode=disable
+      - MM_SERVICESETTINGS_SITEURL=https://k13a105.p.ssafy.io/chat
+      - MM_LOGSETTINGS_CONSOLELEVEL=INFO
+      - MM_SERVICESETTINGS_ALLOWEDUNTRUSTEDINTERNALCONNECTIONS=0.0.0.0/0
+      - MM_SERVICESETTINGS_ENABLEUSERACCESSTOKENS=true
+      - MM_SERVICESETTINGS_ALLOWCORSFROM=https://k13a105.p.ssafy.io,http://localhost:3000
+      - MM_PLUGINSETTINGS_ENABLE=true
+      - MM_PLUGINSETTINGS_ENABLEUPLOADS=true
+      - MM_PLUGINSETTINGS_PLUGINSTATES={"prham-spring-notifier-plugin":{"Enable":true}}
+      - MM_TEAMSETTINGS_TEAMMATENAMEDISPLAY=nickname_full_name
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - app_data:/mattermost/data
+      - /home/ubuntu/app/mm-plugins:/mattermost/data/plugins
+    ports:
+      - "8065:8065"
+    networks:
+      - prham-network
+
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: unless-stopped
+    command:
+      - --default-authentication-plugin=mysql_native_password
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --init-connect=SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci
+      - --skip-character-set-client-handshake
+      - --lower_case_table_names=2
+    environment:
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - TZ=Asia/Seoul
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-ssafy}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-prham}
+      - MYSQL_USER=${MYSQL_USER:-prham_user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-prham_password}
+    ports:
+      - "${MYSQL_HOST_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./prhdump.sql:/docker-entrypoint-initdb.d/dump.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER:-prham_user}", "-p${MYSQL_PASSWORD:-prham_password}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - prham-network
+
+  mongodb:
+    image: mongo:${MONGO_VERSION:-7.0}
+    container_name: mongodb
+    restart: unless-stopped
+    environment:
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - TZ=Asia/Seoul
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-admin_password}
+      - MONGO_INITDB_DATABASE=${MONGO_DATABASE:-prham_db}
+    ports:
+      - "${MONGO_HOST_PORT:-27017}:27017"
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - prham-network
+
+  spring:
+    build: ./spring
+    image: app-spring:latest
+    restart: unless-stopped
+    container_name: spring
+    environment:
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - TZ=Asia/Seoul
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-prham}?useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&useUnicode=true
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER:-prham_user}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD:-prham_password}
+      - SPRING_DATA_MONGODB_URI=mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-admin_password}@mongodb:27017/${MONGO_DATABASE:-prham_db}?authSource=admin
+#      - MATTERMOST_API_BASE_URL=${MATTERMOST_API_BASE_URL:-http://mattermost:8065}
+#      - MATTERMOST_API_TOKEN=${MATTERMOST_API_TOKEN}
+      - MATTERMOST_ALLOWED_CHANNELS=${MATTERMOST_ALLOWED_CHANNELS:-}
+      - MATTERMOST_BLOCKED_CHANNELS=${MATTERMOST_BLOCKED_CHANNELS:-}
+      - MATTERMOST_WEBHOOK_ALLOWED_CHANNELS=${MATTERMOST_WEBHOOK_ALLOWED_CHANNELS:-}
+      - MATTERMOST_WEBHOOK_BLOCKED_CHANNELS=${MATTERMOST_WEBHOOK_BLOCKED_CHANNELS:-}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    expose:
+      - "8080"
+    networks:
+      - prham-network
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    container_name: meilisearch
+    restart: unless-stopped
+    environment:
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - TZ=Asia/Seoul
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-masterKey-A105-ham}
+    expose:
+      - "7700"
+    volumes:
+      - meili_data:/meili_data
+    networks:
+      - prham-network
+
+  nginx:
+    build: ./nginx
+    restart: unless-stopped
+    container_name: nginx
+    environment:
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - TZ=Asia/Seoul
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app
+      - spring
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - /home/ubuntu/app/ssl:/etc/nginx/ssl:ro
+    networks:
+      - prham-network
+
+networks:
+  prham-network:
+    driver: bridge
+
+volumes:
+  db_data:
+  app_data:
+  meili_data:
+  mysql_data:
+  mongodb_data:
+  jenkins_home:
+  mattermost_root:

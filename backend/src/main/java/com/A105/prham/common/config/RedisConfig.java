@@ -28,7 +28,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RedisConfig {
 
-	// Redis 직렬화를 위한 ObjectMapper 설정
 	@Bean
 	public ObjectMapper redisObjectMapper() {
 		ObjectMapper mapper = new ObjectMapper();
@@ -37,14 +36,17 @@ public class RedisConfig {
 		return mapper;
 	}
 
-	//RedisTemplate 설정
 	@Bean
-	public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory, ObjectMapper redisObjectMapper) {
+	public RedisTemplate<String, Object> redisTemplate(
+		RedisConnectionFactory connectionFactory,
+		ObjectMapper redisObjectMapper) {
 		RedisTemplate<String, Object> template = new RedisTemplate<>();
 		template.setConnectionFactory(connectionFactory);
 
 		StringRedisSerializer stringSerializer = new StringRedisSerializer();
-		GenericJackson2JsonRedisSerializer jsonSerializer = new GenericJackson2JsonRedisSerializer(redisObjectMapper);
+		GenericJackson2JsonRedisSerializer jsonSerializer =
+			new GenericJackson2JsonRedisSerializer(redisObjectMapper);
+
 		template.setKeySerializer(stringSerializer);
 		template.setHashKeySerializer(stringSerializer);
 		template.setValueSerializer(jsonSerializer);
@@ -53,17 +55,23 @@ public class RedisConfig {
 		return template;
 	}
 
-	//기본 캐시 매니저(10분 ttl) - mattermost api 용
-	@Bean
+	// ⭐ 빈 이름 변경: cacheManager10Min → redisCacheManager10Min
+	@Bean("redisCacheManager10Min")
 	@Primary
-	public CacheManager cacheManager10Min (RedisConnectionFactory connectionFactory, ObjectMapper redisObjectMapper) {
+	public CacheManager redisCacheManager10Min(
+		RedisConnectionFactory connectionFactory,
+		ObjectMapper redisObjectMapper) {
 
-		RedisCacheConfiguration defaultConfig = createCacheConfig(Duration.ofMinutes(10), redisObjectMapper);
+		RedisCacheConfiguration defaultConfig =
+			createCacheConfig(Duration.ofMinutes(10), redisObjectMapper);
 
 		Map<String, RedisCacheConfiguration> cacheConfigs = new HashMap<>();
-		cacheConfigs.put("mattermostUser", createCacheConfig(Duration.ofMinutes(10), redisObjectMapper));
-		cacheConfigs.put("mattermostTeams", createCacheConfig(Duration.ofMinutes(10), redisObjectMapper));
-		cacheConfigs.put("mattermostTeamChannels",  createCacheConfig(Duration.ofMinutes(10), redisObjectMapper));
+		cacheConfigs.put("mattermostUser",
+			createCacheConfig(Duration.ofMinutes(10), redisObjectMapper));
+		cacheConfigs.put("mattermostTeams",
+			createCacheConfig(Duration.ofMinutes(10), redisObjectMapper));
+		cacheConfigs.put("mattermostTeamChannels",
+			createCacheConfig(Duration.ofMinutes(10), redisObjectMapper));
 
 		return RedisCacheManager.builder(connectionFactory)
 			.cacheDefaults(defaultConfig)
@@ -71,11 +79,14 @@ public class RedisConfig {
 			.build();
 	}
 
-	//캐시 매니저 5분 - 채널별 최신 공지용
-	@Bean
-	public CacheManager cacheManager5Min (RedisConnectionFactory connectionFactory, ObjectMapper redisObjectMapper) {
+	// ⭐ 빈 이름 변경: cacheManager5Min → redisCacheManager5Min
+	@Bean("redisCacheManager5Min")
+	public CacheManager redisCacheManager5Min(
+		RedisConnectionFactory connectionFactory,
+		ObjectMapper redisObjectMapper) {
 
-		RedisCacheConfiguration config = createCacheConfig(Duration.ofMinutes(5), redisObjectMapper);
+		RedisCacheConfiguration config =
+			createCacheConfig(Duration.ofMinutes(5), redisObjectMapper);
 
 		Map<String, RedisCacheConfiguration> cacheConfigs = new HashMap<>();
 		cacheConfigs.put("channelRecentPosts", config);
@@ -87,18 +98,23 @@ public class RedisConfig {
 			.build();
 	}
 
-	//캐시 매니저 1시간 - 통계 데이터용
-	@Bean
-	public CacheManager cacheManager1Hour (RedisConnectionFactory connectionFactory, ObjectMapper redisObjectMapper) {
+	// ⭐ 빈 이름 변경: cacheManager1Hour → redisCacheManager1Hour
+	@Bean("redisCacheManager1Hour")
+	public CacheManager redisCacheManager1Hour(
+		RedisConnectionFactory connectionFactory,
+		ObjectMapper redisObjectMapper) {
 
-		RedisCacheConfiguration config = createCacheConfig(Duration.ofHours(1), redisObjectMapper);
+		RedisCacheConfiguration config =
+			createCacheConfig(Duration.ofHours(1), redisObjectMapper);
 
 		return RedisCacheManager.builder(connectionFactory)
 			.cacheDefaults(config)
 			.build();
 	}
 
-	private RedisCacheConfiguration createCacheConfig(Duration ttl, ObjectMapper objectMapper) {
+	private RedisCacheConfiguration createCacheConfig(
+		Duration ttl,
+		ObjectMapper objectMapper) {
 
 		return RedisCacheConfiguration.defaultCacheConfig()
 			.entryTtl(ttl)
